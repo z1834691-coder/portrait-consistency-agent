@@ -14,8 +14,8 @@
 | 2 | 本地 Python 环境与开发命令 | 已完成 | 可创建隔离环境、同步依赖、运行基础检查 |
 | 3 | 六个数据合同与合同测试 | 已完成 | 合法数据可序列化，非法数据被拒绝 |
 | 4 | 腾讯能力卡、API Adapter、smoke 脚本 | 已实现；live Gate 待权限 | 无密钥时安全失败；有密钥时可保存 RequestId/结果/错误 |
-| 5 | 最小 Streamlit 外壳、SQLite/JSONL trace | 下一步 | 从界面创建 session，并能追溯 IntentFrame 与 ProviderRun |
-| 6 | MediaPipe 质量门和 Profile v0 | 未开始 | 单张有效/无效输入有可读结果 |
+| 5 | 最小 Streamlit 外壳、SQLite/JSONL trace | 已完成 | 从界面创建 session，并能追溯 IntentFrame、脱敏事件和预置的 ProviderRun 审计投影 |
+| 6 | MediaPipe 质量门和 Profile v0 | 下一步 | 单张有效/无效输入有可读结果 |
 | 7 | LLM 意图澄清与 fallback | 未开始 | IntentFrame 可被解析、校验、回退 |
 | 8 | 端到端单张闭环与 smoke cases | 未开始 | Happy Path + 两条失败路径可重复演示 |
 
@@ -198,7 +198,7 @@
 - 未获得真实 `RequestId`、结果图片或真实调用耗时；
 - 未完成 live API Gate。
 
-## 当前检查点：5｜最小 Streamlit 外壳、SQLite/JSONL trace
+## 检查点 5｜最小 Streamlit 外壳、SQLite/JSONL trace（已完成）
 
 ### 本检查点目标
 
@@ -210,3 +210,39 @@
 - 不接 MediaPipe、不计算一致性指数；
 - 不调用腾讯 API 或 LLM；
 - 不启动公网部署。
+
+### 已完成
+
+- 2026-08-26：实现 `app.py`，页面可建立匿名本地 session、内存预览母版/目标照、提交模板 IntentFrame 并展示脱敏 trace；
+- 2026-08-26：实现 `LocalTraceStore`，将 session、IntentFrame、ProviderRun 审计投影和事件写入本地 SQLite/JSONL；
+- 2026-08-26：实现递归 redaction，拒绝把密钥、确认 token、Base64 图片、原图 payload 或签名 URL 写入 trace；
+- 2026-08-26：创建 `.streamlit/config.toml`，服务只绑定 `127.0.0.1`、关闭匿名使用统计、保留 CORS/XSRF 保护；
+- 2026-08-26：新增本地存储测试，验证敏感字段被红删、同一 session 的事件可追溯、Intent turn 可递增。
+
+### 验证证据
+
+- `uv run python -c "import app"`：`app_import_ok`；
+- 临时启动 Streamlit 后，`curl http://127.0.0.1:8501/_stcore/health`：`ok`；测试服务已人工停止；
+- `make test`：`13 passed`；
+- `make lint`：`All checks passed!`；
+- `uv run ruff format --check .`：全部格式正确；
+- 未上传图片、未调用腾讯 API、未调用 LLM、未启动公网服务。
+
+### 明确未完成 / 不可夸写
+
+- 页面仍使用 `template_fallback`，不是 LLM 自然语言解析；
+- 上传图片只在浏览器/页面当前内存中预览，尚未有质量门或 Feature 提取；
+- SQLite 的 `ProviderRun` 审计表已准备好，但尚未产生任何真实腾讯运行记录；
+- 尚未实现删除/TTL job、登录、多用户隔离或线上部署。
+
+## 当前检查点：6｜MediaPipe 质量门与 Reference Profile v0
+
+### 下一步目标（尚未开始）
+
+让单张母版/目标照得到可解释的“可比较 / 不可比较”结果：单脸、姿态、清晰度、曝光、遮挡等。随后才创建不含原图的 `ReferenceProfile` 与实验性几何特征。
+
+### 将保留给你的决策
+
+- 质量门阈值的最终严格程度；我会先使用明确标为 `uncalibrated-v0` 的可配置保守基线；
+- 未来用户是否接受“建议重拍”的体验文案和默认强度；
+- 真实照片测试集的授权方式与保存期限。

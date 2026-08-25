@@ -10,6 +10,7 @@
 | D-004 | 2026-08-26 | 密钥只读取本机 `.env`，绝不写入 Git、进展文档或 Trace | 已确认 | 后续 API 调用需显式配置 | 删除 `.env` 或轮换云密钥 |
 | D-005 | 2026-08-26 | 该仓库使用本地 Git 身份 `Codex Local <codex@local.invalid>` | 已确认 | 仅用于本项目的可追溯提交，不修改全局 Git 身份 | 用户可随时修改本仓库的 `git config --local user.name/user.email` |
 | D-006 | 2026-08-26 | V0 采用腾讯官方 Python FMU SDK 与 `BeautifyPic` REST 能力卡 | 已确认 | 仅支持大眼/瘦脸/美白/磨皮四个显式参数 | 可替换为后续已授权 SDK Adapter；Provider Card 版本化保留 |
+| D-007 | 2026-08-26 | V0 本地 UI 使用 Streamlit + SQLite/JSONL，绑定 `127.0.0.1` | 已确认 | 先获得可运行、可追溯的单用户原型，不保存原图 | 后续可在隐私/部署 Gate 后替换为 FastAPI + 前端 + PostgreSQL |
 | D-USER-001 | 待定 | 腾讯云账号、密钥、预算与区域 | 待用户决定 | 决定能否进行真实 API Gate | 不配置时使用安全失败 smoke 模式 |
 | D-USER-002 | 待定 | LLM 供应商与预算 | 待用户决定 | 决定后续意图解析实现 | 使用模板 fallback，不阻塞视觉/API 基线 |
 | D-USER-003 | 待定 | Demo 是否部署公网 | 待用户决定 | 影响服务器、对象存储、隐私与访问控制 | 本地运行/录屏为默认 |

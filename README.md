@@ -21,6 +21,24 @@
 
 开发状态、每一步验证结果和待你决策的事项见：[开发进展](docs/DEVELOPMENT_PROGRESS.md) 与 [决策日志](docs/DECISION_LOG.md)。
 
+## 当前项目树
+
+```text
+portrait-consistency-agent/
+├── app.py                         # 本机 Streamlit 壳；尚无视觉/API 执行
+├── .streamlit/config.toml         # 仅绑定 127.0.0.1，关闭匿名统计
+├── data/provider_cards/           # 可追溯 Tencent 能力卡（RAG P0）
+├── docs/                          # 蓝图外的开发进展、决定、合同、运行与 API Gate 记录
+├── scripts/                       # 环境检查与显式 opt-in 的腾讯 smoke 脚本
+├── src/portrait_consistency_agent/
+│   ├── core/                      # 合同与本地设置
+│   ├── services/                  # Provider Card / 腾讯 API Adapter
+│   └── storage/                   # SQLite + JSONL 脱敏 trace
+├── storage/                       # 本地 DB / 未来结果图（Git 忽略）
+├── logs/                          # 本地 JSONL trace（Git 忽略）
+└── tests/                         # 当前 13 个基础/合同/存储/Provider 测试
+```
+
 ## 本地命令
 
 ```bash
