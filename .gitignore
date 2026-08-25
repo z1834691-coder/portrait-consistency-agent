@@ -1,0 +1,34 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Sensitive, generated, or temporary photo data
+storage/*
+!storage/.gitkeep
+logs/*
+!logs/.gitkeep
+data/local/
+*.sqlite
+*.sqlite3
+*.db
+
+# Uploaded / generated images
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
