@@ -13,8 +13,8 @@
 | 1 | 项目骨架、Git、进展/决策记录 | 已完成 | 树结构清晰，Git 可追踪，文档说明上下文与待决策项 |
 | 2 | 本地 Python 环境与开发命令 | 已完成 | 可创建隔离环境、同步依赖、运行基础检查 |
 | 3 | 六个数据合同与合同测试 | 已完成 | 合法数据可序列化，非法数据被拒绝 |
-| 4 | 腾讯能力卡、API Adapter、smoke 脚本 | 下一步 | 无密钥时安全失败；有密钥时可保存 RequestId/结果/错误 |
-| 5 | 最小 Streamlit 外壳、SQLite/JSONL trace | 未开始 | 从界面创建 session，并能追溯 IntentFrame 与 ProviderRun |
+| 4 | 腾讯能力卡、API Adapter、smoke 脚本 | 已实现；live Gate 待权限 | 无密钥时安全失败；有密钥时可保存 RequestId/结果/错误 |
+| 5 | 最小 Streamlit 外壳、SQLite/JSONL trace | 下一步 | 从界面创建 session，并能追溯 IntentFrame 与 ProviderRun |
 | 6 | MediaPipe 质量门和 Profile v0 | 未开始 | 单张有效/无效输入有可读结果 |
 | 7 | LLM 意图澄清与 fallback | 未开始 | IntentFrame 可被解析、校验、回退 |
 | 8 | 端到端单张闭环与 smoke cases | 未开始 | Happy Path + 两条失败路径可重复演示 |
@@ -156,7 +156,7 @@
 - 未创建请求/结果图片；
 - 未调用 LLM 或视觉模型。
 
-## 当前检查点：4｜腾讯能力卡、API Adapter、smoke 脚本
+## 检查点 4｜腾讯能力卡、API Adapter、smoke 脚本（离线实现完成；live Gate 待权限）
 
 ### 本检查点目标
 
@@ -173,3 +173,40 @@
 
 - `D-USER-001`：何时提供自己的腾讯云账号/密钥、预算上限和区域；
 - 如果你暂时不提供密钥：我会完成 Adapter 的结构、错误边界和 fixture 测试，但进展文档会明确标为“未完成 live API Gate”。
+
+### 已完成
+
+- 2026-08-26：根据腾讯官方 `BeautifyPic`、API 概览和 Python SDK 文档建立版本化 Provider Card；
+- 2026-08-26：安装并验证产品级 Python SDK `tencentcloud-sdk-python-fmu==3.1.82`；
+- 2026-08-26：实现只从本地 `.env` 读取凭据的 Adapter；四个 V0 参数永远显式发送；
+- 2026-08-26：实现 smoke 脚本。默认运行不读取图片、不联网；`--allow-live` 但无密钥时安全退出并明确说明原因；
+- 2026-08-26：写入 API Gate 文档，说明官方来源、限制、真实运行命令和不应夸写的边界。
+
+### 验证证据
+
+- `make test`：`11 passed`；
+- `make lint`：`All checks passed!`；
+- `uv run ruff format --check .`：全部格式正确；
+- 默认 smoke：返回 `network_called=false`，未读取图片或调用网络；
+- `--allow-live` 且无密钥：以退出码 `2` 安全返回 `network_called=false`；
+- SDK 导入验证：`FmuClient:BeautifyPicRequest`。
+
+### 明确未完成 / 不可夸写
+
+- 未提供或使用腾讯账号、SecretId、SecretKey；
+- 未上传任何图片到腾讯；
+- 未获得真实 `RequestId`、结果图片或真实调用耗时；
+- 未完成 live API Gate。
+
+## 当前检查点：5｜最小 Streamlit 外壳、SQLite/JSONL trace
+
+### 本检查点目标
+
+建立不做真实修图的本地任务外壳：用户能创建一个匿名会话、上传两张仅本地预览的图片、写入固定模板 `IntentFrame`，并把 session/intent/事件写入 SQLite 与 JSONL。页面必须明确标识“尚未调用腾讯 API、尚未做视觉评分”。
+
+### 本检查点不做
+
+- 不处理或保存真实图片到数据库；
+- 不接 MediaPipe、不计算一致性指数；
+- 不调用腾讯 API 或 LLM；
+- 不启动公网部署。

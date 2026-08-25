@@ -1,0 +1,59 @@
+{
+  "card_id": "tencent-beautify-pic-2019-12-13",
+  "provider": "tencent_cloud",
+  "operation": "BeautifyPic",
+  "api_version": "2019-12-13",
+  "endpoint": "fmu.tencentcloudapi.com",
+  "review_status": "verified",
+  "reviewed_at": "2026-08-26",
+  "input": {
+    "one_of": ["Image", "Url"],
+    "v0_selected_input": "Image",
+    "formats": ["PNG", "JPG", "JPEG", "BMP"],
+    "unsupported": ["GIF", "alpha_channel"],
+    "max_base64_bytes": 5242880,
+    "max_single_side_px": 4000,
+    "product_gate": "V0 rejects multi-face photos even though the provider may process multiple faces."
+  },
+  "parameters": {
+    "FaceLifting": {
+      "feature": "face_lifting",
+      "range": [0, 100],
+      "default": 70,
+      "v0_policy": "Always send explicitly; 0 means no slimming."
+    },
+    "EyeEnlarging": {
+      "feature": "eye_enlarging",
+      "range": [0, 100],
+      "default": 70,
+      "v0_policy": "Always send explicitly; 0 means no eye enlargement."
+    },
+    "Whitening": {
+      "feature": "whitening",
+      "range": [0, 100],
+      "default": 30,
+      "v0_policy": "Only enable after user permits skin-tone changes."
+    },
+    "Smoothing": {
+      "feature": "smoothing",
+      "range": [0, 100],
+      "default": 10,
+      "v0_policy": "Only enable after user permits skin-texture changes."
+    }
+  },
+  "output": {
+    "RspImgType": ["base64", "url"],
+    "v0_selected_output": "base64",
+    "url_validity": "1 day",
+    "required_audit_fields": ["RequestId", "result_ref", "latency_ms"]
+  },
+  "rate_limit": {
+    "default_qps": 20,
+    "dimension": "API + region + sub-account"
+  },
+  "source": {
+    "api_doc": "https://cloud.tencent.com/document/product/1172/40715",
+    "overview_doc": "https://cloud.tencent.com/document/product/1172/40697",
+    "sdk_doc": "https://cloud.tencent.com/document/sdk/python"
+  }
+}

@@ -15,6 +15,7 @@ dependencies = [
   "pydantic-settings>=2.7,<3",
   "python-dotenv>=1.0,<2",
   "streamlit>=1.40,<2",
+  "tencentcloud-sdk-python-fmu>=3.0,<4",
 ]
 
 [dependency-groups]
