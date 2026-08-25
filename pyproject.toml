@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.25,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "portrait-consistency-agent"
+version = "0.1.0"
+description = "A traceable demo for reference-profile portrait consistency."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "httpx>=0.27,<1",
+  "Pillow>=10.4,<12",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "python-dotenv>=1.0,<2",
+  "streamlit>=1.40,<2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/portrait_consistency_agent"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = [".venv", "storage", "logs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.uv]
+package = true
