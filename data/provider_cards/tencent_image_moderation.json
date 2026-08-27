@@ -1,0 +1,31 @@
+{
+  "card_id": "tencent-image-moderation-2020-12-29",
+  "provider": "tencent_cloud",
+  "operation": "ImageModeration",
+  "api_version": "2020-12-29",
+  "card_version": "reviewed_2026-08-27",
+  "endpoint": "ims.tencentcloudapi.com",
+  "review_status": "verified",
+  "reviewed_at": "2026-08-27",
+  "input": {
+    "v0_selected_input": "FileContent",
+    "formats": ["PNG", "JPG", "JPEG", "BMP"],
+    "max_base64_bytes": 10485760,
+    "type": "IMAGE",
+    "biz_type": "optional; a configured BizType can select a product policy"
+  },
+  "output": {
+    "suggestion": ["Pass", "Review", "Block"],
+    "required_audit_fields": ["RequestId", "Suggestion", "Label", "Score"]
+  },
+  "v0_policy": {
+    "pass": "PASSED",
+    "review": "BLOCKED until a human review policy exists",
+    "block": "BLOCKED",
+    "user_visible_raw_labels": false
+  },
+  "source": {
+    "api_doc": "https://cloud.tencent.com/document/product/1125/53273",
+    "sdk_doc": "https://cloud.tencent.com/document/product/1125/100989"
+  }
+}

@@ -1,0 +1,198 @@
+"""Tencent ImageModeration adapter for the pre-processing safety gate."""
+
+from __future__ import annotations
+
+import base64
+import json
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Final
+
+from portrait_consistency_agent.core.contracts import (
+    ContentSafetyEvidence,
+    ContentSafetyStatus,
+)
+from portrait_consistency_agent.core.settings import AppSettings
+
+MAX_BASE64_BYTES: Final[int] = 10 * 1024 * 1024
+MODERATION_API_VERSION: Final[str] = "2020-12-29"
+MODERATION_OPERATION: Final[str] = "ImageModeration"
+
+
+class ContentSafetyCredentialsMissingError(RuntimeError):
+    """Raised before a network call when Tencent credentials are absent."""
+
+
+class TencentContentSafetyApiError(RuntimeError):
+    """A safe provider failure suitable for a trace/error summary."""
+
+    def __init__(self, error_code: str, message: str, request_id: str | None = None) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+        self.request_id = request_id
+
+
+@dataclass(frozen=True)
+class TencentImageModerationResponse:
+    request_id: str
+    suggestion: str
+    label: str | None
+    sub_label: str | None
+    score: float | None
+
+
+@dataclass(frozen=True)
+class ContentSafetyDecision:
+    status: ContentSafetyStatus
+    evidence: ContentSafetyEvidence
+    reason_code: str
+
+
+def _sdk_error_code(exception: object) -> str:
+    get_code = getattr(exception, "get_code", None)
+    code = get_code() if callable(get_code) else None
+    return str(code or "TENCENT_SDK_ERROR")
+
+
+def _as_base64(image: bytes | str) -> str:
+    if isinstance(image, bytes):
+        if not image:
+            raise ValueError("image bytes must not be empty")
+        encoded = base64.b64encode(image).decode("ascii")
+    else:
+        encoded = image.strip()
+        if not encoded:
+            raise ValueError("image base64 must not be empty")
+    if len(encoded.encode("ascii")) > MAX_BASE64_BYTES:
+        raise ValueError("image base64 exceeds Tencent ImageModeration's 10MB limit")
+    return encoded
+
+
+class TencentImageModerationClient:
+    """V0 synchronous safety adapter; it never stores the image payload."""
+
+    def __init__(self, settings: AppSettings) -> None:
+        self.settings = settings
+
+    @staticmethod
+    def build_base64_request(
+        image: bytes | str,
+        *,
+        biz_type: str = "",
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "FileContent": _as_base64(image),
+            "Type": "IMAGE",
+        }
+        if biz_type.strip():
+            payload["BizType"] = biz_type.strip()
+        return payload
+
+    def moderate_base64(
+        self,
+        image: bytes | str,
+    ) -> TencentImageModerationResponse:
+        if not self.settings.has_tencent_credentials:
+            raise ContentSafetyCredentialsMissingError(
+                "Tencent credentials are absent. Configure both values in local .env "
+                "before a live ImageModeration call."
+            )
+        try:
+            from tencentcloud.common import credential
+            from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
+                TencentCloudSDKException,
+            )
+            from tencentcloud.common.profile.client_profile import ClientProfile
+            from tencentcloud.common.profile.http_profile import HttpProfile
+            from tencentcloud.ims.v20201229 import ims_client, models
+        except ImportError as exc:  # pragma: no cover - dependency test covers normal path
+            raise TencentContentSafetyApiError(
+                "SDK_MISSING",
+                "Tencent IMS SDK is not installed in the current environment.",
+            ) from exc
+
+        try:
+            credentials = credential.Credential(
+                self.settings.tencent_secret_id.get_secret_value(),  # type: ignore[union-attr]
+                self.settings.tencent_secret_key.get_secret_value(),  # type: ignore[union-attr]
+            )
+            http_profile = HttpProfile()
+            http_profile.endpoint = self.settings.tencent_moderation_endpoint
+            client_profile = ClientProfile()
+            client_profile.httpProfile = http_profile
+            client = ims_client.ImsClient(
+                credentials,
+                self.settings.tencent_region,
+                client_profile,
+            )
+            request = models.ImageModerationRequest()
+            request.from_json_string(
+                json.dumps(
+                    self.build_base64_request(
+                        image,
+                        biz_type=self.settings.tencent_moderation_biz_type,
+                    )
+                )
+            )
+            response = client.ImageModeration(request)
+        except TencentCloudSDKException as exc:
+            error_code = _sdk_error_code(exc)
+            request_id = getattr(exc, "get_request_id", lambda: None)()
+            raise TencentContentSafetyApiError(
+                error_code or "TENCENT_SDK_ERROR",
+                "Tencent ImageModeration request failed. See the receipt for "
+                "request_id/error_code.",
+                request_id=request_id,
+            ) from exc
+
+        request_id = getattr(response, "RequestId", None)
+        suggestion = getattr(response, "Suggestion", None)
+        if not request_id:
+            raise TencentContentSafetyApiError(
+                "MISSING_REQUEST_ID",
+                "Tencent returned no RequestId; the safety result cannot be audited.",
+            )
+        if not suggestion:
+            raise TencentContentSafetyApiError(
+                "MISSING_SUGGESTION",
+                "Tencent returned no ImageModeration suggestion.",
+                request_id=request_id,
+            )
+        score = getattr(response, "Score", None)
+        return TencentImageModerationResponse(
+            request_id=request_id,
+            suggestion=str(suggestion),
+            label=getattr(response, "Label", None) or None,
+            sub_label=getattr(response, "SubLabel", None) or None,
+            score=float(score) if score is not None else None,
+        )
+
+
+def build_content_safety_decision(
+    response: TencentImageModerationResponse,
+    *,
+    receipt_ref: str,
+    policy_version: str = "content-safety-v0",
+) -> ContentSafetyDecision:
+    """Map Pass to allow; hold Review/Block as blocked until a human policy exists."""
+
+    suggestion = response.suggestion.strip().lower()
+    if suggestion == "pass":
+        status = ContentSafetyStatus.PASSED
+        reason_code = "content_safety_provider_passed"
+    elif suggestion == "review":
+        status = ContentSafetyStatus.BLOCKED
+        reason_code = "content_safety_review_required"
+    else:
+        status = ContentSafetyStatus.BLOCKED
+        reason_code = "content_safety_provider_blocked"
+    evidence = ContentSafetyEvidence(
+        provider="tencent_ims",
+        operation=MODERATION_OPERATION,
+        provider_version=MODERATION_API_VERSION,
+        policy_version=policy_version,
+        receipt_ref=receipt_ref,
+        provider_request_id=response.request_id,
+        evaluated_at=datetime.now(timezone.utc),
+    )
+    return ContentSafetyDecision(status=status, evidence=evidence, reason_code=reason_code)

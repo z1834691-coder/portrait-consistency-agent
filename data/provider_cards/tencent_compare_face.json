@@ -1,0 +1,41 @@
+{
+  "card_id": "tencent-compare-face-2018-03-01",
+  "provider": "tencent_cloud",
+  "operation": "CompareFace",
+  "api_version": "2018-03-01",
+  "card_version": "reviewed_2026-08-27",
+  "endpoint": "iai.tencentcloudapi.com",
+  "review_status": "verified",
+  "reviewed_at": "2026-08-27",
+  "input": {
+    "one_of_per_image": ["ImageA", "UrlA", "ImageB", "UrlB"],
+    "v0_selected_input": "ImageA+ImageB",
+    "formats": ["PNG", "JPG", "JPEG", "BMP"],
+    "unsupported": ["GIF"],
+    "max_base64_bytes_per_image": 5242880,
+    "multi_face_behavior": "The provider compares the largest face in each image and exposes no target-face selector.",
+    "face_model_version": "3.0",
+    "quality_control": 0,
+    "need_rotate_detection": 0
+  },
+  "output": {
+    "raw_score": {
+      "range": [0, 100],
+      "meaning": "Provider comparison score; not a calibrated probability and not shown to V0 users."
+    },
+    "face_model_version": "3.0",
+    "required_audit_fields": ["RequestId", "raw_score", "FaceModelVersion", "latency_ms"]
+  },
+  "routing_policy": {
+    "policy_id": "subject_match_v0",
+    "match_at_or_above": 70,
+    "uncertain_at_or_above": 50,
+    "calibrated": false,
+    "user_visible_score": false
+  },
+  "source": {
+    "api_doc": "https://cloud.tencent.com/document/api/867/32802",
+    "score_doc": "https://cloud.tencent.com/document/api/867/114852",
+    "sdk_doc": "https://cloud.tencent.com/document/sdk/python"
+  }
+}

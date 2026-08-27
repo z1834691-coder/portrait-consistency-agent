@@ -3,9 +3,10 @@
   "provider": "tencent_cloud",
   "operation": "BeautifyPic",
   "api_version": "2019-12-13",
+  "card_version": "reviewed_2026-08-27",
   "endpoint": "fmu.tencentcloudapi.com",
   "review_status": "verified",
-  "reviewed_at": "2026-08-26",
+  "reviewed_at": "2026-08-27",
   "input": {
     "one_of": ["Image", "Url"],
     "v0_selected_input": "Image",
@@ -13,7 +14,11 @@
     "unsupported": ["GIF", "alpha_channel"],
     "max_base64_bytes": 5242880,
     "max_single_side_px": 4000,
-    "product_gate": "V0 rejects multi-face photos even though the provider may process multiple faces."
+    "min_short_side_px": 64,
+    "recommended_min_face_px": "34x34",
+    "provider_face_behavior": "The provider may process up to the five largest faces and exposes no target-face selector.",
+    "current_runtime_gate": "Reject multi-face images or require a user-cropped single-face input until target isolation, recomposition, and verification are implemented.",
+    "target_product_policy": "The user selects one face; only that face is isolated, edited, recomposed, and re-verified."
   },
   "parameters": {
     "FaceLifting": {
@@ -50,6 +55,24 @@
   "rate_limit": {
     "default_qps": 20,
     "dimension": "API + region + sub-account"
+  },
+  "known_error_policy": {
+    "retryable_examples": [
+      "FailedOperation.InnerError",
+      "FailedOperation.RequestTimeout",
+      "FailedOperation.RpcFail",
+      "FailedOperation.ServerError"
+    ],
+    "non_retryable_examples": [
+      "FailedOperation.FaceSizeTooSmall",
+      "FailedOperation.ImageDecodeFailed",
+      "FailedOperation.ImageNotSupported",
+      "InvalidParameter.NoFaceInPhoto",
+      "InvalidParameterValue.EyeEnlargingIllegal",
+      "InvalidParameterValue.FaceLiftingIllegal",
+      "InvalidParameterValue.SmoothingIllegal",
+      "InvalidParameterValue.WhiteningIllegal"
+    ]
   },
   "source": {
     "api_doc": "https://cloud.tencent.com/document/product/1172/40715",

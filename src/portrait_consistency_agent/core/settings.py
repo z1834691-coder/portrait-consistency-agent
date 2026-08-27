@@ -29,6 +29,9 @@ class AppSettings(BaseSettings):
     tencent_secret_key: SecretStr | None = None
     tencent_region: str = "ap-guangzhou"
     tencent_beautify_endpoint: str = "fmu.tencentcloudapi.com"
+    tencent_subject_endpoint: str = "iai.tencentcloudapi.com"
+    tencent_moderation_endpoint: str = "ims.tencentcloudapi.com"
+    tencent_moderation_biz_type: str = ""
 
     @field_validator("tencent_secret_id", "tencent_secret_key", mode="before")
     @classmethod

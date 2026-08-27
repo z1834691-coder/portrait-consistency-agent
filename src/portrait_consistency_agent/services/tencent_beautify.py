@@ -22,6 +22,14 @@ class TencentBeautifyApiError(RuntimeError):
         self.request_id = request_id
 
 
+def _sdk_error_code(exception: object) -> str:
+    """Extract Tencent's documented SDK error code without exposing the raw request."""
+
+    get_code = getattr(exception, "get_code", None)
+    code = get_code() if callable(get_code) else None
+    return str(code or "TENCENT_SDK_ERROR")
+
+
 @dataclass(frozen=True)
 class TencentBeautifyResponse:
     request_id: str
@@ -102,7 +110,7 @@ class TencentBeautifyClient:
             request.from_json_string(json.dumps(self.build_base64_request(image_base64, params)))
             response = client.BeautifyPic(request)
         except TencentCloudSDKException as exc:
-            error_code = getattr(exc, "get_error_code", lambda: "TENCENT_SDK_ERROR")()
+            error_code = _sdk_error_code(exc)
             request_id = getattr(exc, "get_request_id", lambda: None)()
             raise TencentBeautifyApiError(
                 error_code or "TENCENT_SDK_ERROR",

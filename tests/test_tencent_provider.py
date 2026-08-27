@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 
 from portrait_consistency_agent.core.contracts import TencentBeautifyParams
 from portrait_consistency_agent.core.settings import AppSettings
@@ -7,6 +8,7 @@ from portrait_consistency_agent.services.provider_cards import load_tencent_beau
 from portrait_consistency_agent.services.tencent_beautify import (
     TencentBeautifyClient,
     TencentCredentialsMissingError,
+    _sdk_error_code,
 )
 
 
@@ -15,6 +17,7 @@ def test_provider_card_contains_reviewed_v0_constraints() -> None:
 
     assert card["operation"] == "BeautifyPic"
     assert card["api_version"] == "2019-12-13"
+    assert card["card_version"] == "reviewed_2026-08-27"
     assert card["parameters"]["FaceLifting"]["default"] == 70
     assert card["parameters"]["EyeEnlarging"]["default"] == 70
     assert card["review_status"] == "verified"
@@ -50,3 +53,13 @@ def test_client_refuses_to_call_without_credentials() -> None:
 
     with pytest.raises(TencentCredentialsMissingError, match="credentials are absent"):
         client.beautify_base64("aGVsbG8=", TencentBeautifyParams())
+
+
+def test_sdk_error_code_is_preserved_for_bad_case_attribution() -> None:
+    exception = TencentCloudSDKException(
+        code="UnauthorizedOperation",
+        message="permission denied",
+        requestId="request-001",
+    )
+
+    assert _sdk_error_code(exception) == "UnauthorizedOperation"

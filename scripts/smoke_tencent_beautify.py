@@ -13,10 +13,14 @@ import hashlib
 import json
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from portrait_consistency_agent.core.contracts import (
+    ArtifactLifecycle,
+    ErrorCategory,
+    ErrorPhase,
+    ProviderErrorDetail,
     ProviderRun,
     ProviderRunStatus,
     TencentBeautifyParams,
@@ -111,6 +115,17 @@ def main() -> int:
     started_at = utc_now()
     started_clock = time.perf_counter()
     request_hash = build_request_hash(image_bytes, params)
+    input_artifact_sha256 = hashlib.sha256(image_bytes).hexdigest()
+    confirmation_scope_hash = hashlib.sha256(
+        json.dumps(
+            {
+                "input_artifact_sha256": input_artifact_sha256,
+                "params": params.model_dump(mode="json"),
+                "purpose": "explicit_cli_smoke",
+            },
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
     client = TencentBeautifyClient(settings)
 
     try:
@@ -132,19 +147,37 @@ def main() -> int:
         result_path = results_dir / f"{response.request_id}{extension}"
         result_path.write_bytes(result_bytes)
         latency_ms = round((time.perf_counter() - started_clock) * 1000)
+        completed_at = utc_now()
         provider_run = ProviderRun(
             run_id=run_id,
+            trace_id=f"trace_{run_id.removeprefix('run_')}",
             plan_id="smoke_plan_001",
+            plan_revision=1,
             session_id="smoke_session_001",
-            provider_version="2019-12-13",
+            photo_id=f"photo_{input_artifact_sha256[:16]}",
+            attempt_number=1,
+            provider_api_version="2019-12-13",
+            region=settings.tencent_region,
+            endpoint=settings.tencent_beautify_endpoint,
+            provider_card_id="tencent-beautify-pic-2019-12-13",
+            provider_card_version="reviewed_2026-08-27",
             idempotency_key=idempotency_key,
             request_hash=request_hash,
+            request_params=params,
+            input_artifact_ref=f"authorized_photo_{input_artifact_sha256[:16]}",
+            input_artifact_sha256=input_artifact_sha256,
+            confirmation_ref="authorized_cli_smoke",
+            confirmation_scope_hash=confirmation_scope_hash,
+            consent_policy_version="cli-smoke-v1",
             status=ProviderRunStatus.SUCCEEDED,
             provider_request_id=response.request_id,
-            result_ref=str(result_path.relative_to(PROJECT_ROOT)),
-            latency_ms=latency_ms,
+            result_artifact_ref=str(result_path.relative_to(PROJECT_ROOT)),
+            result_artifact_sha256=hashlib.sha256(result_bytes).hexdigest(),
+            artifact_lifecycle=ArtifactLifecycle(expires_at=completed_at + timedelta(hours=24)),
+            network_latency_ms=latency_ms,
+            total_latency_ms=latency_ms,
             started_at=started_at,
-            completed_at=utc_now(),
+            completed_at=completed_at,
         )
         print_status({"status": "succeeded", "provider_run": provider_run.model_dump(mode="json")})
         return 0
@@ -154,20 +187,49 @@ def main() -> int:
         error_code = (
             exc.error_code if isinstance(exc, TencentBeautifyApiError) else "LOCAL_VALIDATION_ERROR"
         )
+        completed_at = utc_now()
         provider_run = ProviderRun(
             run_id=run_id,
+            trace_id=f"trace_{run_id.removeprefix('run_')}",
             plan_id="smoke_plan_001",
+            plan_revision=1,
             session_id="smoke_session_001",
-            provider_version="2019-12-13",
+            photo_id=f"photo_{input_artifact_sha256[:16]}",
+            attempt_number=1,
+            provider_api_version="2019-12-13",
+            region=settings.tencent_region,
+            endpoint=settings.tencent_beautify_endpoint,
+            provider_card_id="tencent-beautify-pic-2019-12-13",
+            provider_card_version="reviewed_2026-08-27",
             idempotency_key=idempotency_key,
             request_hash=request_hash,
+            request_params=params,
+            input_artifact_ref=f"authorized_photo_{input_artifact_sha256[:16]}",
+            input_artifact_sha256=input_artifact_sha256,
+            confirmation_ref="authorized_cli_smoke",
+            confirmation_scope_hash=confirmation_scope_hash,
+            consent_policy_version="cli-smoke-v1",
             status=ProviderRunStatus.FAILED,
             provider_request_id=request_id,
-            latency_ms=latency_ms,
-            error_code=error_code,
-            error_message="Tencent smoke request failed; see error_code and local console context.",
+            network_latency_ms=latency_ms,
+            total_latency_ms=latency_ms,
+            error=ProviderErrorDetail(
+                phase=(
+                    ErrorPhase.PREFLIGHT
+                    if error_code == "LOCAL_VALIDATION_ERROR"
+                    else ErrorPhase.PROVIDER
+                ),
+                category=(
+                    ErrorCategory.LOCAL_VALIDATION
+                    if error_code == "LOCAL_VALIDATION_ERROR"
+                    else ErrorCategory.UNKNOWN
+                ),
+                provider_code=error_code,
+                safe_message="Tencent smoke request failed; inspect the redacted error category.",
+                retryable=False,
+            ),
             started_at=started_at,
-            completed_at=utc_now(),
+            completed_at=completed_at,
         )
         print_status({"status": "failed", "provider_run": provider_run.model_dump(mode="json")})
         return 1
