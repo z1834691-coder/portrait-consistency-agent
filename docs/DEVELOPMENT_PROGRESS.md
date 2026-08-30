@@ -1377,6 +1377,14 @@ uv run python scripts/analyze_rag_failures.py
 
 本轮已重新运行 `pytest`（146 passed, 4 warnings）、Ruff、format、compileall、`git diff --check`；`uv run python` 可直接导入 `app.py`，本机 Streamlit 8510 端口返回 HTTP 200 后已正常停止。Git tree 已确认不含密钥、照片、账本和隐藏答案，私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent) 已创建并推送 `main`；Streamlit Community Cloud 的“创建 App、选择入口、配置 Secrets、确认 Private/受邀名单”仍需用户在控制台完成，Cloud URL 由控制台生成。
 
+### 2026-08-30｜Cloud URL 与腾讯精准域名现场核验
+
+- 产品负责人已在 Community Cloud 创建 Private App：`https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`。只读 HTTP 探针返回 `303` 到 Streamlit 登录流程，证明应用地址存在且访问控制仍为 Private；未把它写成公网开放或生产服务。
+- 腾讯 Web License 表单已打开并复现格式差异：填完整 URL（带 `https://` 或尾部 `/`）时“确定”按钮禁用；填纯主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app` 时按钮可用。主机名 63 字节，低于 128 字节限制。项目名使用 `portrait-consistency-demo`，小程序 Appid 留空；本轮未提交外部 License。
+- 当前 v3 Holdout 仍只有 `data/evaluation/rag_gold_v3_holdout_runtime.template.json` 空模板和保管说明；不存在已生成但未公开的题目/答案键文件。canonical safety event 目录为 `data/evaluation/rag_safety_event_catalog_v0.json`，共 48 个稳定事件 ID，状态仍待产品负责人审核。
+
+本轮现场核验没有调用图片 Provider、没有读取密钥、没有上传照片，也没有创建 Tencent License 资源；下一步需产品负责人审核目录、决定 v3 题目/答案键的独立生成方式，并在确认后提交腾讯测试 License。
+
 ### 明确边界
 
 GitHub 私有仓库和 Cloud Private App 只是可部署演示入口，不证明生产级多租户、持久化数据库、半年主体锚点删除 SLA、数据驻留合规或公网用户测试已完成。Cloud 容器在美国且磁盘不作为长期存储；在数据出境和受邀名单未确认前，只使用合成/明确授权的测试照片。火山候选仍为 `candidate`/fail-closed，RAG 不得因检索命中而放行它。

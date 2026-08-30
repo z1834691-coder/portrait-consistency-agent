@@ -24,6 +24,24 @@ Community Cloud 当成生产服务器，也不改变 RAG 只能提议、腾讯�
 
 Community Cloud 的构建会读取仓库的 `uv.lock`，并在仓库根目录执行 Streamlit。它的容器磁盘不是可靠的长期数据库：重启、休眠或重新部署可能丢失 `storage/` 和 `logs/`。因此受邀 Beta 阶段只把它当演示与短期测试入口，不在这里承诺半年主体锚点删除、运营长期留存或生产级审计。
 
+## 2026-08-30｜腾讯 Web License 精确域名现场核验
+
+当前 Cloud App 已由产品负责人创建，地址为：
+`https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`。
+对该地址发起只读 HTTP 探针得到 Streamlit 登录跳转（HTTP 303），说明应用存在且目前是 Private，不代表应用公开可访问。
+该 URL 的纯主机名为 63 字节，低于腾讯表单提示的 128 字节上限。
+
+腾讯 Web License 的 `Domain` 输入框要求**精准域名**，不是完整 URL。现场核验结果如下：
+
+- 错误格式：`https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app/`；表单的“确定”按钮保持禁用；
+- 正确格式：`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`；表单按钮立即变为可用；
+- 不要填写 `https://`、末尾 `/`、路径、查询参数、通配符或空格；小程序 Appid 留空；
+- 当前控制台已预填项目名 `portrait-consistency-demo` 和上述纯主机名，但尚未点击“确定”提交测试 License。
+
+腾讯官方资料说明 Web License 按固定域名绑定，且 Web 端测试 License 申请后有效 14 天、可续期一次至 28 天；Streamlit 官方资料说明 Community Cloud 应用可使用 6–63 字符自定义 `streamlit.app` 子域名。若纯主机名仍在提交阶段被服务端拒绝，问题就不是字节长度，而是供应商对第三方托管子域名/域名归属的服务端限制；此时不要购买正式套餐，先用自有域名反向代理或本机 `localhost` 做单独 License Spike，并重新核验 referer。
+
+官方依据：[腾讯 Web 端 License 计费与精准域名说明](https://cloud.tencent.com/document/product/616/86942)、[腾讯 Web 测试 License 说明](https://cloud.tencent.com/document/product/616/80189)、[腾讯 Web License 常见问题](https://cloud.tencent.com/document/product/1143/45381)、[Streamlit 应用 URL 设置](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app/app-settings)。
+
 ## Secrets 配置
 
 Community Cloud 的根级 Secrets 会以环境变量形式提供给应用。只在 Streamlit 的 **Advanced settings → Secrets** 粘贴你自己的值，不要把真实值发给 Codex，也不要提交 `.streamlit/secrets.toml` 或 `.env`。

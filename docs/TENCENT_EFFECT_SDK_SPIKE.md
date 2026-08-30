@@ -92,6 +92,6 @@ Adapter：[tencent_effect.py](../src/portrait_consistency_agent/services/tencent
 
 ## 10. 2026-08-30 控制台现场证据
 
-已在腾讯云视立方控制台打开 `Web 端 License` 管理页并进入“新建测试版 License”表单。当前页面显示：正式 License=0、测试 License=0；测试表单要求填写 `Project Name`，并至少绑定精确 `Domain` 或小程序 `AppId`。页面明确提示测试有效期 14 天、可续期 1 次、总计 28 天。该表单尚未提交，因此当前仍没有 License、SDK Token、真实静态图 receipt 或可执行 Adapter。
+已在腾讯云视立方控制台打开 `Web 端 License` 管理页并进入“新建测试版 License”表单。当前页面显示：正式 License=0、测试 License=0；测试表单要求填写 `Project Name`，并至少绑定精确 `Domain` 或小程序 `AppId`。页面明确提示测试有效期 14 天、可续期 1 次、总计 28 天。产品负责人已创建 Streamlit Private App，现场验证可填写的精准域名为 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`（不带 `https://`、路径或尾部斜杠）；该表单尚未提交，因此当前仍没有 License、SDK Token、真实静态图 receipt 或可执行 Adapter。
 
-这条现场证据把下一步缩小为：产品负责人先决定用于 Web Spike 的可绑定域名（本机 `127.0.0.1` 是否被控制台接受不能臆测；若不接受，需要一个受邀部署域名），再由本人提交免费测试 License。提交后仍要下载/接入对应 Web SDK，做单图 smoke，核验细项参数是否真的在 Web 表面可用；不能把“表单提交成功”当成图片能力通过。
+这条现场证据把下一步缩小为：产品负责人确认是否提交已预填的免费测试 License。若提交阶段仍拒绝该 `streamlit.app` 主机名，问题就不是 128 字节，而是供应商对第三方托管子域名/域名归属的服务端限制；此时不购买正式套餐，改评估自有域名反向代理或本机 `localhost` Spike。提交后仍要下载/接入对应 Web SDK，做单图 smoke，核验细项参数是否真的在 Web 表面可用；不能把“表单提交成功”当成图片能力通过。

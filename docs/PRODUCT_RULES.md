@@ -546,7 +546,7 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 
 ## 19. 2026-08-30 当前部署与 Provider 规则收口
 
-<span style="color:#C00000"><strong>部署规则。</strong> 为获得短期可分享演示 URL，代码包已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)，预定使用 Streamlit Community Cloud Private/受邀 Beta。Cloud App 必须由用户在控制台选择 `main/app.py`、配置 Secrets 并确认访问名单；URL 由控制台生成，仓库和代码不承诺某个自定义 slug 一定可用。仓库不包含 `.env`、照片/结果图、本机 SQLite/JSONL、模型缓存、隐藏答案和报告。</span>
+<span style="color:#C00000"><strong>部署规则。</strong> 为获得短期可分享演示 URL，代码包已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)，并已由产品负责人创建 Streamlit Community Cloud Private 应用：`https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`。只读探针返回 Streamlit 登录跳转，说明应用存在且仍为 Private；这不等于公网开放、真实照片授权或持久化服务。腾讯 Web License 表单现场验证要求填纯主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，不能带协议、路径、通配符或尾部斜杠；当前仅预填、未提交测试 License。仓库不包含 `.env`、照片/结果图、本机 SQLite/JSONL、模型缓存、隐藏答案和报告。</span>
 
 <span style="color:#C00000"><strong>火山候选规则。</strong> 火山美颜 API V2 已核对到官方“创点/购买支持后付费 API 套餐”的准入说明；公开资料未给出个人免费额度或按次 API 价格，公开 SDK 年包从 6 万元起且不是 V2 API 的报价。因此 V0 暂不购买、不配置 Key、不发送照片；保留 Card/Adapter shell 供未来候选评估。只有取得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才可另行申请进入 `reviewed_active`。腾讯 BeautifyPic 是当前唯一继续使用的已验证图片执行 Provider。</span>
 
