@@ -1,6 +1,6 @@
 """Versioned, JSON-safe contracts shared by every project module.
 
-Contract v0.2 implements the product rules frozen on 2026-08-27.  Contracts
+Contract v0.4 implements the product rules frozen on 2026-08-28.  Contracts
 carry facts and versioned policy snapshots; they never carry raw image bytes,
 secrets, signed URLs, hidden reasoning, or an uncalibrated consistency score.
 """
@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-CONTRACT_VERSION = "0.2"
+CONTRACT_VERSION = "0.4"
 
 SafeId = Annotated[
     str,
@@ -22,6 +22,17 @@ SafeId = Annotated[
         max_length=128,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
         description="Opaque identifier; never an image payload, path, or secret.",
+    ),
+]
+AuditedKnowledgeRef = Annotated[
+    str,
+    Field(
+        min_length=7,
+        max_length=384,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*#[A-Za-z0-9][A-Za-z0-9_-]*@[A-Za-z0-9._-]+$",
+        description=(
+            "Reviewed knowledge source/chunk/version reference; never a URL or raw content."
+        ),
     ),
 ]
 Sha256 = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
@@ -43,7 +54,7 @@ class ContractModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    contract_version: Literal["0.2"] = CONTRACT_VERSION
+    contract_version: Literal["0.4"] = CONTRACT_VERSION
 
 
 class EditableFeature(str, Enum):
@@ -99,6 +110,7 @@ class MeasurementUnit(str, Enum):
 class AnchorStatus(str, Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
+    DELETE_PENDING = "delete_pending"
     DELETED = "deleted"
 
 
@@ -324,6 +336,20 @@ class ComparisonTrend(str, Enum):
     UNVERIFIABLE = "unverifiable"
 
 
+class VerificationStrategy(str, Enum):
+    """A bounded way to gather post-edit evidence.
+
+    The enum is a strategy proposal vocabulary, not permission to make a
+    network call.  State/consent policy and the concrete adapter still decide
+    whether the proposed strategy can run.
+    """
+
+    LOCAL_GEOMETRY = "local_geometry"
+    EXTERNAL_SUBJECT_MATCH = "external_subject_match"
+    HYBRID = "hybrid"
+    MANUAL_VISUAL_REVIEW = "manual_visual_review"
+
+
 class VerificationDecision(str, Enum):
     STOP = "stop"
     REPLAN = "replan"
@@ -343,19 +369,90 @@ class StopReason(str, Enum):
     PROVIDER_FAILURE = "provider_failure"
     SAFETY_BLOCK = "safety_block"
     USER_CANCELLED = "user_cancelled"
+    USER_DISSATISFIED = "user_dissatisfied"
 
 
 class FeedbackStatus(str, Enum):
     ACCEPTED = "accepted"
     REJECTED = "rejected"
+    UNKNOWN = "unknown"
     NOT_PROVIDED = "not_provided"
 
 
 class FeedbackLabelSource(str, Enum):
     HUMAN_GOLD = "human_gold"
+    USER_EXPLICIT = "user_explicit"
     INTERACTION_WEAK = "interaction_weak"
     SYNTHETIC = "synthetic"
     NOT_APPLICABLE = "not_applicable"
+
+
+class FeedbackEvidenceStrength(str, Enum):
+    """How much a feedback signal can support a product inference."""
+
+    STRONG_INTENT = "strong_intent"
+    STRONG_FEEDBACK = "strong_feedback"
+    WEAK_BEHAVIOR = "weak_behavior"
+    UNKNOWN = "unknown"
+
+
+class FeedbackSignal(str, Enum):
+    """The observable signal, kept separate from satisfaction status."""
+
+    NONE = "none"
+    LIKE = "like"
+    DISLIKE = "dislike"
+    TEXT_COMMENT = "text_comment"
+    FOLLOW_UP_REQUEST = "follow_up_request"
+    FIRST_PROMPT = "first_prompt"
+    NEW_SESSION = "new_session"
+    SESSION_EXIT = "session_exit"
+    INACTIVITY = "inactivity"
+
+
+class ProductEventType(str, Enum):
+    """Redacted operational events that feed the future product dashboard."""
+
+    SESSION_STARTED = "session_started"
+    PROFILE_CREATED = "profile_created"
+    INTENT_SUBMITTED = "intent_submitted"
+    DIAGNOSIS_SHOWN = "diagnosis_shown"
+    PLAN_SHOWN = "plan_shown"
+    EXECUTION_CONFIRMED = "execution_confirmed"
+    PROVIDER_SUCCEEDED = "provider_succeeded"
+    VERIFICATION_COMPLETED = "verification_completed"
+    FEEDBACK_LIKED = "feedback_liked"
+    FEEDBACK_DISLIKED = "feedback_disliked"
+    USER_COMMENTED = "user_commented"
+    FOLLOW_UP_REQUESTED = "follow_up_requested"
+    REUPLOAD_REQUIRED = "reupload_required"
+    SESSION_EXITED = "session_exited"
+    INACTIVITY_TIMEOUT = "inactivity_timeout"
+    DATA_DELETION_REQUESTED = "data_deletion_requested"
+    DATA_DELETED = "data_deleted"
+
+
+class InteractionStage(str, Enum):
+    ONBOARDING = "onboarding"
+    PROFILE = "profile"
+    QUALITY_GATE = "quality_gate"
+    SUBJECT_GATE = "subject_gate"
+    DIAGNOSIS = "diagnosis"
+    PLAN = "plan"
+    CONFIRMATION = "confirmation"
+    EXECUTION = "execution"
+    VERIFICATION = "verification"
+    DATA_LIFECYCLE = "data_lifecycle"
+    UNKNOWN = "unknown"
+
+
+class InteractionOutcome(str, Enum):
+    """A path outcome, deliberately not a satisfaction label."""
+
+    UNKNOWN = "unknown"
+    CONTINUED = "continued"
+    COMPLETED = "completed"
+    PATH_ABANDONED = "path_abandoned"
 
 
 class NormalizedFeature(ContractModel):
@@ -378,16 +475,45 @@ class NormalizedFeature(ContractModel):
         return self
 
 
+class DataRetentionPolicySnapshot(ContractModel):
+    """The user-facing retention and deletion promise attached to an anchor."""
+
+    policy_id: SafeId
+    policy_version: str = Field(min_length=1, max_length=64)
+    anchor_retention_days: PositiveInt
+    reminder_days_before_expiry: list[PositiveInt] = Field(min_length=1, max_length=8)
+    primary_delete_sla_hours: PositiveInt
+    backup_delete_sla_days: PositiveInt
+
+    @model_validator(mode="after")
+    def validate_retention_policy(self) -> DataRetentionPolicySnapshot:
+        if len(self.reminder_days_before_expiry) != len(set(self.reminder_days_before_expiry)):
+            raise ValueError("expiry reminders must not contain duplicates")
+        if any(day >= self.anchor_retention_days for day in self.reminder_days_before_expiry):
+            raise ValueError("expiry reminders must occur before the retention deadline")
+        return self
+
+
 class SubjectAnchorMetadata(ContractModel):
-    """Metadata for an encrypted, separately consented six-month subject anchor."""
+    """Metadata for an encrypted, separately consented six-month subject anchor.
+
+    ``anchor_ref`` is an opaque reference to encrypted storage.  It never contains
+    an embedding, a key, a photo path, or a vendor face-library identifier.
+    """
 
     anchor_ref: SafeId | None = None
     consent_record_ref: SafeId
     status: AnchorStatus
     created_at: datetime
     expires_at: datetime | None = None
-    deleted_at: datetime | None = None
+    retention_policy: DataRetentionPolicySnapshot
     access_policy_version: str = Field(min_length=1, max_length=64)
+    deletion_requested_at: datetime | None = None
+    access_revoked_at: datetime | None = None
+    primary_delete_due_at: datetime | None = None
+    backup_delete_due_at: datetime | None = None
+    deleted_at: datetime | None = None
+    deletion_audit_ref: SafeId | None = None
 
     @model_validator(mode="after")
     def validate_anchor_lifecycle(self) -> SubjectAnchorMetadata:
@@ -396,8 +522,30 @@ class SubjectAnchorMetadata(ContractModel):
                 raise ValueError("active subject anchors require an opaque ref and expiry")
             if self.expires_at <= self.created_at:
                 raise ValueError("subject anchor expiry must be after creation")
-        if self.status == AnchorStatus.DELETED and self.deleted_at is None:
-            raise ValueError("deleted subject anchors require deleted_at")
+        if self.status == AnchorStatus.DELETE_PENDING:
+            required = (
+                self.deletion_requested_at,
+                self.access_revoked_at,
+                self.primary_delete_due_at,
+                self.backup_delete_due_at,
+            )
+            if any(value is None for value in required):
+                raise ValueError(
+                    "pending deletion requires request, access-revocation, and SLA deadlines"
+                )
+            assert self.deletion_requested_at is not None
+            assert self.access_revoked_at is not None
+            assert self.primary_delete_due_at is not None
+            assert self.backup_delete_due_at is not None
+            if self.access_revoked_at < self.deletion_requested_at:
+                raise ValueError("anchor access cannot be revoked before deletion is requested")
+            if self.primary_delete_due_at < self.deletion_requested_at:
+                raise ValueError("primary deletion due time must follow the request")
+            if self.backup_delete_due_at < self.primary_delete_due_at:
+                raise ValueError("backup deletion due time must not precede primary deletion")
+        if self.status == AnchorStatus.DELETED:
+            if self.deleted_at is None or self.deletion_audit_ref is None:
+                raise ValueError("deleted subject anchors require deletion evidence")
         return self
 
 
@@ -446,8 +594,14 @@ class ReferenceProfile(ContractModel):
         if len(codes) != len(set(codes)):
             raise ValueError("normalized_features must have unique feature_code values")
         if self.status == ProfileStatus.GEOMETRY_ONLY and self.subject_anchor is not None:
-            if self.subject_anchor.status == AnchorStatus.ACTIVE:
-                raise ValueError("geometry-only profiles cannot have an active subject anchor")
+            if self.subject_anchor.status in {
+                AnchorStatus.ACTIVE,
+                AnchorStatus.DELETE_PENDING,
+            }:
+                raise ValueError(
+                    "geometry-only profiles cannot retain an active or pending-deletion "
+                    "subject anchor"
+                )
         if self.updated_at < self.created_at:
             raise ValueError("updated_at cannot be earlier than created_at")
         return self
@@ -783,6 +937,7 @@ class EditPlan(ContractModel):
     provider_api_version: str = Field(min_length=1, max_length=64)
     provider_card_id: SafeId
     provider_card_version: str = Field(min_length=1, max_length=64)
+    knowledge_refs: list[AuditedKnowledgeRef] = Field(default_factory=list, max_length=16)
     baseline_feature_differences: list[FeatureDifference] = Field(default_factory=list)
     executable_changes: list[ExecutableChange] = Field(default_factory=list)
     suggestion_only_changes: list[SuggestionOnlyChange] = Field(default_factory=list)
@@ -805,6 +960,8 @@ class EditPlan(ContractModel):
         features = [change.feature for change in self.executable_changes]
         if len(features) != len(set(features)):
             raise ValueError("executable_changes cannot target the same feature twice")
+        if len(self.knowledge_refs) != len(set(self.knowledge_refs)):
+            raise ValueError("knowledge_refs must not contain duplicates")
         allowed = set(self.constraints_snapshot.allowed_features)
         blocked = set(self.constraints_snapshot.blocked_features)
         if any(feature not in allowed or feature in blocked for feature in features):
@@ -951,20 +1108,131 @@ class FeatureComparison(ContractModel):
         return self
 
 
+class VerificationStrategyProposal(ContractModel):
+    """A constrained strategy suggestion before any verification tool runs.
+
+    This is intentionally separate from :class:`VerificationResult`: a
+    proposal records what the Agent suggested, while the result records what
+    the verifier actually measured.  It never proves that an external tool was
+    called and it cannot grant permission by itself.
+    """
+
+    proposal_id: SafeId
+    selected_strategy: VerificationStrategy
+    allowed_strategies: list[VerificationStrategy] = Field(min_length=1, max_length=8)
+    reason_codes: list[str] = Field(min_length=1, max_length=8)
+    knowledge_refs: list[AuditedKnowledgeRef] = Field(default_factory=list, max_length=16)
+    data_outbound: bool = False
+    additional_consent_required: bool = False
+    selector_mode: Literal["deterministic_baseline_v0", "llm_proposed"] = (
+        "deterministic_baseline_v0"
+    )
+    selector_version: str = Field(min_length=1, max_length=64)
+    created_at: datetime = Field(default_factory=utc_now)
+
+    @model_validator(mode="after")
+    def validate_strategy_proposal(self) -> VerificationStrategyProposal:
+        if len(self.allowed_strategies) != len(set(self.allowed_strategies)):
+            raise ValueError("allowed_strategies must not contain duplicates")
+        if len(self.knowledge_refs) != len(set(self.knowledge_refs)):
+            raise ValueError("knowledge_refs must not contain duplicates")
+        if self.selected_strategy not in self.allowed_strategies:
+            raise ValueError("selected strategy must be inside the allowed strategy set")
+        outbound_strategy = self.selected_strategy in {
+            VerificationStrategy.EXTERNAL_SUBJECT_MATCH,
+            VerificationStrategy.HYBRID,
+        }
+        if outbound_strategy and not self.data_outbound:
+            raise ValueError("external or hybrid verification must declare data_outbound")
+        if self.data_outbound and not self.additional_consent_required:
+            raise ValueError("outbound verification requires additional consent")
+        if not outbound_strategy and self.data_outbound:
+            raise ValueError("local or manual verification cannot declare data_outbound")
+        return self
+
+
 class UserFeedback(ContractModel):
+    """A user-level feedback fact, separate from behavioral telemetry.
+
+    An explicit first prompt is strong evidence of intent, for example, but it
+    remains ``status=unknown`` because it says nothing about satisfaction.
+    """
+
     status: FeedbackStatus = FeedbackStatus.NOT_PROVIDED
     label_source: FeedbackLabelSource = FeedbackLabelSource.NOT_APPLICABLE
     explicit: bool = False
+    signal: FeedbackSignal = FeedbackSignal.NONE
+    evidence_strength: FeedbackEvidenceStrength = FeedbackEvidenceStrength.UNKNOWN
     reason_codes: list[str] = Field(default_factory=list, max_length=8)
     recorded_at: datetime | None = None
 
     @model_validator(mode="after")
     def validate_feedback(self) -> UserFeedback:
         if self.status in {FeedbackStatus.ACCEPTED, FeedbackStatus.REJECTED}:
-            if not self.explicit or self.label_source != FeedbackLabelSource.HUMAN_GOLD:
-                raise ValueError("accept/reject must be explicit human feedback")
+            if (
+                not self.explicit
+                or self.label_source
+                not in {FeedbackLabelSource.HUMAN_GOLD, FeedbackLabelSource.USER_EXPLICIT}
+                or self.evidence_strength != FeedbackEvidenceStrength.STRONG_FEEDBACK
+            ):
+                raise ValueError("accept/reject must be explicit strong human feedback")
         if self.label_source == FeedbackLabelSource.INTERACTION_WEAK and self.explicit:
             raise ValueError("interaction weak labels cannot be marked explicit")
+        if self.evidence_strength == FeedbackEvidenceStrength.WEAK_BEHAVIOR and self.explicit:
+            raise ValueError("weak behavioral evidence cannot be marked explicit")
+        if self.signal in {
+            FeedbackSignal.FIRST_PROMPT,
+            FeedbackSignal.NEW_SESSION,
+            FeedbackSignal.SESSION_EXIT,
+            FeedbackSignal.INACTIVITY,
+        } and self.status in {FeedbackStatus.ACCEPTED, FeedbackStatus.REJECTED}:
+            raise ValueError(
+                "intent, continuation, exit, and inactivity signals are not satisfaction labels"
+            )
+        if (
+            self.status == FeedbackStatus.NOT_PROVIDED
+            and self.label_source != FeedbackLabelSource.NOT_APPLICABLE
+        ):
+            raise ValueError("not-provided feedback cannot claim a label source")
+        return self
+
+
+class ProductEvent(ContractModel):
+    """Redacted event for operational analysis, retention, and the local dashboard.
+
+    This is deliberately not a seventh image-processing contract and not a
+    training dataset row. It records that a product event occurred without raw
+    text, face geometry, photos, embeddings, or provider request payloads.
+    """
+
+    event_id: SafeId
+    session_id: SafeId
+    anonymous_user_id: SafeId
+    event_type: ProductEventType
+    stage: InteractionStage
+    evidence_strength: FeedbackEvidenceStrength
+    outcome: InteractionOutcome = InteractionOutcome.UNKNOWN
+    related_contract_ref: SafeId | None = None
+    reason_codes: list[str] = Field(default_factory=list, max_length=8)
+    occurred_at: datetime = Field(default_factory=utc_now)
+
+    @model_validator(mode="after")
+    def validate_product_event(self) -> ProductEvent:
+        weak_events = {
+            ProductEventType.SESSION_EXITED,
+            ProductEventType.INACTIVITY_TIMEOUT,
+            ProductEventType.REUPLOAD_REQUIRED,
+        }
+        if (
+            self.event_type in weak_events
+            and self.evidence_strength == FeedbackEvidenceStrength.STRONG_FEEDBACK
+        ):
+            raise ValueError(
+                "exit, inactivity, and reupload events cannot be strong satisfaction feedback"
+            )
+        if self.event_type == ProductEventType.INTENT_SUBMITTED:
+            if self.evidence_strength != FeedbackEvidenceStrength.STRONG_INTENT:
+                raise ValueError("an intentionally submitted prompt must be strong intent evidence")
         return self
 
 
@@ -1006,6 +1274,19 @@ class VerificationResult(ContractModel):
     plan_id: SafeId
     plan_revision: PositiveInt
     provider_run_id: SafeId
+    verification_strategy: VerificationStrategy = VerificationStrategy.LOCAL_GEOMETRY
+    strategy_proposal_ref: SafeId | None = None
+    strategy_reason_codes: list[str] = Field(default_factory=list, max_length=8)
+    knowledge_refs: list[AuditedKnowledgeRef] = Field(default_factory=list, max_length=16)
+    data_outbound: bool = False
+    additional_consent_required: bool = False
+    verification_run_refs: list[SafeId] = Field(default_factory=list, max_length=8)
+    verification_artifact_refs: list[SafeId] = Field(default_factory=list, max_length=8)
+    plan_family_id: SafeId | None = None
+    previous_verification_id: SafeId | None = None
+    cumulative_improvement: bool = False
+    target_evidence_sufficient: bool = False
+    preserved_attributes_verified: bool = False
     feature_comparisons: list[FeatureComparison] = Field(default_factory=list)
     overall_trend: ComparisonTrend
     result_quality_flags: list[QualityFlag] = Field(default_factory=list)
@@ -1030,6 +1311,27 @@ class VerificationResult(ContractModel):
 
     @model_validator(mode="after")
     def validate_verification(self) -> VerificationResult:
+        outbound_strategy = self.verification_strategy in {
+            VerificationStrategy.EXTERNAL_SUBJECT_MATCH,
+            VerificationStrategy.HYBRID,
+        }
+        if outbound_strategy and not self.data_outbound:
+            raise ValueError("external or hybrid verification must declare data_outbound")
+        if self.data_outbound and not self.additional_consent_required:
+            raise ValueError("outbound verification requires additional consent")
+        if not outbound_strategy and self.data_outbound:
+            raise ValueError("local or manual verification cannot declare data_outbound")
+        if self.verification_run_refs and (
+            self.verification_strategy == VerificationStrategy.LOCAL_GEOMETRY
+        ):
+            raise ValueError("local verification cannot claim an external verification run")
+        if self.target_evidence_sufficient and self.overall_trend not in {
+            ComparisonTrend.IMPROVED,
+            ComparisonTrend.NO_CHANGE,
+        }:
+            raise ValueError(
+                "target evidence can be sufficient only when trend is improved or unchanged"
+            )
         if self.round_number > self.safety_policy.max_provider_rounds:
             raise ValueError("round_number exceeds the applied safety policy")
         policy_exhausted = (
@@ -1048,15 +1350,20 @@ class VerificationResult(ContractModel):
             if (
                 self.calibrated_acceptance is None
                 and self.user_feedback.status != FeedbackStatus.ACCEPTED
+                and not self.target_evidence_sufficient
             ):
                 raise ValueError(
-                    "goal_met requires calibrated evidence or explicit user acceptance"
+                    "goal_met requires calibrated evidence, explicit user acceptance, or "
+                    "structured target evidence"
                 )
         if (
             not self.result_artifact_available or self.prohibited_attribute_changed
-        ) and self.decision == VerificationDecision.STOP:
-            raise ValueError("missing/unsafe result artifacts cannot be accepted as STOP")
-        if self.overall_trend == ComparisonTrend.WORSENED:
+        ) and self.decision in {VerificationDecision.STOP, VerificationDecision.CLOSE}:
+            raise ValueError("missing/unsafe result artifacts cannot be accepted as STOP/CLOSE")
+        if self.overall_trend == ComparisonTrend.WORSENED and self.decision in {
+            VerificationDecision.STOP,
+            VerificationDecision.CLOSE,
+        }:
             if self.last_known_good_artifact_ref is None or self.rollback_reason is None:
                 raise ValueError("worsened results require a last-known-good fallback")
         if self.decision == VerificationDecision.MANUAL_REVIEW and self.manual_review is None:

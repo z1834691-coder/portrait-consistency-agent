@@ -37,6 +37,7 @@ def make_observation(photo_id: str, role: PhotoRole) -> PhotoObservation:
                 height=620,
                 eye_count=2,
                 eye_centers=((0.35, 0.42), (0.65, 0.43)),
+                eye_boxes=((0.28, 0.36, 0.12, 0.07), (0.60, 0.37, 0.12, 0.07)),
             ),
         ),
         selected_face_ref=f"{photo_id}_face_0",

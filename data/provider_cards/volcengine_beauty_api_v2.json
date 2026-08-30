@@ -1,0 +1,175 @@
+{
+  "card_id": "volcengine-beauty-api-v2",
+  "provider": "volcengine",
+  "operation": "beautify_image_v2",
+  "api_version": "v2.0_traditional_retouching_document_2026-05-15",
+  "card_version": "candidate_evidence_2026-08-30_v1",
+  "endpoint": {
+    "base_url": "https://kickart.volces.com",
+    "submit_path": "/openapi/ai_effect/submit",
+    "query_path": "/openapi/ai_effect/query",
+    "method": "POST",
+    "execution_mode": "asynchronous_submit_then_query",
+    "official_evidence_status": "documented_in_official_v2_page_and_its_official_sample;_not_live_smoke_verified"
+  },
+  "review_status": "candidate",
+  "reviewed_at": "2026-08-30",
+  "capability_summary": "The official V2 page documents a static-image URL workflow: submit one image task, then query for a result URL. It documents fixed-parameter groups for face reshaping, eye size, slim nose and teeth whitening. Product material also describes batch scenarios, but the V2 request document explicitly says one resource per task; this project must orchestrate a batch as multiple independently checked tasks, not claim a multi-image request.",
+  "parameters": {
+    "face_shape": {
+      "feature": "face_shape",
+      "status": "official_parameter_group_documented_pending_live_smoke",
+      "range": null,
+      "provider_parameter_group": "reshape",
+      "documented_parameters": [
+        { "key": "liuchanglian", "label": "流畅脸", "range": [0, 100] },
+        { "key": "xiahexian", "label": "下颌线", "range": [0, 100] },
+        { "key": "shuangxiaba", "label": "去双下巴", "range": [0, 100] },
+        { "key": "slimface_nature", "label": "瘦脸-自然脸", "range": [0, 100] },
+        { "key": "face_cutface", "label": "窄脸", "range": [-50, 50] },
+        { "key": "face_shrinkhead", "label": "小头", "range": [0, 100] },
+        { "key": "face_cheekbone", "label": "颧骨", "range": [-50, 50] },
+        { "key": "face_chin_v2", "label": "下巴长短", "range": [-50, 50] },
+        { "key": "face_forehead", "label": "发际线", "range": [-50, 50] }
+      ],
+      "provider_parameter": null,
+      "execution_note": "Documented request fields are candidate evidence only. Do not expose them as active runtime controls until an authorized live smoke validates their effect and returned artifact."
+    },
+    "eyes": {
+      "feature": "eye_size",
+      "status": "official_parameter_documented_pending_live_smoke",
+      "range": [-50, 50],
+      "provider_parameter": "eye",
+      "additional_documented_parameter": { "key": "eye_brighten", "label": "亮眼", "range": [0, 100] },
+      "does_not_verify": ["eye_distance", "eye_width", "eye_height", "eye_shape"],
+      "execution_note": "The V2 document proves an eye-size field, not the other eye sub-features listed here as unverified."
+    },
+    "nose": {
+      "feature": "slim_nose",
+      "status": "official_parameter_documented_pending_live_smoke",
+      "range": [-50, 50],
+      "provider_parameter": "nose",
+      "does_not_verify": ["nose_wing", "nose_height", "nose_length"],
+      "execution_note": "The official V2 label is 瘦鼻. It must not be generalized to every nose geometry operation."
+    },
+    "mouth": {
+      "feature": "teeth_whitening",
+      "status": "official_parameter_documented_pending_live_smoke",
+      "range": [0, 100],
+      "provider_parameter": "whiten_teeth",
+      "does_not_verify": ["mouth_shape", "mouth_size", "lip_thickness", "lip_shape"],
+      "execution_note": "The V2 document currently evidences teeth whitening only; it does not evidence mouth-shape or lip-thickness execution."
+    },
+    "eyebrow": {
+      "feature": "eyebrow",
+      "status": "not_documented_in_v2_static_api",
+      "range": null,
+      "provider_parameter": null
+    },
+    "ear": {
+      "feature": "ear",
+      "status": "not_documented_in_v2_static_api",
+      "range": null,
+      "provider_parameter": null
+    }
+  },
+  "input": {
+    "mode": "static_image_url",
+    "resource_list_field": "payload.resource_list",
+    "resource_per_task": 1,
+    "batch_mode": "multiple_async_single_image_tasks_only",
+    "formats": "pending_vendor_confirmation",
+    "max_image_size": "pending_vendor_confirmation",
+    "max_batch_size": null,
+    "image_outbound_required": true,
+    "target_face_selector": "not_documented_in_v2_static_api",
+    "required_extra": {
+      "beautyToolConfigKey": "beautyCustom_v1",
+      "custom_parameter_default_group": "required_when_using_custom_parameters"
+    },
+    "template_id": "245621002"
+  },
+  "output": {
+    "result_type": "query_response_data.payload.result_url_after_success",
+    "provider_task_identifier": "task_id",
+    "result_retention": "Official service terms say a completed media task result may be released/destroyed; no exact TTL is published for this V2 API.",
+    "input_retention": "pending_vendor_confirmation",
+    "required_receipt_fields": [
+      "provider_task_id",
+      "result_url_or_result_artifact_ref",
+      "result_artifact_sha256",
+      "submit_latency_ms",
+      "query_completion_latency_ms"
+    ]
+  },
+  "auth": {
+    "method": "Bearer_API_Key_for_this_V2_request_sample",
+    "header": "Authorization: Bearer <API_KEY>",
+    "secret_storage": "deployment_secrets_only",
+    "required_secret_names_after_product_freeze": ["VOLC_BEAUTY_API_KEY"],
+    "current_shell_secret_probe": "VOLC_BEAUTY_CREDENTIAL_REF",
+    "onboarding_credential_note": "The product overview separately mentions obtaining AK&SK through the console, while the V2 APIKey document and its sample use a Bearer API key. Treat the operation-specific Bearer API key as the candidate request contract; confirm the account/onboarding relationship with Volcengine before any live call.",
+    "allow_live_switch": "--allow-live plus a configured deployment secret and every admission gate"
+  },
+  "privacy": {
+    "data_outbound": true,
+    "outbound_mechanism": "A remote image URL is supplied in resource_list to Volcengine's asynchronous service.",
+    "service_license_territory": "China mainland under the currently cited intelligent-experience service terms unless otherwise agreed in writing.",
+    "data_processing_region": "pending_vendor_confirmation; service license territory is not proof of physical processing region.",
+    "provider_retention": "Input retention is not stated in the V2 API document. Task-result release/destruction is mentioned in service terms, but the exact TTL is not published.",
+    "provider_logging": "pending_vendor_confirmation",
+    "model_improvement_or_training": "The cited service terms contain limited anonymous service-improvement language, but do not establish a V2-specific no-training/no-retention guarantee. Treat as unverified for this product.",
+    "user_consent_scope": "A Tencent consent does not cover Volcengine. Obtain separate provider/outbound consent before any live image request; customer must have lawful rights and consent for uploaded material."
+  },
+  "cost": {
+    "unit": "创点 (official product overview); exact V2 per-image/public price not found",
+    "estimated_cny_per_image": null,
+    "estimated_cny_per_batch": null,
+    "budget_policy": "block when a verified estimate exceeds the current plan budget",
+    "currency_source": "Official overview says to purchase creator points through business/support; the SDK annual price table is a different product surface and must not be used as this API's unit price."
+  },
+  "latency": {
+    "p50_ms": null,
+    "p95_ms": null,
+    "measurement_status": "not_measured",
+    "official_sample_poll_interval_ms": 5000,
+    "official_sample_timeout_ms": 600000,
+    "note": "The sample's polling values are implementation examples, not an SLA or latency commitment."
+  },
+  "batch": {
+    "supported_claim": "The product overview names batch retouching scenarios, but the V2 interface document says each task supports only one resource_list image.",
+    "max_images_per_task": 1,
+    "max_concurrency": null,
+    "queue_policy": "pending_product_decision_after_verified_cost_concurrency_and_live_smoke",
+    "per_image_plan_required": true,
+    "same_parameter_reuse_allowed": false
+  },
+  "failure_policy": {
+    "default": "fail_closed",
+    "retry": "No automatic retry until provider error taxonomy, task polling, timeout and idempotency behavior are verified.",
+    "fallback": "manual_suggestion_or_existing_reviewed_baseline",
+    "result_validation": "Decode the returned artifact, verify target-face isolation/recomposition and run local verification before presenting the result as usable."
+  },
+  "admission": {
+    "ready_for_execution": false,
+    "required_gates": [
+      "official_api_schema_and_auth_confirmed_in_target_account",
+      "license_and_data_processing_region_confirmed",
+      "privacy_retention_logging_and_model_use_confirmed",
+      "cost_and_latency_budget_frozen",
+      "candidate_adapter_and_fake_tests",
+      "explicit_provider_outbound_consent",
+      "live_smoke_with_real_task_id_and_result_artifact",
+      "RAG_Gold_and_hidden_holdout_regression",
+      "product_owner_freeze"
+    ],
+    "rag_policy": "advice_only_until_all_gates_pass"
+  },
+  "source": {
+    "v2_interface_doc": "https://www.volcengine.com/docs/6705/2477693?lang=zh",
+    "official_v2_sample_code": "https://portal.volccdn.com/obj/volcfe/cloud-universal-doc/upload_602eefdc4c2ccc785188fb6b81fb4f25.py",
+    "product_overview": "https://www.volcengine.com/docs/6705/2441388",
+    "service_terms": "https://www.volcengine.com/docs/6705/1544700?lang=zh",
+    "source_status": "official_documentary_evidence_reviewed_2026-08-30; no target-account credential, billing screen, data-processing addendum, live request or result receipt reviewed"
+  }
+}

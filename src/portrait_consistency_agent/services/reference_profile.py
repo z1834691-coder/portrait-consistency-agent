@@ -75,7 +75,14 @@ def _provider_mappings() -> list[ProviderFeatureMapping]:
 def extract_normalized_features(
     observation: PhotoObservation,
 ) -> list[NormalizedFeature]:
-    """Extract V0 face-box/eye geometry without retaining raw coordinates."""
+    """Extract V0 face-box/eye geometry without retaining raw coordinates.
+
+    Eye area is intentionally measured only when the detector returns exactly
+    two eye boxes.  Eye-centre distance is not treated as eye size: if the
+    stricter measurement is unavailable, the profile carries an explicit
+    unavailable field so the planner can explain why it did not propose an
+    ``EyeEnlarging`` value.
+    """
 
     if observation.face_count != 1 or observation.largest_face is None:
         raise ReferenceProfileBuildError(
@@ -170,6 +177,32 @@ def extract_normalized_features(
                 ),
             ]
         )
+
+    eye_size_fields = (
+        ("eye_width_mean_face_ratio", MeasurementUnit.NORMALIZED_RATIO),
+        ("eye_height_mean_face_ratio", MeasurementUnit.NORMALIZED_RATIO),
+        ("eye_area_mean_face_ratio", MeasurementUnit.NORMALIZED_RATIO),
+    )
+    if len(face.eye_boxes) == 2:
+        mean_width = sum(box[2] for box in face.eye_boxes) / 2.0
+        mean_height = sum(box[3] for box in face.eye_boxes) / 2.0
+        mean_area = sum(box[2] * box[3] for box in face.eye_boxes) / 2.0
+        measured_values = (mean_width, mean_height, mean_area)
+        features.extend(
+            _measured(code, value, unit, face_confidence)
+            for (code, unit), value in zip(eye_size_fields, measured_values, strict=True)
+        )
+    else:
+        features.extend(
+            NormalizedFeature(
+                feature_code=code,
+                unit=unit,
+                status=MeasurementStatus.UNAVAILABLE,
+                value=None,
+                confidence=None,
+            )
+            for code, unit in eye_size_fields
+        )
     return features
 
 
@@ -237,7 +270,7 @@ def build_reference_profile(
         adjustment_mode=AdjustmentMode.BALANCED,
         provider_mappings=_provider_mappings(),
         subject_anchor=subject_anchor,
-        profile_schema_version="profile-v0.2",
+        profile_schema_version="profile-v0.3",
         extractor_version="opencv-haar-geometry-v0",
         canonicalization_version="canonical-v0",
         consent_policy_version="consent-v0",

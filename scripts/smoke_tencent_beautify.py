@@ -2,7 +2,9 @@
 
 Without --allow-live this script never reads an image or calls Tencent. With
 --allow-live it only uses a user-authorized local image and redacts all image
-payloads and credentials from its JSON output.
+payloads and credentials from its JSON output. It no longer writes a result to
+``storage/results``: current V0 policy keeps result bytes only in the live
+process that requested them.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from portrait_consistency_agent.core.contracts import (
     ProviderRunStatus,
     TencentBeautifyParams,
 )
+from portrait_consistency_agent.core.policies import build_v0_execution_policy
 from portrait_consistency_agent.core.settings import AppSettings
 from portrait_consistency_agent.services.tencent_beautify import (
     TencentBeautifyApiError,
@@ -137,17 +140,9 @@ def main() -> int:
                 request_id=response.request_id,
             )
         result_bytes = base64.b64decode(response.result_image_base64, validate=True)
-        results_dir = PROJECT_ROOT / "storage/results"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        extension = (
-            args.image.suffix.lower()
-            if args.image.suffix.lower() in SUPPORTED_EXTENSIONS
-            else ".jpg"
-        )
-        result_path = results_dir / f"{response.request_id}{extension}"
-        result_path.write_bytes(result_bytes)
         latency_ms = round((time.perf_counter() - started_clock) * 1000)
         completed_at = utc_now()
+        execution_policy = build_v0_execution_policy()
         provider_run = ProviderRun(
             run_id=run_id,
             trace_id=f"trace_{run_id.removeprefix('run_')}",
@@ -171,9 +166,12 @@ def main() -> int:
             consent_policy_version="cli-smoke-v1",
             status=ProviderRunStatus.SUCCEEDED,
             provider_request_id=response.request_id,
-            result_artifact_ref=str(result_path.relative_to(PROJECT_ROOT)),
+            result_artifact_ref=f"memory_only_smoke_{response.request_id}",
             result_artifact_sha256=hashlib.sha256(result_bytes).hexdigest(),
-            artifact_lifecycle=ArtifactLifecycle(expires_at=completed_at + timedelta(hours=24)),
+            artifact_lifecycle=ArtifactLifecycle(
+                expires_at=completed_at
+                + timedelta(minutes=execution_policy.result_memory_ttl_minutes)
+            ),
             network_latency_ms=latency_ms,
             total_latency_ms=latency_ms,
             started_at=started_at,

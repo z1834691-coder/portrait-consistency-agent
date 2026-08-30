@@ -20,7 +20,9 @@ from portrait_consistency_agent.core.contracts import (
     ErrorPhase,
     ExecutableChange,
     FeatureComparison,
+    FeedbackEvidenceStrength,
     FeedbackLabelSource,
+    FeedbackSignal,
     FeedbackStatus,
     IntentAction,
     IntentFrame,
@@ -57,6 +59,7 @@ from portrait_consistency_agent.core.contracts import (
     VerificationResult,
 )
 from portrait_consistency_agent.core.policies import (
+    build_v0_data_retention_policy,
     build_v0_quality_routing_policy,
     build_v0_safety_policy,
 )
@@ -109,9 +112,10 @@ def make_profile(**overrides: object) -> ReferenceProfile:
             status=AnchorStatus.ACTIVE,
             created_at=NOW,
             expires_at=NOW + timedelta(days=183),
+            retention_policy=build_v0_data_retention_policy(),
             access_policy_version="restricted-v1",
         ),
-        "profile_schema_version": "profile-v0.2",
+        "profile_schema_version": "profile-v0.3",
         "extractor_version": "extractor-v0",
         "canonicalization_version": "canonical-v0",
         "consent_policy_version": "consent-v0",
@@ -244,9 +248,9 @@ def make_provider_run(**overrides: object) -> ProviderRun:
         "consent_policy_version": "consent-v0",
         "status": ProviderRunStatus.SUCCEEDED,
         "provider_request_id": "request-001",
-        "result_artifact_ref": "storage/results/result_001.jpg",
+        "result_artifact_ref": "session_memory_result_001",
         "result_artifact_sha256": OTHER_SHA,
-        "artifact_lifecycle": ArtifactLifecycle(expires_at=NOW + timedelta(hours=24)),
+        "artifact_lifecycle": ArtifactLifecycle(expires_at=NOW + timedelta(minutes=10)),
         "started_at": NOW,
         "completed_at": NOW + timedelta(milliseconds=420),
         "network_latency_ms": 420,
@@ -281,8 +285,8 @@ def make_verification(**overrides: object) -> VerificationResult:
         "no_improvement_streak": 0,
         "safety_policy": build_v0_safety_policy(),
         "decision": VerificationDecision.REPLAN,
-        "result_artifact_ref": "storage/results/result_001.jpg",
-        "last_known_good_artifact_ref": "storage/results/result_001.jpg",
+        "result_artifact_ref": "session_memory_result_001",
+        "last_known_good_artifact_ref": "session_memory_result_001",
         "verifier_version": "verify-v0",
         "extractor_version": "extractor-v0",
         "threshold_policy_version": "threshold-v0",
@@ -304,6 +308,25 @@ def test_reference_profile_is_structured_and_contains_no_raw_photo_field() -> No
 def test_geometry_only_profile_cannot_keep_active_subject_anchor() -> None:
     with pytest.raises(ValidationError, match="geometry-only"):
         make_profile(status=ProfileStatus.GEOMETRY_ONLY)
+
+
+def test_geometry_only_profile_cannot_keep_anchor_pending_deletion() -> None:
+    pending_anchor = SubjectAnchorMetadata(
+        anchor_ref="anchor_001",
+        consent_record_ref="consent_001",
+        status=AnchorStatus.DELETE_PENDING,
+        created_at=NOW,
+        expires_at=NOW + timedelta(days=183),
+        retention_policy=build_v0_data_retention_policy(),
+        access_policy_version="restricted-v1",
+        deletion_requested_at=NOW + timedelta(days=1),
+        access_revoked_at=NOW + timedelta(days=1),
+        primary_delete_due_at=NOW + timedelta(days=2),
+        backup_delete_due_at=NOW + timedelta(days=9),
+    )
+
+    with pytest.raises(ValidationError, match="geometry-only"):
+        make_profile(status=ProfileStatus.GEOMETRY_ONLY, subject_anchor=pending_anchor)
 
 
 def test_quality_and_editability_use_most_restrictive_configured_route() -> None:
@@ -428,7 +451,7 @@ def test_high_confidence_execute_still_requires_bounded_confirmation() -> None:
 
 def test_tencent_parameters_are_explicit_and_never_exceed_provider_range() -> None:
     assert TencentBeautifyParams().model_dump() == {
-        "contract_version": "0.2",
+        "contract_version": "0.4",
         "face_lifting": 0,
         "eye_enlarging": 0,
         "whitening": 0,
@@ -543,6 +566,7 @@ def test_user_accepted_stop_requires_explicit_human_feedback() -> None:
         status=FeedbackStatus.ACCEPTED,
         label_source=FeedbackLabelSource.HUMAN_GOLD,
         explicit=True,
+        evidence_strength=FeedbackEvidenceStrength.STRONG_FEEDBACK,
         recorded_at=NOW,
     )
     result = make_verification(
@@ -551,6 +575,28 @@ def test_user_accepted_stop_requires_explicit_human_feedback() -> None:
         user_feedback=feedback,
     )
     assert result.user_feedback.explicit
+
+
+def test_feedback_keeps_intent_and_satisfaction_separate() -> None:
+    first_prompt = UserFeedback(
+        status=FeedbackStatus.UNKNOWN,
+        label_source=FeedbackLabelSource.USER_EXPLICIT,
+        explicit=True,
+        signal=FeedbackSignal.FIRST_PROMPT,
+        evidence_strength=FeedbackEvidenceStrength.STRONG_INTENT,
+        recorded_at=NOW,
+    )
+
+    assert first_prompt.status == FeedbackStatus.UNKNOWN
+    with pytest.raises(ValidationError, match="not satisfaction labels"):
+        UserFeedback(
+            status=FeedbackStatus.ACCEPTED,
+            label_source=FeedbackLabelSource.USER_EXPLICIT,
+            explicit=True,
+            signal=FeedbackSignal.FIRST_PROMPT,
+            evidence_strength=FeedbackEvidenceStrength.STRONG_FEEDBACK,
+            recorded_at=NOW,
+        )
 
 
 def test_manual_review_is_a_developer_queue_with_separate_photo_authorization() -> None:

@@ -2,11 +2,16 @@ import json
 import sqlite3
 
 from portrait_consistency_agent.core.contracts import (
+    FeedbackEvidenceStrength,
     IntentAction,
     IntentFrame,
     IntentGoal,
+    InteractionOutcome,
+    InteractionStage,
     OutputPreference,
     ParserMode,
+    ProductEvent,
+    ProductEventType,
     ReferenceSource,
     Route,
     TargetScope,
@@ -96,9 +101,19 @@ def test_store_persists_all_six_contracts_and_trace(tmp_path) -> None:
             "SELECT migration_id FROM schema_migrations WHERE migration_id = ?",
             ("contract_v0_2_tables",),
         ).fetchone()
+        analytics_migration = connection.execute(
+            "SELECT migration_id FROM schema_migrations WHERE migration_id = ?",
+            ("contract_v0_3_analytics_lifecycle",),
+        ).fetchone()
+        verification_migration = connection.execute(
+            "SELECT migration_id FROM schema_migrations WHERE migration_id = ?",
+            ("contract_v0_4_verification_observation",),
+        ).fetchone()
 
     assert all(count == 1 for count in counts.values())
     assert migration == ("contract_v0_2_tables",)
+    assert analytics_migration == ("contract_v0_3_analytics_lifecycle",)
+    assert verification_migration == ("contract_v0_4_verification_observation",)
     assert store.next_intent_turn(session.session_id) == 2
 
     event_types = {event["event_type"] for event in store.recent_events(session.session_id)}
@@ -143,7 +158,7 @@ def test_profile_replacement_deletes_old_feature_body_but_keeps_audit(tmp_path) 
     assert rows[0]["active"] == 0
     assert rows[0]["feature_body_deleted_at"] is not None
     assert old_payload == {
-        "contract_version": "0.2",
+        "contract_version": "0.4",
         "feature_body_deleted": True,
         "profile_id": "profile_001",
         "status": "superseded",
@@ -151,3 +166,31 @@ def test_profile_replacement_deletes_old_feature_body_but_keeps_audit(tmp_path) 
     }
     assert rows[1]["active"] == 1
     assert audit_count == 1
+
+
+def test_product_events_feed_a_redacted_dashboard_snapshot(tmp_path) -> None:
+    store = LocalTraceStore(tmp_path / "demo.sqlite3", tmp_path / "events.jsonl")
+    store.initialize()
+    first_session = store.create_session()
+    second_session = store.create_session(anonymous_user_id=first_session.anonymous_user_id)
+
+    store.record_product_event(
+        ProductEvent(
+            event_id="product_event_feedback_001",
+            session_id=second_session.session_id,
+            anonymous_user_id=first_session.anonymous_user_id,
+            event_type=ProductEventType.FEEDBACK_LIKED,
+            stage=InteractionStage.VERIFICATION,
+            evidence_strength=FeedbackEvidenceStrength.STRONG_FEEDBACK,
+            outcome=InteractionOutcome.COMPLETED,
+            reason_codes=["user_explicit_like"],
+        )
+    )
+    snapshot = store.dashboard_snapshot()
+
+    assert snapshot["total_sessions"] == 2
+    assert snapshot["explicit_feedback"] == 1
+    assert snapshot["wau"] == 1
+    rows = store.recent_product_events()
+    assert all("anonymous_user_id" not in row for row in rows)
+    assert any(row["event_type"] == "feedback_liked" for row in rows)

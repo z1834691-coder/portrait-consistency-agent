@@ -1,6 +1,6 @@
 # 产品规则与六合同审计
 
-> 版本：`v0.3-frozen`｜更新：2026-08-27（人工审计回合 4）
+> 版本：`v0.13-frozen`｜更新：2026-08-29（RAG P0-C 受限回接 8A / 8C 并同步）
 > 这份文档记录已经冻结的产品规则、仍需后续讨论的规则，以及这些规则对六个数据合同的影响。当前整体执行真相源见 [母版人像一致性Agent-执行版PRD.md](母版人像一致性Agent-执行版PRD.md)。
 
 ## 0. 本轮审计结论
@@ -17,9 +17,23 @@
 - 母版保存加密、可删除、受限访问的派生主体表示，保存期为半年；到期后提醒重新上传，或删除主体锚点、降级为只使用归一化几何特征；
 - 质量不足时先解释原因并让用户重新上传；批量模式中单张失败不阻塞其他照片，但要在处理前告知用户；
 - 多脸照片在满足质量条件时自动隔离背景、只编辑用户选择的单脸；无法安全隔离、回贴或复测时，说明具体原因并要求用户先裁剪为单脸后重新上传；
-- Demo 计划部署到可生成分享 URL 的 Streamlit 平台，仅允许受邀测试者进入，密钥放平台 Secrets；公网开放后置；
+- 受邀 Streamlit 部署仍是后续方向；具体平台、访问控制、区域、费用上限和是否购置服务器设备尚未决定，当前继续在本机开发；
 - `IntentFrame`、`EditPlan`、`ProviderRun`、`VerificationResult` 的耦合纠错及最后五项产品决定已经由用户确认；
-- 六合同已经升级为 Python `v0.2-frozen`，SQLite 已增加六类合同表和迁移标识，当前回归测试为 29 个通过。
+- 六合同及其生命周期/反馈语义已升级为 Python `v0.4-frozen`；SQLite 保留六类业务合同表，并新增匿名 `product_events` 运营账本和本地管理员 Dashboard；RAG P0-A/P0-B/P0-C 额外使用独立知识库/合同，不混入用户运行账本；全量测试通过数以本轮实际运行回执为准。
+- 用户意图、满意度和行为事件分开保存：首次 Prompt 是强意图，不是满意；点赞/点踩/明确评论是强反馈；退出和沉默默认未知，只有在明确上下文下标记为当前路径中止。
+- 当前会话同人门采用腾讯 CompareFace 3.0；`match/uncertain/no_match` 的临时路由独立于质量门。跨会话长期能力采用本地加密派生主体锚点，但真实特征提取模型许可、AES-GCM 存储、TTL/delete worker 仍待开发。
+- 内容安全采用本地预检 + 腾讯 IMS `ImageModeration`，`Review/Block` 保守拦截；服务开通后已得到真实 `Block` 回执，随后新授权照片又得到真实 `Pass`，说明 Adapter 的拒绝与允许路由都有证据。被拦截的照片仍不建档、不进入同人或修图；单次供应商结果不等于完整内容安全覆盖。
+- LLM 主模型冻结为 DeepSeek V4 Flash；检查点 7 已实现文本 `IntentFrame` Adapter、显式文字授权、Pydantic Schema 校验和本地模板 fallback，并完成一次固定文本的真实 live receipt；不自动转发到第二个云 Provider。
+- 检查点 8A 已冻结并实现：在通过质量/内容安全/当前会话同人门后，确定性规划器比较母版与目标的归一化几何，严格双眼测量满足条件时同时规划瘦脸/大眼；生成 `proposed`、必须确认的 `EditPlan`。
+- 检查点 8B 已冻结并实现：确认页不提供滑杆改原计划；实质改口必须重新规划并重新确认。一次确认绑定当前照片 hash、Profile 版本、计划参数和允许部位，10 分钟内只允许一次外部调用；结果只在当前浏览器会话内临时展示/由用户下载，不落 SQLite、JSONL、Trace 或结果目录；超时/网络错误也不自动重试。
+- <span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现：</strong>结果图可在内存中重新观察，`VerificationStrategyProposal` 在已审核/已授权策略集合中提出复测方案，`VerificationResult` 按目标特征输出趋势和 STOP/REPLAN/RESHOOT/MANUAL_REVIEW；`REPLAN` 会在证据、首次外部处理同意和计划族 scope 均满足时生成并自动执行子计划，不再逐轮等待参数点击。</span>
+- <span style="color:#C00000"><strong>8C 迭代与反馈规则已实现：</strong>初次确认授权有界计划族，最多三轮；每轮使用新的 `EditPlan`、独立 `ProviderRun` 与父子血缘，只有出现方向正确且可验证的累积改善才继续。点赞/点踩和文字评论会留下强反馈事件；点踩或文字评论关闭当前计划族，追问/新会话/下载为继续使用或行为证据，退出/沉默按上下文记录为未知。自动续跑不等于静默执行：每次都会写入策略、scope、hash、轮次、预算和调用结果 Trace。</span>
+- <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C 已实现的能力与边界：</strong>3 张人工审核 Provider Card 已导入独立 SQLite 知识库并拆成 10 条 `KnowledgeChunk`；每次查询先做生命周期/Provider/operation/region metadata 过滤，再做 FTS5，P0-B 追加本地 dense 召回、RRF 和 rerank，最终仍经过同一证据分类和过期/冲突/缺槽/注入安全降级。P0-C 已在 8A 计划前、8C 策略选择前消费这些证据，分为 direct/reference/conflict 并留下脱敏 Trace/Bad Case；页面只展示来源/版本/简短支持或降级理由。它不读照片/用户原话、不调用 LLM/Tencent/新 Provider、不生成参数或 ProviderRun；`execution_authorized=false`，因此不是 RAG 自动修图。</span>
+- <span style="color:#C00000"><strong>RAG 的冻结路由规则：</strong>无冲突时 direct evidence 可以作为已有确定性规划器/策略选择器的输入，reference 只辅助解释；硬冲突必须展示双方来源、阻断执行，用户/LLM 只能选人工复核、手动建议或停止；检索 miss、索引故障、缺关键槽或没有 direct evidence 时，RAG 分支立即返回“当前不知道”，记录脱敏 bad case，不能让 LLM 编造。既有、独立审核且普通 Gate 已通过的 baseline 才可原样保留，不能借 RAG 扩大能力。新 Provider 仍须 Card → Adapter → 权限/预算 → live smoke → Gold 回归 → 产品冻结，RAG 搜到资料不等于可执行。</span>
+- <span style="color:#C00000"><strong>数据闭环已确认：</strong>短期记录任务事实、首条 Prompt/追问/再开一轮、下载/重传、点赞/点踩/文字反馈、复测路由和上下文退出；长期聚合 Profile 建立率、首次成功修图率、7/30 日回访、WAU、MAU、会话完成率、失败后重传率和明确满意/不满意比例。它们进入匿名 `product_events` 和 Dashboard，用于迭代，不是训练 Dataset；退出/沉默没有上下文证据时只能是 `unknown`。</span>
+- <span style="color:#C00000"><strong>数据出境与权限已确认：</strong>DeepSeek 只收脱敏最小必要文本和结构化上下文，不接收照片、Base64、向量、主体锚点、密钥或原始 Trace；失败先走本地模板，不自动转发第二个云 Provider，OpenRouter/跨境默认关闭。处理本次照片、发送给外部 Provider、保存主体锚点半年、允许公开演示分别取得同意；仅本人单人照片默认放行，未成年人拒绝，多人须确认所有人授权；IMS `Review/Block` 保守拦截。ZDR 必须以供应商当前合同/配置核验，不能仅凭文案假定。</span>
+
+- <span style="color:#C00000"><strong>RAG 状态同步（本条优先于早期“未实现”描述）：</strong>执行知识只来自官方资料和项目人工审核内容，过期/撤回/硬冲突知识不得放行；P0-A/P0-B 已实现本地 SQLite、结构化 query、metadata/FTS、本地 dense/RRF/rerank、完整 Trace、Gold Set 对应的定向安全案例和用户依据卡；P0-C 已把受限 evidence 回接运行链，另有只读本机 RAG Dashboard 显示脱敏知识/路由/bad-case 聚合。8A 的参数仍由确定性 `mapping_policy` 生成，8C 的外部白名单仍由 Policy 管，RAG 不能授权。当前没有自动 RAG worker、新 Provider 或新的自动 external/hybrid 执行。</span>
 
 ## 1. 产品结果：不展示指数，但要有可验证的判断机制
 
@@ -76,7 +90,7 @@
 
 ### 1.3 对当前合同的直接影响
 
-原 `v0.1 VerificationResult` 中的 `before_index`、`after_index`、`index_delta` 是旧设计遗留，不再是产品真相。`v0.2` 已改为保存：
+原 `v0.1 VerificationResult` 中的 `before_index`、`after_index`、`index_delta` 是旧设计遗留，不再是产品真相。合同 `v0.4` 保存：
 
 - 修前/修后各特征差异；
 - 质量和同一人物门控结果；
@@ -103,7 +117,74 @@
 - 未来的眼距、嘴型、唇厚、鼻翼等参数可以保留在产品合同中；当某个外部工具能力卡确认支持后，可接入对应 Adapter；当前腾讯 Adapter 不支持的参数不得假装已执行，应转为“手动建议”或等待后续工具；
 - 外部工具只负责执行，不负责定义母版、不负责评估人类接受概率。
 
-## 3. `ReferenceProfile`：母版档案规则
+## 3. 检查点 8A：局部差异诊断与 EditPlan 规则
+
+8A 的目标是把已通过门控的母版和目标照，转换成一份可解释、可审计、等待确认的修图计划；它不执行图片编辑，也不展示总分或接受概率。
+
+### 3.1 可测量字段与方向
+
+- `face_width_height_ratio`：目标照相对母版更宽时，才可候选映射到腾讯 `FaceLifting`；目标照更窄时不伪造反向参数；
+- `eye_area_mean_face_ratio`：仅当视觉模块恰好得到两只眼框时才是 `measured`；目标眼睛面积占脸比例更小时，才可候选映射到 `EyeEnlarging`；
+- 眼距、脸在画面中的大小/中心/边缘余量可作为诊断事实，但不能直接当作大眼或瘦脸参数；
+- 局部差异百分比是归一化几何测量，不是母版相似度、接受概率或质量评分。
+
+### 3.2 规划与降级
+
+`mapping_policy_v0.1` 是版本化的确定性映射：差异 `≤4%` 视为容差内；`4%—12%` 进入规划区；超过 `12%` 不继续无限叠加。差异百分比不等于腾讯滑杆值，规划器先检查方向、可测量性和用户允许范围，再生成用户可读的 `+n` 与腾讯绝对值。调整模式 `preserve_original / balanced / consistency_first` 的自动强度上限暂定为 `8 / 15 / 22`；每份 `EditPlan` 保存策略版本、输入差异、原因码和降级原因。这些数字是可回归的产品基线，不是经过人工金标准校准的概率模型。
+
+以下任一条件成立时，不生成对应可执行参数：特征不可测量、测量置信度低于规划下限、Provider 无法朝目标方向调整、用户禁止该部位、质量/安全/同人门未通过。系统必须解释具体原因，并降级为重拍、手动建议或暂不处理。
+
+### 3.3 计划合同与确认
+
+规划器读取 `ReferenceProfile`、`PhotoQualityResult`、`IntentFrame` 和审核过的 Provider Card；P0-C 现已在规划器前受限消费 P0-A/P0-B 的带版本 evidence。它只提供 direct/reference/conflict 证据，确定性规划器仍输出逐特征 `FeatureDifference` 与不可变 `EditPlan`；冲突、未知或仅手动建议会阻断计划。计划记录用户层 `+n`、Provider 绝对值、原因码、策略版本、风险和直接证据引用；当前 Provider 的参数全部显式发送，美白/磨皮仍默认关闭。首次执行计划状态为 `proposed`，`requires_confirmation=true`，必须取得一次有界外部处理同意；计划族内的后续子计划沿用有效 scope，不再逐轮要求用户点击。
+
+### 3.4 当前实现边界
+
+<span style="color:#C00000"><strong>RAG 同步边界。</strong> 本节前文“RAG 细则未冻结/尚未实现检索器”是历史描述；P0-A/P0-B 已有真实本地检索器、安全 Trace、本地语义召回和重排，P0-C 已把其输出受限接入 `edit_planner.py`。因此可以称“有治理的 RAG evidence 参与规划”，但不能声称 RAG 自动修图、自动新增 Provider 或自由 Agent。</span>
+
+代码位于 `services/edit_planner.py`，页面通过“生成差异诊断与计划草案”展示归一化值、局部差异、是否可进入计划和脱敏 Trace。它不接受图片字节、不让 LLM 计算视觉事实、不调用腾讯编辑 API；修后 `VerificationResult` 由 8C-1 的 `services/verification.py` 负责，重新规划属于 8C-2。
+
+## 3B. 检查点 8B：用户确认、单次执行与事实回执规则
+
+### 3B.1 确认不是可编辑滑杆，也不是 LLM 说“可以”
+
+用户在确认页只能看清“改什么、为什么、会调用哪个工具、结果如何留存”，不能拖动滑杆修改当前方案。若用户自然语言改口，例如“少瘦一点”“别动眼睛”“这次只要参数”，系统必须生成新的 `IntentFrame` 和新的不可变 `EditPlan`；旧计划/确认失效，用户再确认。LLM 可以理解改口、解释方案，但不能生成确认 token、放行工具或私自改变腾讯参数。
+
+### 3B.2 有界确认与一次执行
+
+确认作用域必须同时绑定当前 `photo_sha256`、Profile 版本、可执行部位、Provider 参数、Safety Policy 和过期时间。V0 确认有效期为 10 分钟；过期、更换照片/母版、质量/安全/同人 Gate 改变、计划被 supersede 或重复执行时，不调用腾讯。`max_provider_rounds=3` 是计划族的配置上限；8B 的首个计划仍只允许一次付费图片编辑调用，8C 后续子计划可在首次确认 scope 未变且 preflight 通过时自动调用一次，不能在同一计划内重试。
+
+### 3B.3 结果、失败与隐私
+
+腾讯结果图只存在当前 Streamlit 浏览器会话的内存，用户可主动下载；页面结束、进程重启或最多 10 分钟后不再可取。结果展示区每 30 秒自检一次过期时间并清除会话内 bytes，避免把 TTL 只写在文档里。SQLite、JSONL、Trace 和项目目录只保存脱敏 `ProviderRun` 事实：参数投影、RequestId、耗时、错误分类、哈希和不透明的 `session_memory` 结果引用，绝不保存结果 Base64、原图、密钥或签名 URL。网络/超时/限频/5xx 也不自动重试，系统只解释真实错误；用户愿意再次尝试时必须重新确认，产生新的计划/回执链。
+
+### 3B.4 当前实现与不可夸写边界
+
+`services/execution.py` 在确认按钮之后做确定性 Gate 校验、局部幂等拦截、一次 Tencent Adapter 调用和 ProviderRun 存储；`app.py` 只把结果字节保留在 `st.session_state`。8C-2 对子计划额外核验父 Run、上一轮 VerificationResult、结果 hash、确认 scope 和 iteration，且把上一轮结果图而非原始上传图写为本轮 input artifact。离线 fixture 测试覆盖成功、过期、换图、超时、取消、重复点击、子计划血缘和硬停止；当前仍没有新的 UI 真实照片三轮回执，不能据此宣称腾讯图片一定更像母版。本地幂等键只能阻止已保存回执后的重复点击，不是断电、并发多实例或供应商侧的 exactly-once 承诺。
+
+## 3C. 检查点 8C：修后验证、计划族续跑与反馈（8C-1/8C-2 已实现）
+
+### 3C.1 验证不是固定的“本地复测一次”
+
+8C 以用户最终目标和当前 `EditPlan` 为验证范围。每个标记为 `executable` 且有可靠测量的目标特征，都必须有修前/修后证据；暂不支持、不可测或只有手动建议的特征，必须明确标记 `unverifiable/suggestion_only`，不能被默认为完成。CompareFace 只补充同一人物证据，IMS 只补充内容安全证据，二者不能替代五官/脸型几何复测。
+
+### 3C.2 `VERIFICATION_STRATEGY_SELECT` 的职责分工
+
+Agent 根据修后结构化证据和审核知识检索结果，在允许集合中提出 `local_geometry`、`external_subject_match`、`hybrid` 或 `manual_visual_review` 等策略，并说明原因；状态机负责当前状态和工具白名单；权限策略负责首次外部处理同意、出站范围、成本和轮次；Adapter 负责真实调用。若当前 scope 已覆盖所选工具和用途，Agent 可直接触发调用，不再弹出逐次确认；scope 不覆盖时必须停下请求授权。8C 首个切片用 `deterministic_baseline_v0` 提议本地几何或人工复核，已经写入 `VerificationStrategyProposal`；P0-C 现可为提议层提供 direct/reference/conflict evidence，但不能替换白名单、安装/调用未知工具或扩大权限。<span style="color:#C00000"><strong>这里“scope 内可直接调用”仅指已经实现、已验证 Adapter 的当前确定性计划族续跑；RAG 新提出的 external/hybrid 复测在 P0-C 中只能提议/留证，仍以 `RAG_DECISION_GATE.md` 第 21 节为准，当前不能默认放行。</strong></span>RAG 只提供工具能力/限制/失败规则的证据，不直接计算脸部差异或参数。
+
+### 3C.3 三轮计划族与停止
+
+初次确认授权照片、允许部位、预算和最多三轮的有界计划族。8C-2 已把 `REPLAN` 具体化：只有上一轮 `ProviderRun` 成功、`VerificationResult=REPLAN + improved + cumulative_improvement=true`、目标证据尚不足、结果图 hash 与回执一致、没有质量标记/明确不满意，且确认 scope/Profile/期限/轮次仍有效时，才生成并自动执行新的子 `EditPlan`。子计划有新 `plan_id`、`parent_plan_id`、本轮结果图 hash；下一条 `ProviderRun` 有 `parent_run_id` 和上一结果引用，不能重试原计划。腾讯参数是新输入图上的单次 2—6 保守值，不与上一轮数值相加。用户不需要看参数或逐轮点击，但系统必须写入自动续跑原因、策略/同意引用、preflight、真实回执和失败路由 Trace。达到目标、无改善、变差、无法判断、达到三轮上限、同意/范围失效或用户明确不满意时停止。这里的“Agent 判断达到目标”必须由结构化 `VerificationResult` 和版本化停止策略支撑，不能只凭 LLM 文本。
+
+### 3C.4 反馈事件
+
+结果页提供点赞、点踩和可选文字评论：点赞/点踩是强满意度标签，文字评论是强反馈事件但 V0 不自动把原话当作执行命令；只保存文字 hash。当前实现中，点赞、点踩或文字评论均关闭当前计划族，点踩为硬停止；用户想改变方向需回到 IntentFrame 说明新目标并重新确认。追问、新一轮会话和下载记录为继续使用/行为证据，不等于满意；退出和沉默按上下文记录为未知，不能直接判为不满意。长期留存、WAU、MAU继续进入匿名运营账本，只用于产品迭代，不直接成为训练真值或线上 KPI。
+
+### 3C.5 已实现边界与仍未实现项
+
+当前实现的 `measurement_tolerance=0.01`、`target_gap_tolerance=0.04` 和后续单次 `2—6` 强度是可配置、可替换的工程基线，不是校准概率、真实人脸变化百分比或醒图滑杆换算。若结果不可解码，或必验特征没有可靠修后测量，系统走 `RESHOOT/INPUT_NOT_COMPARABLE`；若特征变差且有上一张已知良好结果仍在会话内存，页面展示回退预览而不重调腾讯；没有回退证据则走 `MANUAL_REVIEW`，不编造回滚成功。`preserved_attributes_verified=false` 明确表示妆面、肤色、背景等保持项尚未自动验证。当前选择器记录 `deterministic_baseline_v0`；P0-C 只能提供策略相关 evidence，不能开放 external/hybrid、LLM 自由策略或真实 UI 三轮照片回执。
+
+## 4. `ReferenceProfile`：母版档案规则
 
 ### 3.1 已确认的生命周期
 
@@ -152,7 +233,7 @@
 - 原始关键点数组、可直接还原的图像数据；
 - 未经明确同意长期保存的完整人脸 embedding；即使同意，也只能以加密、可删除、受限访问的派生主体表示保存。
 
-### 3.3 一个必须补充决策的冲突：长期母版与“完全不保存照片信息”
+### 3.3 已冻结的冲突解决：长期母版与“不保存原图”
 
 用户希望长期使用母版，同时要求不保存照片信息，并希望之后确认目标照片与母版是否为同一个人。这三点存在技术冲突：删除原图后，系统仍需要某种可比较的主体锚点。
 
@@ -165,7 +246,7 @@
 3. 用户不重新上传/不同意时，删除旧主体锚点，只保留归一化几何特征，系统降级为“几何一致性参考”，并明确告知同一人物确认能力变弱；
 4. 到期删除失败必须进入异常队列并告警，不能静默继续长期保存。
 
-仍需后续补充的不是方案选择，而是：同意文案、提醒时机、删除证明、访问审计和用户撤回同意后的即时处理。
+已冻结的用户告知与处理规则是：建立长期锚点前，分别取得“处理当前照片”“保存主体锚点 6 个月”“允许公开演示”的同意；三项不能混在一个勾选项里。到期前 30 天和 7 天提醒；用户撤回后立即撤销访问，主存储在 24 小时内删除、备份在 7 天内清理，保留脱敏删除审计事件。当前合同已能记录这些策略和截止时间；真实 AES-GCM 加密、提醒/删除 worker、访问审计页面尚未实现。
 
 ### 3.4 母版上传页面规则
 
@@ -291,47 +372,44 @@
 - 给出“拒绝/请更换照片”的可理解说明；
 - 记录脱敏的风险类别和处理结果，便于 bad case 归因。
 
-## 6. 合同 `v0.2-frozen` 已落实的升级
+## 6. 合同 `v0.4-frozen` 已落实的升级
 
-代码中的 `contracts.py` 已按 [CONTRACTS.md](CONTRACTS.md) 升级为 `v0.2-frozen`：
+代码中的 `contracts.py` 已按 [CONTRACTS.md](CONTRACTS.md) 升级为 `v0.4-frozen`：
 
 - `ReferenceProfile`：已加入 Profile 状态、特征级置信度/可用性、能力映射和同一人物锚点元数据；SQLite 已实现新版本成功后旧特征正文 tombstone；
 - `PhotoQualityResult`：已加入同一人物门控、质量置信度、可执行性置信度、多脸选择/隔离状态和最严格路由；
 - `IntentFrame`：动态澄清，拆分用户意图、状态机和工具名；补充对象范围、保留项、字段来源、逐槽位置信和确认作用域；
 - `EditPlan`：已取消部位数量硬上限和 `expected_index_gain`；Provider 绝对参数仍严格为 0—100，不支持项可标为 suggestion-only；
 - `ProviderRun`：增加尝试次数、能力卡版本、确认范围、参数投影、重试/超时/成本、错误分类和结果 TTL；
-- `VerificationResult`：已移除旧指数，改为逐特征修前/修后实测、总体趋势、显式用户反馈和 STOP/REPLAN/RESHOOT/MANUAL_REVIEW 决策。
+- `VerificationResult`：已移除旧指数，改为逐特征修前/修后实测、总体趋势、策略提议引用、出站/同意事实、计划族引用、显式用户反馈和 STOP/REPLAN/RESHOOT/MANUAL_REVIEW 决策；`target_evidence_sufficient` 只表示结构化差异满足当前策略，不是概率。
+- `VerificationStrategyProposal`：记录允许策略集合、选中策略、原因码和是否需要额外出站同意；当前实现是确定性 baseline，不代表已经启用 LLM/RAG 路由。
+- 运营账本：新增匿名 `ProductEvent`、匿名用户 ID、强意图/强反馈/弱行为/未知四类证据强度与本地 Dashboard；它不是第七个图片处理合同，也不是训练 Dataset。
+- 主体锚点：新增 183 天保留、30/7 天提醒、撤回后 24 小时主存储删除/7 天备份清理的 Policy 快照和 `delete_pending/deleted` 审计字段；实际加密与删除任务仍待实现。
 
-完整 Prompt 已整理在 [AGENT_PROMPTS.md](AGENT_PROMPTS.md)，但仍只是待接入规格；合同字段存在不代表 LLM、视觉或状态机已经实现。
+完整 Prompt 已整理在 [AGENT_PROMPTS.md](AGENT_PROMPTS.md)。其中 IntentFrame 的文本解析、检查点 8A 的规划边界、8C-1 的结果解释边界，以及 8C-2 的计划族允许条件已接入。当前仍未接入 LLM/RAG 动态策略、完整多轮澄清和 Bad Case 自动归因；合同字段存在不代表完整 Agent 状态机已经实现。
 
-<span style="color:#C00000"><strong>检查点 6 的实际实现：</strong>新增 `photo_quality.py`（Pillow 安全解码 + OpenCV Haar 人脸/眼睛检测、清晰度/曝光/脸框尺寸指标）、`tencent_subject.py`（IAI `CompareFace` 3.0 当前会话同人 Adapter）、`tencent_safety.py`（IMS `ImageModeration` 安全 Adapter）、`reference_profile.py`（V0 归一化脸框/眼睛几何 Profile 构建）和 `checkpoint6.py`（三者的确定性组合服务）。这些模块只在内存处理原图，SQLite 只保存合同脱敏投影。CompareFace 已在 IAI 服务开通、CAM 最小权限补齐后完成一次真实同图 smoke，返回原始分 100；该分数不作为 V0 用户分数。ImageModeration 尚未 live 验证。</strong></span>
+<span style="color:#C00000"><strong>检查点 6 的实际实现：</strong>新增 `photo_quality.py`（Pillow 安全解码 + OpenCV Haar 人脸/眼睛检测、清晰度/曝光/脸框尺寸指标）、`tencent_subject.py`（IAI `CompareFace` 3.0 当前会话同人 Adapter）、`tencent_safety.py`（IMS `ImageModeration` 安全 Adapter）、`reference_profile.py`（V0 归一化脸框/眼睛几何 Profile 构建）和 `checkpoint6.py`（三者的确定性组合服务）。这些模块只在内存处理原图，SQLite 只保存合同脱敏投影。CompareFace 已完成一次真实同图 smoke，返回原始分 100；该分数不作为 V0 用户分数。IMS 服务开通后的第四次 `ImageModeration` smoke 返回 `Block`（RequestId `21bf408d-929a-46ec-83aa-78f071eff556`），另一张明确授权照片的第五次 smoke 返回 `Pass`（RequestId `211483d5-4ee0-41e8-b5d5-156f81557a69`）。这证明两条样例路由和 Adapter 证据链真实可用；`Block` 样本仍被拦截，`Pass` 样本也不代表完整内容安全覆盖。</strong></span>
 
-## 7. 仍需用户决定的事项
+<span style="color:#C00000"><strong>检查点 7 的实际实现：</strong>`agent/intent_adapter.py` 只把用户文字和最小化结构化上下文送入 DeepSeek；页面必须先获得“发送本轮脱敏文字”的明确勾选，本机无 Key、未勾选、网络/HTTP/JSON/Schema 失败时均回退到本地 `template_keyword_baseline`。模型不能写入 ID、确认引用、模型版本或工具回执；`action=execute` 只由系统生成待确认作用域，并不执行修图。Trace 只写解析路径、模型/Prompt、耗时、token（可得时）、fallback 原因和脱敏类别，绝不写原话或模型隐藏思维链。9 条离线 Adapter 测试、默认不联网 smoke 和固定无个人信息的真实 smoke 均已通过；当前最新全量回归数字以本轮 8C-2 验证证据为准。</strong></span>
 
-| 优先级 | 决策 | 为什么不能由工程默认替代 |
+<span style="color:#C00000"><strong>检查点 8A 的实际实现：</strong>新增 `services/edit_planner.py` 与 `scripts/smoke_edit_planner.py`。规划器只读取已通过门控的 Profile/PhotoQualityResult/IntentFrame/Provider Card，不接收图片字节、不调用 LLM 计算视觉数值、不调用 BeautifyPic。它严格使用双眼框计算 `eye_area_mean_face_ratio`，用版本化 `mapping_policy_v0.1` 将可达差异映射为 FaceLifting/EyeEnlarging 的保守绝对值；不可测量、方向不可达、测量置信不足或用户禁改时转为 suggestion-only。计划状态固定为 `proposed` 且需要有界确认，美白/磨皮显式为 0。5 个规划器案例、离线完整 Trace 和页面展示已通过。</strong></span>
+
+<span style="color:#C00000"><strong>检查点 8B 的实际实现：</strong>新增 `services/execution.py` 与 `scripts/smoke_execution_8b.py`。页面只有在用户勾选“将当前照片发送给腾讯云 BeautifyPic”并点击确认后，才生成一份由系统而非 LLM 产生的 `user_structured_input` 执行意图和新的 `confirmed` 计划 revision；执行器逐项检查确认期限、照片 hash、Profile、质量/内容安全/同人 Gate、计划状态和本地幂等键，再且只再调用一次 Adapter。成功/失败均由 Adapter 写入真实 ProviderRun 事实，结果字节仅保存在浏览器会话内存；6 个离线案例和 fixture Trace 已通过。</strong></span>
+
+<span style="color:#C00000"><strong>检查点 8C-1/8C-2 的实际实现：</strong>新增 `services/verification.py`、`services/plan_family.py`、`scripts/smoke_verification_8c.py`、`scripts/smoke_plan_family_8c2.py` 和 `CHECKPOINT_8C_VERIFICATION_GATE.md`。8C 在内存中解码/重新提取腾讯结果图，按当前 EditPlan 的 executable 特征生成逐项 `FeatureComparison`，使用版本化 tolerance 路由到 `CLOSE/REPLAN/STOP/RESHOOT/MANUAL_REVIEW`；当且仅当 `REPLAN + improved + cumulative_improvement` 等证据和原确认范围同时成立，才生成新的不可变子计划。子计划以父 plan/run、上一结果图 hash 和新的单次参数相连；首次外部处理同意的 scope 仍覆盖照片、用途、Provider、预算和轮次时，页面写入自动 preflight 后直接把上一结果图作为下一次腾讯输入，不逐轮要求用户点击；scope 改变则先停止并重新授权。点赞、点踩和文字评论记录强反馈，且关闭当前计划族；文字仅保留 hash。结果图不写数据库；Trace 只写脱敏合同事实和 `result_bytes_persisted=false`。6 条 8C-1 加 6 条 8C-2 服务/落账测试和两条 fixture smoke 已通过。当前仍没有真实 UI 三轮修图回执，不能把 fixture 结果写成线上成功。</strong></span>
+
+## 7. 已冻结边界与以后才需要的决定
+
+| 时间 | 事项 | 当前状态与原因 |
 |---|---|---|
-| P0 | 是否允许保存派生主体锚点 | 已确认：加密、可删除、受限访问，保存半年；到期提醒并可降级为几何特征 |
-| P0 | “可接受”的人工标注标准 | 已确认采用人工金标准 + 交互弱标签 + 合成数据三类分层；具体标注问法仍需共同设计 |
-| P0 | V0 是否显示任何接受概率，还是只显示定性结论 | 已确认：V0 不显示任何接受概率 |
-| P0 | 多脸选择后的裁剪/编辑方式 | 已确认：用户选脸后自动隔离背景和其他人脸，只编辑该单脸；链路待实现 |
-| P0 | 质量置信度的边界是否按 `≤0.50 / <0.80 / ≥0.80` 执行 | 已确认：只用于 quality/editability 并取最严格路由；subject match 独立判定 |
-| P1 | 母版结构化字段的最终粒度 | 已确认先尽量具体，保存归一化五官/脸型字段、特征置信度和提取版本 |
-| P1 | 母版旧版本是硬删除还是只删除特征正文、保留审计事件 | 已确认：删除特征正文，保留脱敏审计事件 |
-| P1 | 美白/磨皮的确认文案和作用范围 | 已确认：前端明确影响范围；默认关闭，仅对当前任务生效，不写入母版 |
-| P1 | Demo 测试部署方式 | 已确认：先部署可分享 URL 的 Streamlit 应用，仅允许受邀测试者；密钥放平台 Secrets，公网开放后置 |
+| 未来概率模型前 | 人工金标准问法、评审人数和冲突处理 | 暂缓；没有样本与真实端到端结果时，不提前设计看似精确的评审制度 |
+| 本地主体锚点开发前 | 许可核验后的特征提取模型、运行硬件/服务器 | 长期锚点已冻结为产品方向；具体模型和设备不能由当前笔记本假设替代 |
+| 内容安全多样性验证前 | 继续用更多明确授权样本覆盖 Pass/Review/Block 和误判边界 | 当前已各有一条真实 `Pass` 与 `Block` 回执；单样本不能代表完整安全覆盖，`Review/Block` 仍保守拦截 |
+| 受邀部署前 | 平台、受邀名单/密码、区域、费用上限、管理员访问控制和删除实现 | 本机开发继续；不默认采购硬件或开放公网 |
+| Dataset 化前 | 事件抽取、去标识化、人工标注、holdout 与训练用途 | 当前数据库仅是产品运行账本，不能直接当训练数据 |
+| P0-C 受限回接后 | Gold Set v2 人审/Judge/阈值、自动 worker、新 Provider 与 external/hybrid Adapter | evidence 消费规则与本机只读 RAG Dashboard 已完成；不得自动接入图片执行，见 [RAG_DECISION_GATE.md](RAG_DECISION_GATE.md) 与 [RAG_P0C_ADVISORY_INTEGRATION_GATE.md](RAG_P0C_ADVISORY_INTEGRATION_GATE.md) |
 
-### 已定方向、尚未冻结细节
-
-这些不是我可以擅自替你选的技术细节，而是下一轮需要继续对话的产品规则：
-
-- 人工金标准的具体问题、评审者数量、是否允许用户自评和如何处理评审冲突；
-- 用户交互自动生成弱标签时，哪些行为算“接受”、哪些行为只能算“未完成”；
-- 合成数据的生成范围、标记方式、是否只用于边界测试；
-- 主体锚点的同意文案、半年提醒时间、撤回同意后的删除时限和访问审计；
-- V0 的同一人物门控具体采用哪个模型/服务、许可条件、阈值校准方法，以及在校准前是否允许模型结果直接拒绝；
-- V0 的色情、暴力、未成年人不当内容等图片安全检查采用本地模型、云端审核服务还是受邀 Beta 的人工前置审核；用户声明不能被记录为“机器检查通过”；
-- 多脸隔离失败时的方向已确认：说明失败并要求用户先裁剪；具体隔离/回贴算法和视觉验收阈值待开发时审计；
-- Streamlit 部署平台的具体选择、受邀名单/访问密码形式、测试者数据删除方式和费用上限。
+这一轮已没有待产品负责人补答的 V0 基础规则；上表列出的都是未来模块的开工 Gate。实施前仍沿用“先讨论 → 补漏洞/权衡 → 用户冻结 → 再写代码和测试”的协作方式。
 
 ## 8. 本项目的模块协作方式
 
@@ -375,7 +453,7 @@
 
 <span style="color:#C00000"><strong>【耦合纠错】review_reference、lock_profile、analyze_consistency、plan_edit、execute_beautify 等不是同一层“用户 intent”：前两者更接近工作流状态，后三者是工具。IntentFrame 只描述用户要什么，状态机决定现在允许做什么，ReAct 层只能在白名单中建议下一工具。</strong></span>
 
-执行、删除、母版更新和长期偏好保存都需要明确确认。高置信与低成本只能减少澄清，不能免除外部编辑确认；“以后默认直接执行”只能预选执行路径，仍不能取消新任务的有界确认。用户明确取消时立即取消；改口后，新 IntentFrame 覆盖旧意图，旧未执行计划与确认失效并写入 Trace。
+执行、删除、母版更新和长期偏好保存都需要明确确认。高置信与低成本只能减少澄清，不能免除外部编辑确认；“以后默认直接执行”只能预选执行路径，仍不能取消新任务的有界确认。检查点 8B 中，用户真实点击确认后才由系统生成 `parser_mode=user_structured_input` 的执行意图；LLM 不能制造这一权限。用户明确取消时立即取消；改口后，新 IntentFrame 覆盖旧意图，旧未执行计划与确认失效并写入 Trace。
 
 三到五秒首个反馈属于体验目标：UI 可以立即显示真实的“正在解析/检查/规划/调用/复测”状态，不能把动画或流式文字当作工具已经成功，也不能展示隐藏思维链。
 
@@ -385,7 +463,7 @@
 
 <span style="color:#C00000"><strong>【耦合纠错】腾讯官方参数只能是 0—100，后台不能发送超界值；单次/累计安全上限也不能由 LLM 决定。用户提出更大变化时，规划器应按版本化安全策略截断或拒绝并解释。</strong></span>
 
-取消固定“三个部位”上限；真实可执行数量仍受 Provider Card 限制。连续调整是在最近一个“已验证且未变差”的结果上创建新 plan revision，旧计划不修改。EditPlan 只保存修前差异、具体参数、预计改善方向、风险和确认要求；修后实测必须进入 VerificationResult。
+取消固定“三个部位”上限；真实可执行数量仍受 Provider Card 限制。检查点 8B 的确认页不允许直接修改滑杆；实质改口必须生成新 plan revision 并重新确认，旧计划不修改。8C-2 的后续轮不是修改旧计划：它创建新的不可变子 `EditPlan`（新 `plan_id`、`parent_plan_id`、当前结果图 hash、iteration），并只可沿用首次确认已允许的部位、轮次和期限。EditPlan 只保存修前差异、具体参数、预计改善方向、风险和确认要求；修后实测必须进入 VerificationResult。
 
 ### 9.3 `ProviderRun`
 
@@ -393,25 +471,49 @@
 
 <span style="color:#C00000"><strong>【耦合纠错】ProviderRun 不是 LLM 合同，必须由 Adapter 和计时/审计代码生成；附件中的 Prompt 实际是读取 ProviderRun 后的 Bad Case 归因 Prompt。API 成功只证明工具执行，不证明修图有效。</strong></span>
 
-自动重试只覆盖明确可恢复的超时、限频、网络或 5xx；参数、权限、内容安全和图片格式错误不重复扣费式重试。一次重试一条 Run，不能覆盖第一次失败。
+当前 8B **不自动重试任何错误**：超时、限频、网络和 5xx 也只产生一次失败 Run，用户重新确认后才可能发出新的请求。参数、权限、内容安全和图片格式错误同样不得重试。8C-2 若继续，必须产生新的 `ProviderRun`，通过 `parent_run_id`、输入结果图引用/hash 与父回执相连；它是同一已确认计划族内的一次受限自动调用，不是重试。一次真实尝试一条 Run，不能覆盖或伪造第一次证据；以后若要启用恢复策略，必须作为新的版本化产品/成本决策，而不是默默改变行为。
 
 ### 9.4 `VerificationResult`
 
-验证器重新提取修前/修后的逐特征差异，记录总体趋势、质量/禁改部位情况、轮次、显式用户反馈和真实下一步。状态机只接受 STOP、REPLAN、RESHOOT、MANUAL_REVIEW 等结构化决定；报告 LLM 只能解释，不能改数值。
+验证器重新提取修前/修后的逐特征差异，记录总体趋势、质量/禁改部位情况、轮次、显式用户反馈和真实下一步。8C 新增 `VERIFICATION_STRATEGY_SELECT`，由 Agent 在审核/授权策略集合内提议复测方式，状态机和权限策略校验后才执行；报告 LLM 只能解释，不能改数值或越权调用。
 
 <span style="color:#C00000"><strong>【耦合纠错】V0 没有校准后的接受概率，因此不能把“真实概率达标”作为当前停止条件。当前只能依据逐特征实测趋势、质量/安全门、轮次策略和用户显式接受做定性判断；沉默、关闭页面或打开新窗口只能作为弱行为信号。</strong></span>
 
-质量不足走重新上传/重拍，不继续加参数；API 失败先走 Provider 的错误分类和有界重试；结果变差则回到原图或上一张已验证结果，并禁止沿同方向继续叠加。用户不满意时先澄清一个具体差异，再判断是否仍在允许范围和预算内。
+质量不足走重新上传/重拍，不继续加参数；8B 的 API 失败先展示 Provider 的错误分类并停止，不能在同一计划中自动再扣费。8C 可以在已确认的三轮计划族内生成并自动执行后继子计划，但每个计划仍只有一次 ProviderRun；只有可验证的累积改善、上一结果图 hash 一致、范围/期限未变时才允许继续。用户不需要逐轮理解参数或点击；系统必须在每次调用前完成 scope/预算/幂等/安全 preflight，并在调用前后保存自动触发 Trace。用户点踩或提交文字反馈时当前计划族硬停止；文字反馈不直接变成参数，先由下一次 IntentFrame 澄清具体差异。
 
-## 10. 本轮五个产品决定已冻结
+## 10. 本轮产品决定已冻结
 
-以下五项已由用户在 2026-08-27 明确确认，并进入合同 `v0.2-frozen`：
+以下决定已由用户在 2026-08-27 至 2026-08-28 明确确认，并进入合同、Policy 或实现边界：
 
 1. <span style="color:#C00000"><strong>确认作用域：</strong>一次确认授权当前照片/批次、明确允许部位和最多三轮的有界计划族；扩大部位、启用美白/磨皮、换母版/照片或超预算时重新确认。</span>
 2. <span style="color:#C00000"><strong>轮次与停止：</strong>“三轮”作为 V0 Safety Policy 的可配置总上限，而非合同类型的永久硬编码；连续两轮无改善提前停止。</span>
 3. <span style="color:#C00000"><strong>多脸 V0：</strong>产品自行执行选择、隔离、裁剪、回贴和复测；任一步无法稳定完成时说明原因并要求用户先裁剪。该工程链路完成前，当前 Demo 拒绝多脸或要求先裁剪。</span>
 4. <span style="color:#C00000"><strong>人工复核：</strong>Beta 只标记为“待项目开发者复核”，查看原图需要单独授权，不宣称已有客服或运营团队。</span>
 5. <span style="color:#C00000"><strong>三类判断信号：</strong>0.50/0.80 只用于 quality/editability，并采用最严格路由；subject match 单独输出 match/uncertain/no_match，供应商原始分不是概率，阈值后续用授权样本校准。</span>
+6. <span style="color:#C00000"><strong>反馈与数据：</strong>首次 Prompt、再次会话和追问记录为强意图/继续使用信号；点赞、点踩和明确评论是强反馈；退出/沉默默认未知，仅按具体上下文记录路径中止。匿名事件进入运营账本与本地 Dashboard，不直接进入训练 Dataset。</span>
+7. <span style="color:#C00000"><strong>隐私生命周期：</strong>主体锚点单独同意，183 天有效，30/7 天提醒；撤回后立即停用，主存储 24 小时内删除、备份 7 天内清理；公开演示授权独立于照片处理与锚点保存。</span>
+8. <span style="color:#C00000"><strong>LLM 与数据边界：</strong>DeepSeek V4 Flash 是文本理解主模型，检查点 7 已实现 Schema 校验与模板降级，并通过一次固定文本的真实 live receipt；照片、Base64、人脸向量和密钥不进入 LLM，不自动把同一段文本发送给第二个云 Provider。LLM 文本远程调用仍需本轮勾选和本机密钥；图片/验证 Provider 的首次外部处理同意可在有效计划族内复用，scope 变化时重新授权。</span>
+9. <span style="color:#C00000"><strong>多脸与不满意：</strong>YuNet → 用户选脸 → MediaPipe/遮罩裁剪 → 编辑 → 回贴 → 复测；失败要求先裁剪。用户明确不满意立即停止下一次工具调用，先澄清再重新确认。</span>
+10. <span style="color:#C00000"><strong>8B 计划编辑：</strong>确认页不提供滑杆直接改当前计划；自然语言改口必须产生新 IntentFrame/新 EditPlan 并重新确认。</span>
+11. <span style="color:#C00000"><strong>8B 确认期限：</strong>确认绑定当前照片 hash、Profile/计划/允许部位与参数，10 分钟后失效；变更、过期、Gate 失败或重复点击均不调用腾讯。</span>
+12. <span style="color:#C00000"><strong>8B 结果数据：</strong>结果图只在当前浏览器会话内预览，用户可下载；不写 SQLite、JSONL、Trace 或项目目录，最多保留 10 分钟内存窗口。</span>
+13. <span style="color:#C00000"><strong>8B 付费失败：</strong>每个确认计划只允许一次外部尝试，不自动重试；同一计划失败后不能静默重试，任何新的尝试必须生成新的子/修订计划并通过相应的 scope Gate。若只是 8C 在首次有效 scope 内的证据驱动后继子计划，则可受限自动调用；scope 变化仍由用户重新授权。</span>
+14. <span style="color:#C00000"><strong>8C 策略选择：</strong>加入 `VERIFICATION_STRATEGY_SELECT`；Agent 只在已审核/已授权策略集合内提议复测方式，状态机、权限策略和 Adapter 才能放行。RAG 可在需要工具知识时提供证据，但不能自由搜索或调用未知工具。</span>
+15. <span style="color:#C00000"><strong>8C 目标与轮次：</strong>验证范围按用户最终目标和当前 EditPlan 的可执行特征确定；最多三轮是版本化计划族上限。只有 `REPLAN + improved + cumulative_improvement`、当前结果图 hash 与父回执一致且原确认仍有效时，才生成并自动执行新的子 EditPlan；子计划的腾讯参数是新输入图上的 2—6 保守单次强度，不能把上轮参数相加。每轮都有独立 ProviderRun，调用前必须通过确定性 preflight 并留下自动触发 Trace；无改善、变差、无法判断、达标或用户不满意时停止。</span>
+16. <span style="color:#C00000"><strong>8C 反馈：</strong>点赞/点踩和明确文字为强反馈；点踩或文字评论关闭当前计划族，文字只记录 hash，不能直接变成修图指令。追问、新会话、下载为继续使用/行为证据；退出/沉默默认未知并结合上下文记录；长期 WAU/MAU 只作为匿名运营事件，不直接当满意度或训练真值。</span>
+17. <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C + Dashboard：</strong>已实现本地 SQLite/metadata/FTS5 与本地 dense/RRF/rerank 的审核工具知识检索、来源依据卡、脱敏 Trace、8A/8C 的受限 evidence 回接，以及只读本机 RAG 治理 Dashboard；它们只回答/展示“现有工具有什么能力、限制和路由事实”，不读照片、不调 LLM/API、不产生参数或执行。Gold Set v2 评测器与答案隔离材料已实现；下一步是逐题审核/真实 predictions，再讨论自动 worker、新 Provider 正式准入和 external/hybrid Adapter。</span>
+18. <span style="color:#C00000"><strong>RAG Gold Set v2 评测：</strong>固定 34 道开发题、18 道挑战题、20 道隐藏题，同时测试工具能力、权限、隐私、生命周期、冲突和提示注入。产品负责人是唯一人工事实审核者，暂不加入第二位人工评审；盲审 LLM Judge 可以看到机器分数/指标摘要，但不能看到 Gold 答案、答案键、开发标签或实现版本。安全类必须 100% 正确拦截、0 次错误工具放行；检索/路由门槛为 Recall@5≥90%、Precision@3≥80%、MRR≥80%、nDCG@5≥85%、路由/证据关系正确率≥90%；未来解释 Faithfulness≥95%、人审—Judge 一致率≥80%、Hidden—Dev 差距≤10 个百分点。隐藏集运行器只接收无答案题目；答案键已移至产品负责人独立保管位置，工作区仅保留不含答案的保管回执。</span>
+19. <span style="color:#C00000"><strong>新 Provider 路线：</strong>选择参数级人像美化 SDK/API，并行验证火山美颜 API V2.0 静态/批量路线与腾讯特效 SDK 细粒度路线。两者目前只能建立 Candidate Card、Adapter shell、权限/预算 preflight、离线测试和 live smoke 入口；必须完成官方能力/License/隐私/地区/成本证据、真实 receipt、Gold 回归和产品负责人冻结后，才可进入 `reviewed_active`。RAG 只能提议，不能授权或直接上传照片。</span>
+
+## 2026-08-30｜Failure Pattern 与 RAG 自校正边界（已实现）
+
+**产品背景。**公开集高分与隐藏集低聚合分数同时出现，说明仅维护一套能通过公开题的规则会掩盖泛化和指标口径问题。产品需要能够回答“为什么错、下一步改什么、改后是否回退”，但不能让系统为了通过评测而读取隐藏答案或扩大工具权限。
+
+**冻结规则。**新增 failure-pattern 分析和本机优化 Dashboard；分析器只消费公开逐题材料与隐藏聚合材料，所有隐藏诊断只保留计数/指标/证据级别。自校正采用 proposal-only：一次只提出一个可解释候选，先跑公开安全回归，再由产品负责人决定升级或回滚；不得自动修改权限、Provider 白名单、参数安全上限、停止策略或 `execution_authorized=false`。
+
+**当前候选。**`rag-correction-candidate-v0.1` 只做经审核的领域/中英同义词归一化，运行在临时本地索引中。候选公开回归没有指标回退（`regression_gate=PASS`），但 project Gate 仍是 `FAIL`，所以候选尚未激活；指标差值和 Trace 聚合落在 `reports/rag_failure_patterns_v1.json/.html`。
+
+**可观测与回滚。**`pages/4_RAG治理看板.py` 的报告集合展示公开评测、隐藏聚合和失败分析 HTML；`pages/5_RAG优化看板.py` 展示分层指标、错误类型、SOP 和候选差值。两页只读、使用显式 allow-list，不读取答案键、照片、向量、原始用户文本或密钥。删除候选文件即可回到现役 deterministic baseline；没有产品负责人批准，系统不会自动发布候选。
 
 ## 11. 附件中【具体任务】完成情况
 
@@ -424,4 +526,20 @@
 | ProviderRun 完整 System Prompt | <span style="color:#C00000"><strong>已完成并定位为下游 Bad Case Prompt</strong></span> | [AGENT_PROMPTS.md](AGENT_PROMPTS.md) 3 |
 | VerificationResult 完整 System Prompt | <span style="color:#C00000"><strong>已完成</strong></span> | [AGENT_PROMPTS.md](AGENT_PROMPTS.md) 4 |
 
-合同、Policy 和本地六表存储已经落实；所有 Prompt 仍未接入 LLM，也未产生线上评测证据。
+合同、Policy、六类业务合同表、匿名运营事件账本、8B 单次执行 Gate、8C-1 修后观察/VerificationResult、8C-2 有界计划族/反馈硬停止，以及独立 RAG P0-A/P0-B 检索、P0-C 受限回接与只读 RAG Dashboard 已落实；DeepSeek 的文本 IntentFrame Adapter 已完成一次真实 Schema receipt；长期锚点加密/删除、多脸链路、external/hybrid 复测、自动 RAG worker/新 Provider、完整 Agent loop 和线上评测仍未完成。
+
+## 2026-08-30 实施状态同步
+
+Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审输入合同和答案不泄漏 HTML/Markdown/JSON 报告已落地；public deterministic baseline 已生成并评分，固定分母 Precision@3=47.44%，project Gate=`FAIL`；answerless holdout 20 题也已运行，产品负责人在工作区外私有目录完成一次仅聚合比对，Route=25.00%、Recall@5=38.24%、MRR=52.94%、nDCG@5=41.56%，project Gate=`FAIL`。私有 Markdown 的自然语言 `must_not` 尚未规范成 canonical event ID，因此 hard-safety 明确为 `MANUAL_REVIEW_REQUIRED`，不伪报通过；隐藏逐题答案不回流规则、Prompt 或调参。
+
+火山美颜 API V2.0 与腾讯特效 SDK 已落地为 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；两者均未接 SDK/API、未发图片、未使用密钥，必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`。本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。最新全量同步校验为 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已通过。
+
+## 2026-08-30 评测治理冻结（Precision C / Holdout A / Safety ID C）
+
+<span style="color:#C00000"><strong>Precision C。</strong> 评测同时输出固定分母 `precision_at_k`、覆盖式 `precision_at_k_effective` 和返回式 `precision_at_k_returned`，并按 Gold 证据条数分层。固定分母保留历史可比性并继续作为当前项目 Gate；其余两项只用于解释稀疏 Gold 和返回噪声，不自动放宽门槛。</span>
+
+<span style="color:#C00000"><strong>Holdout A。</strong> v2 隐藏集及私有 aggregate 只用于历史泛化诊断；新建 v3 answerless runtime 模板和工作区外答案保管流程。v3 题目/答案必须独立生成、正式验收最多一次，不允许用 v2 逐题答案补规则。</span>
+
+<span style="color:#C00000"><strong>Safety ID C。</strong> 已知 hard-safety 标签通过版本化确定性字典映射到 `RAG_EVT_*`；未知标签不模糊猜测，直接要求人工复核。字典只影响评测可观测性，不授权 RAG、LLM 或 Provider 执行。</span>
+
+实现落点：`core/rag_safety_events.py`、`data/evaluation/rag_safety_event_catalog_v0.json`、`data/evaluation/rag_gold_v3_holdout_runtime.template.json`、`RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md`、Gold evaluator/private aggregate/failure analyzer/page 5 看板及对应测试。当前 public 固定 Precision@3=47.44%、覆盖式/返回式=100%、project Gate 仍 `FAIL`；新 v3 仍为空模板，不能写成 RAG 通过。

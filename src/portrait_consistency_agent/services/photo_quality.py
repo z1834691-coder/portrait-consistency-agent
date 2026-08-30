@@ -77,6 +77,10 @@ class FaceObservation:
     height: int
     eye_count: int
     eye_centers: tuple[tuple[float, float], ...] = ()
+    # Normalized (x, y, width, height) boxes for the detected eyes.  These are
+    # kept in memory only.  The eye-size features derived from them are useful
+    # for a bounded V0 plan, but the raw boxes never enter a contract or trace.
+    eye_boxes: tuple[tuple[float, float, float, float], ...] = ()
 
     @property
     def short_side(self) -> int:
@@ -322,6 +326,7 @@ def analyze_photo_bytes(
             minNeighbors=4,
             minSize=(8, 8),
         )
+        sorted_eyes = sorted(eyes, key=lambda item: (int(item[0]), int(item[1])))
         faces.append(
             FaceObservation(
                 index=index,
@@ -329,13 +334,22 @@ def analyze_photo_bytes(
                 y=int(y),
                 width=int(face_width),
                 height=int(face_height),
-                eye_count=min(4, len(eyes)),
+                eye_count=min(4, len(sorted_eyes)),
                 eye_centers=tuple(
                     (
                         float(eye_x + eye_width / 2) / float(face_width),
                         float(eye_y + eye_height / 2) / float(face_height),
                     )
-                    for eye_x, eye_y, eye_width, eye_height in eyes[:4]
+                    for eye_x, eye_y, eye_width, eye_height in sorted_eyes[:4]
+                ),
+                eye_boxes=tuple(
+                    (
+                        float(eye_x) / float(face_width),
+                        float(eye_y) / float(face_height),
+                        float(eye_width) / float(face_width),
+                        float(eye_height) / float(face_height),
+                    )
+                    for eye_x, eye_y, eye_width, eye_height in sorted_eyes[:4]
                 ),
             )
         )
@@ -349,6 +363,7 @@ def analyze_photo_bytes(
             height=face.height,
             eye_count=face.eye_count,
             eye_centers=face.eye_centers,
+            eye_boxes=face.eye_boxes,
         )
         for index, face in enumerate(faces)
     ]

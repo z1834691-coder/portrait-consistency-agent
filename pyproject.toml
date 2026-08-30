@@ -22,6 +22,15 @@ dependencies = [
   "tencentcloud-sdk-python-ims>=3.0,<4",
 ]
 
+[project.optional-dependencies]
+# P0-B safely falls back to lexical retrieval when these packages or model
+# weights are absent. Keep the CPU model stack opt-in for lightweight cloud
+# deployments.
+rag-local = [
+  "torch>=2.5,<3",
+  "transformers>=4.47,<5",
+]
+
 [dependency-groups]
 dev = [
   "pytest>=8.3,<9",

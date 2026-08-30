@@ -3,10 +3,38 @@
   "provider": "tencent_cloud",
   "operation": "ImageModeration",
   "api_version": "2020-12-29",
-  "card_version": "reviewed_2026-08-27",
+  "card_version": "reviewed_2026-08-28",
   "endpoint": "ims.tencentcloudapi.com",
   "review_status": "verified",
   "reviewed_at": "2026-08-27",
+  "live_verification": {
+    "status": "failed_authorization",
+    "request_id": "42c6ed4d-f035-466c-b775-4728dd43ca93",
+    "error_code": "UnauthorizedOperation.Unauthorized",
+    "verified_at": "2026-08-27",
+    "meaning": "The signed request reached Tencent, but the running identity/service is not yet authorized for a successful moderation result. This is not a content-safety pass."
+  },
+  "live_verification_history": [
+    {
+      "status": "failed_authorization",
+      "request_id": "42c6ed4d-f035-466c-b775-4728dd43ca93",
+      "error_code": "UnauthorizedOperation.Unauthorized",
+      "verified_at": "2026-08-27",
+      "meaning": "Historical authorization failure; retained for traceability."
+    },
+    {
+      "status": "passed",
+      "request_id": "211483d5-4ee0-41e8-b5d5-156f81557a69",
+      "verified_at": "2026-08-28",
+      "meaning": "One explicitly authorized JPEG returned Pass. This verifies one allow-path receipt only, not complete safety coverage."
+    }
+  ],
+  "latest_live_verification": {
+    "status": "passed",
+    "request_id": "211483d5-4ee0-41e8-b5d5-156f81557a69",
+    "verified_at": "2026-08-28",
+    "meaning": "One explicitly authorized JPEG returned Pass; keep the historical authorization failure above and do not generalize this sample to all content."
+  },
   "input": {
     "v0_selected_input": "FileContent",
     "formats": ["PNG", "JPG", "JPEG", "BMP"],

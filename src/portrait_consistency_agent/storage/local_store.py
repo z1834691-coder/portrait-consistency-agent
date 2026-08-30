@@ -6,7 +6,7 @@ import json
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -15,14 +15,18 @@ from pydantic import BaseModel
 
 from portrait_consistency_agent.core.contracts import (
     EditPlan,
+    FeedbackEvidenceStrength,
     IntentFrame,
+    InteractionOutcome,
+    InteractionStage,
     PhotoQualityResult,
+    ProductEvent,
+    ProductEventType,
     ProfileStatus,
     ProviderRun,
     ReferenceProfile,
     VerificationResult,
 )
-
 
 SENSITIVE_KEY_FRAGMENTS = (
     "secret",
@@ -72,6 +76,7 @@ def redact_for_trace(value: Any, *, key: str | None = None) -> Any:
 @dataclass(frozen=True)
 class SessionRecord:
     session_id: str
+    anonymous_user_id: str
     state: str
     created_at: str
 
@@ -95,6 +100,7 @@ class LocalTraceStore:
                 """
                 CREATE TABLE IF NOT EXISTS sessions (
                     session_id TEXT PRIMARY KEY,
+                    anonymous_user_id TEXT,
                     state TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -152,6 +158,7 @@ class LocalTraceStore:
                     run_id TEXT PRIMARY KEY,
                     session_id TEXT NOT NULL,
                     plan_id TEXT NOT NULL,
+                    idempotency_key TEXT,
                     provider_run_payload_redacted_json TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
@@ -186,23 +193,92 @@ class LocalTraceStore:
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                 );
+
+                CREATE TABLE IF NOT EXISTS product_events (
+                    event_id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    anonymous_user_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    stage TEXT NOT NULL,
+                    evidence_strength TEXT NOT NULL,
+                    outcome TEXT NOT NULL,
+                    related_contract_ref TEXT,
+                    reason_codes_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+                );
+
+                CREATE INDEX IF NOT EXISTS product_events_by_user_time
+                ON product_events(anonymous_user_id, created_at);
+                """
+            )
+            self._ensure_column(connection, "sessions", "anonymous_user_id", "TEXT")
+            self._ensure_column(connection, "provider_runs", "idempotency_key", "TEXT")
+            connection.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS provider_runs_idempotency_key_unique
+                ON provider_runs(idempotency_key)
+                WHERE idempotency_key IS NOT NULL
+                """
+            )
+            connection.execute(
+                """
+                UPDATE sessions
+                SET anonymous_user_id = 'legacy_' || substr(session_id, 1, 32)
+                WHERE anonymous_user_id IS NULL OR anonymous_user_id = ''
                 """
             )
             connection.execute(
                 "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
                 ("contract_v0_2_tables", utc_now().isoformat()),
             )
+            connection.execute(
+                "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
+                ("contract_v0_3_analytics_lifecycle", utc_now().isoformat()),
+            )
+            connection.execute(
+                "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
+                ("checkpoint_8b_execution_idempotency", utc_now().isoformat()),
+            )
+            connection.execute(
+                "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
+                ("contract_v0_4_verification_observation", utc_now().isoformat()),
+            )
 
-    def create_session(self, *, state: str = "FOUNDATION") -> SessionRecord:
+    def create_session(
+        self,
+        *,
+        state: str = "FOUNDATION",
+        anonymous_user_id: str | None = None,
+    ) -> SessionRecord:
         session_id = f"session_{uuid.uuid4().hex}"
+        user_id = anonymous_user_id or f"user_{uuid.uuid4().hex}"
         created_at = utc_now().isoformat()
         with self._connect() as connection:
             connection.execute(
-                "INSERT INTO sessions (session_id, state, created_at, updated_at) VALUES (?, ?, ?, ?)",
-                (session_id, state, created_at, created_at),
+                """
+                INSERT INTO sessions (session_id, anonymous_user_id, state, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (session_id, user_id, state, created_at, created_at),
             )
         self.record_event(session_id, "session_created", {"state": state})
-        return SessionRecord(session_id=session_id, state=state, created_at=created_at)
+        self.record_product_event(
+            ProductEvent(
+                event_id=f"product_event_{uuid.uuid4().hex}",
+                session_id=session_id,
+                anonymous_user_id=user_id,
+                event_type=ProductEventType.SESSION_STARTED,
+                stage=InteractionStage.ONBOARDING,
+                evidence_strength=FeedbackEvidenceStrength.UNKNOWN,
+            )
+        )
+        return SessionRecord(
+            session_id=session_id,
+            anonymous_user_id=user_id,
+            state=state,
+            created_at=created_at,
+        )
 
     def save_intent_frame(self, intent_frame: IntentFrame) -> None:
         self._require_session(intent_frame.session_id)
@@ -211,7 +287,9 @@ class LocalTraceStore:
         with self._connect() as connection:
             connection.execute(
                 """
-                INSERT INTO intent_frames (session_id, turn, intent_payload_redacted_json, created_at)
+                INSERT INTO intent_frames (
+                    session_id, turn, intent_payload_redacted_json, created_at
+                )
                 VALUES (?, ?, ?, ?)
                 """,
                 (
@@ -239,6 +317,13 @@ class LocalTraceStore:
                 "prompt_version": intent_frame.prompt_version,
                 "missing_slots": intent_frame.missing_slots,
             },
+        )
+        self._record_product_event_for_session(
+            session_id=intent_frame.session_id,
+            event_type=ProductEventType.INTENT_SUBMITTED,
+            stage=InteractionStage.DIAGNOSIS,
+            evidence_strength=FeedbackEvidenceStrength.STRONG_INTENT,
+            related_contract_ref=intent_frame.intent_id,
         )
 
     def save_reference_profile(self, profile: ReferenceProfile) -> None:
@@ -382,13 +467,17 @@ class LocalTraceStore:
         with self._connect() as connection:
             connection.execute(
                 """
-                INSERT INTO provider_runs (run_id, session_id, plan_id, provider_run_payload_redacted_json, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO provider_runs (
+                    run_id, session_id, plan_id, idempotency_key,
+                    provider_run_payload_redacted_json, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     provider_run.run_id,
                     provider_run.session_id,
                     provider_run.plan_id,
+                    provider_run.idempotency_key,
                     json.dumps(payload, ensure_ascii=False, sort_keys=True),
                     created_at,
                 ),
@@ -406,6 +495,31 @@ class LocalTraceStore:
                 ),
             },
         )
+        if provider_run.status.value == "succeeded":
+            self._record_product_event_for_session(
+                session_id=provider_run.session_id,
+                event_type=ProductEventType.PROVIDER_SUCCEEDED,
+                stage=InteractionStage.EXECUTION,
+                evidence_strength=FeedbackEvidenceStrength.UNKNOWN,
+                related_contract_ref=provider_run.run_id,
+                outcome=InteractionOutcome.COMPLETED,
+            )
+
+    def has_provider_run_idempotency_key(self, idempotency_key: str) -> bool:
+        """Return whether this local process has already persisted one attempt.
+
+        The key prevents a repeated button click from creating a second paid
+        request after a factual receipt has been saved.  It is deliberately not
+        advertised as crash-safe distributed idempotency: Tencent's public
+        BeautifyPic API does not expose a server-side idempotency token here.
+        """
+
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM provider_runs WHERE idempotency_key = ? LIMIT 1",
+                (idempotency_key,),
+            ).fetchone()
+        return row is not None
 
     def save_verification_result(self, result: VerificationResult) -> None:
         self._require_session(result.session_id)
@@ -432,6 +546,136 @@ class LocalTraceStore:
                 "decision": result.decision,
             },
         )
+        self._record_product_event_for_session(
+            session_id=result.session_id,
+            event_type=ProductEventType.VERIFICATION_COMPLETED,
+            stage=InteractionStage.VERIFICATION,
+            evidence_strength=FeedbackEvidenceStrength.UNKNOWN,
+            related_contract_ref=result.verification_id,
+            outcome=InteractionOutcome.COMPLETED,
+        )
+
+    def record_product_event(self, event: ProductEvent) -> None:
+        """Persist one redacted operational event for metrics, never raw user data."""
+
+        self._require_session(event.session_id)
+        session_user_id = self._session_user_id(event.session_id)
+        if session_user_id != event.anonymous_user_id:
+            raise ValueError("product event user must match the session's anonymous user")
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO product_events (
+                    event_id, session_id, anonymous_user_id, event_type, stage,
+                    evidence_strength, outcome, related_contract_ref, reason_codes_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event.event_id,
+                    event.session_id,
+                    event.anonymous_user_id,
+                    event.event_type.value,
+                    event.stage.value,
+                    event.evidence_strength.value,
+                    event.outcome.value,
+                    event.related_contract_ref,
+                    json.dumps(event.reason_codes, ensure_ascii=False),
+                    event.occurred_at.isoformat(),
+                ),
+            )
+        self.record_event(
+            event.session_id,
+            "product_event_recorded",
+            {
+                "product_event_id": event.event_id,
+                "event_type": event.event_type,
+                "stage": event.stage,
+                "evidence_strength": event.evidence_strength,
+                "outcome": event.outcome,
+                "related_contract_ref": event.related_contract_ref,
+                "reason_codes": event.reason_codes,
+            },
+        )
+
+    def dashboard_snapshot(self, *, now: datetime | None = None) -> dict[str, int]:
+        """Return only aggregate metrics for the local administrator dashboard.
+
+        The current store is an operational ledger. These counts are not an
+        outcome study, an experiment, or evidence of product-market fit.
+        """
+
+        current_time = now or utc_now()
+        seven_days_ago = current_time - timedelta(days=7)
+        thirty_days_ago = current_time - timedelta(days=30)
+        with self._connect() as connection:
+
+            def count_events(event_type: ProductEventType) -> int:
+                row = connection.execute(
+                    "SELECT COUNT(*) AS count FROM product_events WHERE event_type = ?",
+                    (event_type.value,),
+                ).fetchone()
+                return int(row["count"])
+
+            def active_users_since(cutoff: datetime) -> int:
+                row = connection.execute(
+                    """
+                    SELECT COUNT(DISTINCT anonymous_user_id) AS count
+                    FROM product_events
+                    WHERE created_at >= ?
+                    """,
+                    (cutoff.isoformat(),),
+                ).fetchone()
+                return int(row["count"])
+
+            total_sessions = connection.execute("SELECT COUNT(*) AS count FROM sessions").fetchone()
+            explicit_feedback = connection.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM product_events
+                WHERE event_type IN (?, ?)
+                """,
+                (ProductEventType.FEEDBACK_LIKED.value, ProductEventType.FEEDBACK_DISLIKED.value),
+            ).fetchone()
+            return {
+                "total_sessions": int(total_sessions["count"]),
+                "profile_created": count_events(ProductEventType.PROFILE_CREATED),
+                "intent_submitted": count_events(ProductEventType.INTENT_SUBMITTED),
+                "provider_succeeded": count_events(ProductEventType.PROVIDER_SUCCEEDED),
+                "verification_completed": count_events(ProductEventType.VERIFICATION_COMPLETED),
+                "explicit_feedback": int(explicit_feedback["count"]),
+                "reupload_required": count_events(ProductEventType.REUPLOAD_REQUIRED),
+                "wau": active_users_since(seven_days_ago),
+                "mau": active_users_since(thirty_days_ago),
+            }
+
+    def recent_product_events(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Return redacted event metadata for the local administrator only."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT event_id, session_id, event_type, stage, evidence_strength,
+                       outcome, related_contract_ref, reason_codes_json, created_at
+                FROM product_events
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "event_id": row["event_id"],
+                "session_id": row["session_id"],
+                "event_type": row["event_type"],
+                "stage": row["stage"],
+                "evidence_strength": row["evidence_strength"],
+                "outcome": row["outcome"],
+                "related_contract_ref": row["related_contract_ref"],
+                "reason_codes": json.loads(row["reason_codes_json"]),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
 
     def record_event(self, session_id: str, event_type: str, payload: dict[str, Any]) -> None:
         self._require_session(session_id)
@@ -451,7 +695,9 @@ class LocalTraceStore:
         with self._connect() as connection:
             connection.execute(
                 """
-                INSERT INTO trace_events (event_id, session_id, event_type, payload_redacted_json, created_at)
+                INSERT INTO trace_events (
+                    event_id, session_id, event_type, payload_redacted_json, created_at
+                )
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (event_id, session_id, event_type, serialized_payload, created_at),
@@ -484,6 +730,41 @@ class LocalTraceStore:
             for row in rows
         ]
 
+    def _record_product_event_for_session(
+        self,
+        *,
+        session_id: str,
+        event_type: ProductEventType,
+        stage: InteractionStage,
+        evidence_strength: FeedbackEvidenceStrength,
+        related_contract_ref: str | None = None,
+        outcome: InteractionOutcome = InteractionOutcome.UNKNOWN,
+        reason_codes: list[str] | None = None,
+    ) -> None:
+        self.record_product_event(
+            ProductEvent(
+                event_id=f"product_event_{uuid.uuid4().hex}",
+                session_id=session_id,
+                anonymous_user_id=self._session_user_id(session_id),
+                event_type=event_type,
+                stage=stage,
+                evidence_strength=evidence_strength,
+                outcome=outcome,
+                related_contract_ref=related_contract_ref,
+                reason_codes=reason_codes or [],
+            )
+        )
+
+    def _session_user_id(self, session_id: str) -> str:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT anonymous_user_id FROM sessions WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+        if row is None or row["anonymous_user_id"] is None:
+            raise ValueError(f"Unknown local session: {session_id}")
+        return str(row["anonymous_user_id"])
+
     def _require_session(self, session_id: str) -> None:
         with self._connect() as connection:
             row = connection.execute(
@@ -492,6 +773,21 @@ class LocalTraceStore:
             ).fetchone()
         if row is None:
             raise ValueError(f"Unknown local session: {session_id}")
+
+    @staticmethod
+    def _ensure_column(
+        connection: sqlite3.Connection,
+        table: str,
+        column: str,
+        definition: str,
+    ) -> None:
+        """Apply the only additive local migration needed by the prototype."""
+
+        existing_columns = {
+            str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if column not in existing_columns:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _insert_session_contract(
         self,

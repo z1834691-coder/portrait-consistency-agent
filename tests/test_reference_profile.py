@@ -12,6 +12,7 @@ from portrait_consistency_agent.core.contracts import (
     QualityRoute,
     SubjectAnchorMetadata,
 )
+from portrait_consistency_agent.core.policies import build_v0_data_retention_policy
 from portrait_consistency_agent.services.photo_quality import (
     FaceObservation,
     PhotoObservation,
@@ -45,6 +46,7 @@ def make_observation(**overrides: object) -> PhotoObservation:
                 height=620,
                 eye_count=2,
                 eye_centers=((0.35, 0.42), (0.65, 0.43)),
+                eye_boxes=((0.28, 0.36, 0.12, 0.07), (0.60, 0.37, 0.12, 0.07)),
             ),
         ),
         "selected_face_ref": "photo_reference_face_0",
@@ -82,7 +84,31 @@ def test_profile_extracts_normalized_face_and_eye_geometry_only() -> None:
     assert by_code["face_width_height_ratio"].value == pytest.approx(500 / 620)
     assert by_code["eye_distance_face_ratio"].unit == MeasurementUnit.NORMALIZED_RATIO
     assert by_code["eye_distance_face_ratio"].value == pytest.approx(0.30)
+    assert by_code["eye_area_mean_face_ratio"].value == pytest.approx(0.12 * 0.07)
     assert all(feature.value is not None for feature in features)
+
+
+def test_profile_marks_eye_size_unavailable_without_exactly_two_eye_boxes() -> None:
+    observation = make_observation(
+        faces=(
+            FaceObservation(
+                index=0,
+                x=250,
+                y=180,
+                width=500,
+                height=620,
+                eye_count=1,
+                eye_centers=((0.35, 0.42),),
+                eye_boxes=((0.28, 0.36, 0.12, 0.07),),
+            ),
+        ),
+    )
+    by_code = {
+        feature.feature_code: feature for feature in extract_normalized_features(observation)
+    }
+
+    assert by_code["eye_area_mean_face_ratio"].status.value == "unavailable"
+    assert by_code["eye_area_mean_face_ratio"].value is None
 
 
 def test_profile_without_anchor_is_geometry_only_and_has_provider_mappings() -> None:
@@ -119,6 +145,7 @@ def test_profile_with_separate_anchor_consent_is_active_for_six_months() -> None
         status="active",
         created_at=NOW,
         expires_at=NOW + timedelta(days=183),
+        retention_policy=build_v0_data_retention_policy(),
         access_policy_version="restricted-v1",
     )
     profile = build_reference_profile(
@@ -168,6 +195,7 @@ def test_profile_rejects_non_continuable_or_multi_face_reference() -> None:
                 height=120,
                 eye_count=2,
                 eye_centers=((0.35, 0.42), (0.65, 0.43)),
+                eye_boxes=((0.28, 0.36, 0.12, 0.07), (0.60, 0.37, 0.12, 0.07)),
             ),
         ),
         selected_face_ref=None,

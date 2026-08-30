@@ -18,6 +18,9 @@ def test_image_moderation_card_is_reviewed_and_has_explicit_review_policy() -> N
     assert card["operation"] == "ImageModeration"
     assert card["endpoint"] == "ims.tencentcloudapi.com"
     assert card["v0_policy"]["review"] == "BLOCKED until a human review policy exists"
+    assert card["card_version"] == "reviewed_2026-08-28"
+    assert card["latest_live_verification"]["status"] == "passed"
+    assert card["latest_live_verification"]["request_id"] == "211483d5-4ee0-41e8-b5d5-156f81557a69"
 
 
 def test_image_moderation_request_uses_file_content_and_optional_biz_type() -> None:

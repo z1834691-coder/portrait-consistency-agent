@@ -28,6 +28,17 @@ data/local/
 *.png
 *.webp
 
+# Private evaluation artifacts and local workspace metadata. The deployable
+# app only needs reviewed Provider Cards; hidden/holdout questions, generated
+# reports and answer keys stay outside the GitHub deployment repository.
+.obsidian/
+reports/*
+data/evaluation/*
+!data/evaluation/rag_safety_event_catalog_v0.json
+!data/evaluation/rag_gold_v2_public.json
+!data/evaluation/rag_gold_v2_annotations.json
+!data/evaluation/rag_gold_v3_holdout_runtime.template.json
+
 # OS / editor
 .DS_Store
 .idea/

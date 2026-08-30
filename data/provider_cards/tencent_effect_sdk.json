@@ -1,0 +1,249 @@
+{
+  "card_id": "tencent-effect-sdk-candidate",
+  "provider": "tencent_cloud",
+  "operation": "EffectSDK",
+  "api_version": "vendor_release_pending",
+  "card_version": "candidate_2026-08-30",
+  "review_status": "candidate",
+  "reviewed_at": "2026-08-30",
+  "integration_kind": "client_sdk",
+  "endpoint": null,
+  "platforms": {
+    "web": {
+      "status": "candidate",
+      "static_image_status": "documented_not_live_verified",
+      "batch_status": "not_documented_in_reviewed_sources",
+      "license_status": "pending_vendor_confirmation",
+      "official_evidence": [
+        "Tencent Web tutorial documents choosing one image, updateInputImage, applying effects, and downloading an output image; this project has not run it.",
+        "Reviewed Web pricing documentation only explicitly lists beauty/whitening, smoothing, slimming, face narrowing, big-eye and chin in all three Web packages; it does not prove the fine-grained mobile/PC controls below for Web static images."
+      ]
+    },
+    "pc": {
+      "status": "candidate",
+      "static_image_status": "not_documented_for_this_spike",
+      "batch_status": "not_documented_in_reviewed_sources",
+      "license_status": "pending_vendor_confirmation",
+      "official_evidence": [
+        "Tencent mobile/PC S-series pricing documentation lists the detailed facial controls as package capabilities.",
+        "No first-party static-photo or batch tutorial for the exact PC package/release was verified in this spike."
+      ]
+    },
+    "mobile": {
+      "status": "candidate",
+      "static_image_status": "not_documented_for_this_spike",
+      "batch_status": "not_documented_in_reviewed_sources",
+      "license_status": "pending_vendor_confirmation",
+      "official_evidence": [
+        "Tencent mobile/PC S-series pricing documentation lists the detailed facial controls as package capabilities.",
+        "Tencent privacy material documents Android/iOS album-image handling, but that is not a static-photo ProviderRun for this project."
+      ]
+    }
+  },
+  "parameters": [
+    {
+      "feature_code": "eye_distance",
+      "provider_parameter": "BeautyConstant.BEAUTY_EYE_DISTANCE",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "A documented legacy/mobile reference only; it is not a verified Web static-image key or a live project receipt."
+    },
+    {
+      "feature_code": "eye_width",
+      "provider_parameter": "BeautyConstant.BEAUTY_EYE_WIDTH",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "A documented legacy/mobile reference only; target SDK release and static-image surface remain unverified."
+    },
+    {
+      "feature_code": "eye_height",
+      "provider_parameter": "BeautyConstant.BEAUTY_EYE_HEIGHT",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "A documented legacy/mobile reference only; target SDK release and static-image surface remain unverified."
+    },
+    {
+      "feature_code": "nose_wing",
+      "provider_parameter": "BeautyConstant.BEAUTY_NOSE_WING",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "A documented legacy/mobile reference only; do not send it to any runtime before platform and static-photo evidence exists."
+    },
+    {
+      "feature_code": "mouth_shape",
+      "provider_parameter": "BeautyConstant.BEAUTY_MOUTH_SIZE",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "Documented mobile/legacy candidate capability; not an active Provider Card or static-photo execution mapping."
+    },
+    {
+      "feature_code": "lips_thickness",
+      "provider_parameter": "BeautyConstant.BEAUTY_MOUTH_HEIGHT",
+      "documented_range": [-100, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "Documented mobile/legacy candidate capability; not an active Provider Card or static-photo execution mapping."
+    },
+    {
+      "feature_code": "face_shape",
+      "provider_parameter": "BeautyConstant.BEAUTY_FACE_BASIC",
+      "documented_range": [0, 100],
+      "documentation_status": "documented_candidate",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "legacy Android 3.3.0-or-earlier parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "Face-shape subtype and exact controls remain target-release, license and static-photo dependent."
+    },
+    {
+      "feature_code": "eyebrow",
+      "provider_parameter": null,
+      "documented_range": null,
+      "documentation_status": "documented_feature_no_static_mapping",
+      "static_image_execution_status": "pending_verification",
+      "source_scope": "mobile/PC S-series capability list and legacy Android parameter table",
+      "execution_mapping_status": "not_verified_for_current_static_surface",
+      "notes": "Angle, distance, height, length, thickness and ridge are documented for mobile/PC; no selected-platform static-photo mapping is verified."
+    },
+    {
+      "feature_code": "ear_shape",
+      "provider_parameter": null,
+      "documented_range": null,
+      "documentation_status": "not_verified",
+      "static_image_execution_status": "not_promised",
+      "source_scope": "no reviewed first-party parameter evidence",
+      "execution_mapping_status": "not_promised",
+      "notes": "No evidence yet for this project's static-photo parameter execution."
+    }
+  ],
+  "batch": {
+    "status": "not_documented_in_reviewed_sources",
+    "max_images": null,
+    "per_image_plan_required": true,
+    "same_parameter_reuse_allowed": false
+  },
+  "license": {
+    "status": "pending_vendor_confirmation",
+    "test_license_obtained": false,
+    "production_license_obtained": false,
+    "required_before_live": true,
+    "open_questions": [
+      "Which Web/PC/mobile package and exact release is available for this project?",
+      "Does the test License cover static image processing and the required parameters?",
+      "Is a commercial License, enterprise account, domain, or signed authorization required?",
+      "Do SDK telemetry, authentication, or crash logs send image or device data?"
+    ]
+  },
+  "permission_budget_gate": {
+    "live_allowed_by_default": false,
+    "required_checks": [
+      "allow_live_explicit",
+      "active_test_or_production_license",
+      "provider_permission_granted",
+      "user_image_consent_for_this_provider",
+      "outbound_data_policy_approved",
+      "region_approved",
+      "estimated_cost_known",
+      "plan_budget_set",
+      "adapter_ready",
+      "static_image_smoke_passed"
+    ],
+    "provider_permission_status": "not_requested",
+    "pricing_status": "pending_vendor_quote",
+    "estimated_cost_cny_per_image": null,
+    "plan_budget_cny": null
+  },
+  "data_boundary": {
+    "processing_mode_candidate": "platform_specific_not_assumed",
+    "image_outbound_status": "unknown_pending_license_privacy_review",
+    "vendor_retention_status": "unknown_pending_vendor_terms",
+    "telemetry_status": "unknown_pending_vendor_terms",
+    "android_ios_face_photo_evidence": "Official Android/iOS privacy material describes face coordinates and album photos as local processing with no transmission or reporting; it also describes anonymous encrypted SDK-usage reporting.",
+    "web_image_processing_evidence": "The reviewed Web static-image tutorial processes an input image in a browser SDK flow, but the reviewed material does not establish a complete Web image-egress, retention or telemetry guarantee for this project.",
+    "region_evidence": "No reviewed first-party material established a data-processing region or cross-border route for the selected SDK surface.",
+    "must_not_assume_local_processing": true,
+    "must_not_send_user_photo_in_shell": true
+  },
+  "safety_boundary": {
+    "allowed_subject": "one authorized adult person",
+    "identity_rewrite": false,
+    "body_or_private_parts": false,
+    "per_image_plan": true,
+    "max_plan_rounds": 3,
+    "rag_can_only_propose": true
+  },
+  "evidence_review": {
+    "review_scope": "Tencent official first-party materials only; no account console, License, SDK package, credential, photo or network call was used.",
+    "official_capability_findings": {
+      "web_static_image": {
+        "status": "documented_not_live_verified",
+        "finding": "Tencent documents a browser tutorial that selects one image, passes it to updateInputImage, applies effects and downloads an output image.",
+        "does_not_prove": [
+          "This Streamlit/Python service can invoke the SDK without a browser JavaScript integration.",
+          "The fine-grained mobile/PC facial controls are available in the Web static-image route.",
+          "Batch image processing, a project License or an actual output receipt."
+        ]
+      },
+      "mobile_pc_fine_grained_controls": {
+        "status": "documented_candidate_not_static_photo_verified",
+        "finding": "Tencent's current mobile/PC S-series capability list includes eye distance/width/height/position, eyebrow adjustments, nose wing/position/bridge/root, mouth shape/lip thickness/width/position/smile lip, and detailed face shaping.",
+        "candidate_feature_catalog": {
+          "eyes": ["eye_distance", "eye_width", "eye_height", "eye_position", "eye_angle"],
+          "eyebrows": ["eyebrow_angle", "eyebrow_distance", "eyebrow_height", "eyebrow_length", "eyebrow_thickness", "eyebrow_ridge"],
+          "nose": ["nose_slim", "nose_wing", "nose_position", "nose_bridge", "nose_root"],
+          "mouth": ["mouth_shape", "lips_thickness", "lips_width", "lips_position", "smile_lip"],
+          "face": ["face_slim", "face_narrow", "face_v", "face_jaw", "face_short", "face_shape", "face_chin", "face_forehead", "face_cheekbone_slim"],
+          "ear": ["not_documented_in_reviewed_sources"]
+        },
+        "does_not_prove": [
+          "A particular SDK package or License includes every listed candidate.",
+          "A current Web static-image API key, parameter range, Python API, batch facility or image result for any candidate feature."
+        ]
+      },
+      "batch": {
+        "status": "not_documented_in_reviewed_sources",
+        "finding": "The reviewed static-image guide demonstrates a single selected image; no first-party batch maximum or batch API was established in this review."
+      }
+    },
+    "license_and_pricing_findings": {
+      "web_test_license": "Official Web quick-start documentation describes a test License for local testing, 14 days with one renewal for up to 28 days, and one test License per account; this project has not obtained one.",
+      "web_official_list_price_cny_per_month": {"basic": 5999, "professional": 8999, "advanced": 35000},
+      "web_binding": "One Web License binds one domain and one mini-program AppId; localhost is supported for debugging according to the reviewed pricing documentation.",
+      "mobile_pc": "Official materials show separate mobile/PC licensing and package pricing; one License cannot bind both mobile and PC. Exact selected package and cost remain a product decision and vendor verification item.",
+      "current_project_status": "no test License, production License, package download, bound domain/app identifier or vendor billing evidence"
+    },
+    "privacy_region_latency_findings": {
+      "privacy": "The SDK's official privacy/compliance materials require informed user consent before initialization and state Android/iOS face and album-photo handling as local/no transmission or reporting, while SDK usage records may be anonymous-encrypted reported. This does not establish the Web route's full image outbound/retention behavior.",
+      "retention": "No exact vendor image retention/deletion SLA was found in the reviewed first-party materials for the selected future Web/PC/mobile surface.",
+      "region": "No exact processing region or cross-border data route was found in the reviewed first-party materials.",
+      "latency": "No official p50/p95 latency or static-image throughput claim was found in the reviewed materials."
+    }
+  },
+  "source": {
+    "legacy_parameter_doc": "https://cloud.tencent.com/document/product/616/78792",
+    "mobile_pc_pricing_and_capability_doc": "https://cloud.tencent.com/document/product/616/36807",
+    "web_pricing_doc": "https://cloud.tencent.com/document/product/616/86942",
+    "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",
+    "web_test_license_doc": "https://cloud.tencent.com/document/product/616/71371",
+    "purchase_flow_doc": "https://cloud.tencent.com/document/product/616/11235",
+    "privacy_rule_doc": "https://cloud.tencent.com/document/product/616/65678",
+    "compliance_guide_doc": "https://cloud.tencent.com/document/product/616/102032",
+    "review_note": "Official documentation review on 2026-08-30 only; no licensed SDK, photo, key, live smoke, latency measurement, cost receipt, or ProviderRun exists."
+  }
+}
