@@ -1,6 +1,6 @@
 # 母版人像一致性 Agent
 
-当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / Streamlit deployment package prepared, not yet deployed`
+当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub deployment package pushed, Streamlit Cloud app still awaiting console creation`
 
 目标：在 2026-09-04 前完成一个真实可运行、可录屏、可追溯的 Demo。它帮助用户以一张确认的母版建立五官与脸型标准，再对本人单张或同组照片进行诊断、受确认保护的编辑和复测；它不是身份搜索、审美评分或生产服务。
 
@@ -24,9 +24,9 @@
 - <span style="color:#C00000"><strong>8C-1/8C-2：已实现结果图本地观察、受限 `VERIFICATION_STRATEGY_SELECT` baseline、逐特征趋势、结构化目标证据、父子子计划/ProviderRun 血缘、三轮上限和点赞/点踩/文字 hash 反馈。首次确认范围仍有效且证据满足时，系统会自动执行并自动复测下一轮；每次触发前后都有脱敏 Trace，超出范围不会调用。</strong></span>
 - <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C：已实现独立本地 SQLite 权威知识库、metadata 硬过滤、FTS5、local dense、RRF、local reranker、来源依据卡、脱敏 Trace，以及对 8A/8C 的受限 evidence 回接。</strong>当前导入 3 张人工审核的 Tencent Provider Card、拆成 10 条原子规则；P0-B 只从本地缓存读取固定模型 revision，模型缺失时退回 P0-A。P0-C 把结果分为 direct/reference/conflict，`execution_authorized=false`；它不读取照片或用户原话，不调用 LLM/Tencent/API，不生成参数或新的工具权限。另有一个只读本机 RAG 治理 Dashboard，展示脱敏知识/路由/bad-case 聚合；它不是自动 worker、外部/混合复测或“RAG 自动修图”。</span>
 - <span style="color:#C00000"><strong>Gold Set v2：已实现独立离线评测器、无答案 public 集（34 dev + 18 challenge）、20 题 holdout 输入包、独立答案键、盲审输入合同和可视化 HTML 报告生成。当前 public deterministic baseline 与私有 holdout aggregate 均已运行且 `FAIL`：公开集的固定分母 Precision@3=47.44%，私有隐藏集 Route=25.00%。这说明当前基线还不具备可宣称的泛化效果。</strong></span>
-- <span style="color:#C00000"><strong>Provider 扩展：火山美颜 API V2.0 与腾讯特效 SDK 已建立 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 smoke 入口；两者均未接入 SDK/API、未发送图片、未使用密钥，状态保持 `candidate`/fail-closed。</strong></span>
+- <span style="color:#C00000"><strong>Provider 扩展：火山美颜 API V2.0 与腾讯特效 SDK 已建立 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 smoke 入口；两者均未接入 SDK/API、未发送图片、未使用密钥，状态保持 `candidate`/fail-closed。产品决策是火山 V0 暂不购买/接入，当前执行链只用 Tencent。</strong></span>
 - <span style="color:#C00000"><strong>RAG failure-pattern：已生成脱敏的公开分层指标、隐藏集聚合错误类型、SOP 与 proposal-only 自校正候选；候选公开回归无指标回退但未推广，project Gate 仍为 `FAIL`。RAG 治理看板现可嵌入公开评测、隐藏聚合和失败分析 HTML，另有只读 RAG 优化看板。</strong></span>
-- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明；仓库发布边界排除了密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。当前只是“可部署代码包”，尚未声称已获得公网 URL 或持久化服务。</strong></span>
+- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。仓库发布边界排除了密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。Streamlit Cloud App、Secrets、访问名单和最终 URL 仍需在控制台创建，尚未声称已获得公网 URL 或持久化服务。</strong></span>
 
 ## 重要边界
 
@@ -49,7 +49,7 @@ RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Go
 
 failure analyzer 已把“公开指标、隐藏聚合、错误模式、候选修正、回归差值、SOP”串成可重放链路。当前候选 `rag-correction-candidate-v0.1` 只做经审核的同义词归一化，公开回归 `regression_gate=PASS`，但 project Gate 仍为 `FAIL`，所以没有写入现役检索或权限逻辑。报告和 Dashboard 都是本机只读治理工具，不是生产监控、自动修复器、训练 Dataset 或图片编辑器。
 
-两个候选 Provider 的真实状态仍为：火山 V2 `not_run`、腾讯特效 SDK `blocked`；两者均未导入 SDK、未读取用户照片、未发送图片、未生成真实 ProviderRun。只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执。开通候选供应商账号或 License 后，仍需按候选 Card → Adapter → 权限/预算 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进。
+两个候选 Provider 的真实状态仍为：火山 V2 `not_run`、腾讯特效 SDK `blocked`；两者均未导入 SDK、未读取用户照片、未发送图片、未生成真实 ProviderRun。只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执；由于火山官方准入要求购买创点且公开价格/试用额度未闭合，V0 已明确暂不购买/接入。未来若重新开启候选，仍需按 Card → Adapter → 权限/预算 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进。
 
 ## 当前项目树
 

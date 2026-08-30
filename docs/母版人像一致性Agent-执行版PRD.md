@@ -3,7 +3,7 @@
 > 文档版本：`v0.9-current`
 > 最近同步：2026-08-29
 > 文档性质：**当前产品与工程的共同真相源，持续更新**
-> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层：它只能提议/留证，不能新增执行权限、外部/混合复测或 Provider；RAG 专属本地管理员 Dashboard 已实现并完成页面验证。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。live Judge、外部/混合复测 Adapter、自动 lifecycle/observability worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
+> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层：它只能提议/留证，不能新增执行权限、外部/混合复测或 Provider；RAG 专属本地管理员 Dashboard 已实现并完成页面验证。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 仍需控制台创建。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、自动 lifecycle/observability worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
 > 提交目标：2026-09-04 前完成真实可演示闭环和录屏备份
 
 ## 0. 这份文档和原启动蓝图是什么关系
@@ -1098,14 +1098,14 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | UI 内真实 API 执行                        | **已实现并离线验证** | 8B 确认按钮、确定性 Gate、Tencent Adapter、ProviderRun、会话内结果预览；6 个 fixture 测试 | 尚无新的 UI live receipt；不自动重试、不持久化结果、不代表修图有效                                   |
 | VerificationResult 与计划族续跑              | **已实现并离线验证**   | 结果图内存解码、同一几何观察器、逐特征趋势、目标证据、STOP/REPLAN/RESHOOT/MANUAL_REVIEW；子计划/父子回执/三轮上限/显式反馈/scope fail-closed 的 6 条 8C-2 测试与 fixture Trace；P0-C 可将受限策略 evidence 留入 `knowledge_refs` | 未有真实 UI 三轮照片回执；external/hybrid 复测、妆面/肤色自动验收和 LLM 自由策略未实现         |
 | 批量模式                                 | **已冻结待开发**   | 用户旅程与逐张合同                                                               | 无批量执行代码                                               |
-| 受邀 Streamlit URL / 本地服务器            | **部署包已准备；实际部署待用户操作** | GitHub `main/app.py` 部署包、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步 | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略和 URL 仍需用户在控制台确认 |
+| 受邀 Streamlit URL / 本地服务器            | **私有 GitHub 部署包已推送；Cloud App 待用户操作** | 私有仓库 `z1834691-coder/portrait-consistency-agent` 的 `main/app.py`、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步 | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略和 URL 仍需用户在控制台确认 |
 | 接受概率模型                               | **未来候选**     | 数据/评测规则已定义                                                              | V0 禁止显示                                               |
 | RAG P0-A / P0-B 本地检索                         | **已实现并本地验证**     | SQLite `KnowledgeItem/KnowledgeChunk`、3 张来源卡/10 条原子规则、metadata/FTS5、dense8/RRF10/rerank10、过期/冲突/缺槽/注入降级、依据卡、Trace、15 条检索回归与默认禁止下载 smoke | 只排序已审核工具知识；不读照片/原话、不调用 LLM/腾讯、不产生参数/ProviderRun |
 | RAG P0-C 受限 evidence 回接                    | **已实现并本地验证**     | `RagAdvisoryDecision` / `RagBadCaseRecord`、8A/8C advice 注入、direct/reference/conflict 分层、`EditPlan`/验证合同引用、G01/G09/miss/baseline 4 条回归与本地 smoke | `execution_authorized=false`；不新增 Provider、参数、外部/混合复测或自动 worker，也不产生人工 Gold Set 数值结论 |
 | RAG 专属治理 Dashboard                         | **已实现并本地页面验证** | `pages/4_RAG治理看板.py` 读取独立知识账本的脱敏聚合；`rag_dashboard_snapshot` / `knowledge_catalog` 和定向回归验证不返回 source body、raw query、照片或密钥 | 本机只读管理员视图；不是 Gold 评测通过率、训练 Dataset、自动 lifecycle/observability worker 或部署级管理员鉴权 |
 | RAG Gold Set v2 离线评测器                     | **已实现并本地验证；当前基线未通过** | `services/rag_gold_eval.py`、public 52 题、annotations、holdout 20 题、盲审输入合同、JSON/Markdown/HTML 报告和阈值 Gate；public prediction 与私有 aggregate holdout score 已实际生成；Precision C 双口径、Safety ID C 字典已实现 | public 固定分母 Precision@3=47.44%、覆盖式/返回式=100%，私有 holdout Route=25.00%，两者 project Gate 均 `FAIL`；私有旧 Markdown 仍需 machine-normalized event ID；live Judge 未实现 |
 | RAG failure-pattern / 自校正候选 / 优化 Dashboard | **已实现并本地验证；候选未推广** | `services/rag_failure_analysis.py`、`rag-correction-candidate-v0.1`、脱敏 JSON/HTML、page 4 报告集合与 page 5 优化看板；公开回归差值和六步 SOP 可回放 | 只读 public/隐藏 aggregate；不读 hidden 答案、照片、向量或原始文本；不改变 active baseline、权限、Provider 或 project Gate（当前仍 `FAIL`） |
-| 新 Provider candidate shells                 | **已实现并 fail-closed 验证** | 火山美颜 API V2.0、腾讯特效 SDK 的 Card、typed Adapter、权限/预算 preflight、离线测试和 smoke | 仍为 `candidate`；无 SDK/API、密钥、图片出站、真实 receipt、Gold 回归或产品准入 |
+| 新 Provider candidate shells                 | **已实现并 fail-closed 验证；火山 V0 暂缓** | 火山美颜 API V2.0、腾讯特效 SDK 的 Card、typed Adapter、权限/预算 preflight、离线测试和 smoke；V0 实际执行仍 Tencent-only | 火山需购买创点且公开价格/试用未闭合，腾讯特效仍无 License/真实 receipt；均无 SDK/API、密钥、图片出站、Gold 回归或产品准入 |
 
 ### 13.1 当前测试证据
 
@@ -1325,3 +1325,13 @@ Gold Set v2（开发/挑战/隐藏）
 <span style="color:#C00000"><strong>本轮产品决策。</strong> 采用“私有 GitHub 仓库 + `main/app.py` + Community Cloud Private/受邀 Beta”的部署包方案；只发布代码、审核过的 Provider Card、测试和产品文档，明确排除 `.env`、密钥、真实照片、结果图、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。Streamlit URL 只作为短期演示/受邀测试入口；在确认数据出境、访问名单、Secrets、费用和删除策略前，不把真实照片测试写成已授权公网服务。火山美颜继续保持 candidate，不因部署而进入调用链。</span>
 
 <span style="color:#C00000"><strong>工程实现与效果。</strong> `app.py` 增加 `src/` 入口兼容，`.streamlit/config.toml` 不再把云端绑定到本机地址，`pyproject.toml`/`uv.lock` 默认只安装轻量依赖，新增 [Streamlit 部署说明](STREAMLIT_DEPLOYMENT.md)；`.gitignore` 保护本地运行和评测材料。这样后续每次推送 `main` 都可以复现同一部署入口，而数据库持久化、管理员鉴权、主体锚点 TTL、跨会话恢复和真实用户数据合规仍保持未完成/待新 Gate 的诚实边界。</span>
+
+### 17.16 2026-08-30 产品设计：以预算与准入证据收口火山候选，保证 Demo 主链不被阻塞
+
+<span style="color:#C00000"><strong>背景与问题。</strong> 为补充唇厚、眼距、鼻翼和脸型细分，前一轮曾并行建立火山美颜 API V2.0 与腾讯特效 SDK 候选路线。但“账号已开通 IAM/API Key”不等于服务有创点、可调用、有可接受价格或允许当前图片数据流；如果没有先核对套餐和隐私证据就继续接入，会让个人 Demo 承担不可控费用，也会把候选宣传能力误写成可执行能力。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 本轮核对火山官方产品介绍、V2 APIKey 文档和 SDK 套餐资料：V2 的产品介绍明确要求购买支持后付费 API 的创点套餐；公开页面没有给出个人免费试用额度或按次 API 价格，另行公开的 SDK 年包从 6 万元起但不等同 V2 API 报价。由此判断，当前只有 IAM/API Key 不能证明低成本可用，继续投入会把外部采购风险与 9 月 4 日 Demo 目标耦合。完整来源和未核验项保留在 [火山 Provider Spike](PROVIDER_VOLCENGINE_SPIKE.md)。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> 火山美颜真实接入从 V0 移出：不购买套餐、不配置 Key、不发送用户/测试照片；Candidate Card 和 fail-closed Adapter shell 继续保留，未来只有获得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才重新提交 `reviewed_active` 决策。9 月 4 日 Demo 继续只依赖已真实验证的腾讯 BeautifyPic/IMS 路径，RAG 命中火山知识不能授权它。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 主链路不再被高额或不透明供应商费用阻塞，代码仍可迭代扩展；同时保留了未来证明“如何做 Provider 准入”的面试证据。当前私有 GitHub 部署包已通过 146 个测试和 Streamlit HTTP 200 启动探针，但 Cloud App、Secrets、访问名单和真实受邀照片测试仍需单独确认，不能写成生产上线。</span>

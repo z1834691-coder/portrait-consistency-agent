@@ -346,3 +346,7 @@ Gold failure pattern 的诊断证据按“观察事实 / 聚合事实 / 有限�
 评测指标的双口径不会改变 Agent 的权限：LLM 可以看到固定/覆盖式/返回式 Precision 的脱敏摘要，用于解释“证据是否找全、是否夹带噪声”，但不能据此修改阈值、制造安全通过或选择未准入 Provider。安全事件只能由确定性 `RAG_EVT_*` 字典和 Trace 观察产生；未知事件必须提示人工复核，不能让 Prompt 猜测。
 
 Holdout v2 的聚合结果不能回流 Prompt；v3 只在正式独立验收时使用。任何知识检索 miss、过期、冲突或未知事件都应保持 `UNKNOWN/BASELINE/MANUAL_REVIEW_REQUIRED` 等受限路由，不能为了提高分数生成新的能力声明或执行授权。
+
+## 9. 2026-08-30 部署与 Provider 当前 Prompt 边界
+
+Streamlit Cloud 只是代码运行入口，不会改变 Prompt 的数据边界：Secrets 由部署平台注入，Prompt 不得读取或展示密钥、照片、Base64、人脸向量、原始 Trace、隐藏答案或本机报告。火山美颜 V2 仍为 `candidate`/fail-closed；即使 RAG 命中它的官方能力资料，Prompt 也只能提出“待准入候选”，不得生成 ProviderRun、图片出站或权限授权。当前可执行图片工具仍是已验证的腾讯 BeautifyPic 路径，且继续受既有 scope、预算、一次尝试与 8C 计划族策略约束。

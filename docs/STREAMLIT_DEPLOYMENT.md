@@ -6,7 +6,7 @@ Community Cloud 当成生产服务器，也不改变 RAG 只能提议、腾讯�
 
 ## 当前部署包
 
-- GitHub 仓库：`z1834691-coder/portrait-consistency-agent`（默认私有）；
+- GitHub 仓库：[`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)（已创建、默认私有，`main` 已推送）；
 - 分支：`main`；入口：根目录 `app.py`；
 - 仓库包含可运行代码、审核过的 Provider Card、测试和产品文档；不包含 `.env`、真实照片、
   SQLite/JSONL、生成结果图、模型缓存、隐藏答案键和本机评测报告；

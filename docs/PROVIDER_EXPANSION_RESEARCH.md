@@ -1,6 +1,6 @@
 # 人像细项修图 Provider 扩展调研（双路线已冻结，候选准入进行中）
 
-> 2026-08-30 状态同步：火山美颜 API V2 与腾讯特效 SDK 的官方证据核验已完成，详细可证实/待证实边界分别见 [火山 Spike](PROVIDER_VOLCENGINE_SPIKE.md) 与 [腾讯特效 Spike](TENCENT_EFFECT_SDK_SPIKE.md)。两者仍为 `candidate`，无图片出站、无真实新 Provider receipt；本文件的任何历史候选措辞均不得覆盖这两个专项文档的最新边界。
+> 2026-08-30 状态同步：火山美颜 API V2 与腾讯特效 SDK 的官方证据核验已完成，详细可证实/待证实边界分别见 [火山 Spike](PROVIDER_VOLCENGINE_SPIKE.md) 与 [腾讯特效 Spike](TENCENT_EFFECT_SDK_SPIKE.md)。两者仍为 `candidate`，无图片出站、无真实新 Provider receipt；产品负责人已冻结火山 V0 暂不购买/接入，当前执行链只用 Tencent。本文件的任何历史候选措辞均不得覆盖这两个专项文档的最新边界。
 
 > 调研日期：2026-08-29；实施同步：2026-08-30｜状态：产品负责人已冻结两条并行路线；Candidate Card、Adapter shell、权限/预算 preflight、离线测试和 smoke 已创建，**没有新 Provider 密钥、照片出站或外部调用被创建。**
 

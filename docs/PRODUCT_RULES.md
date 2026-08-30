@@ -543,3 +543,11 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 <span style="color:#C00000"><strong>Safety ID C。</strong> 已知 hard-safety 标签通过版本化确定性字典映射到 `RAG_EVT_*`；未知标签不模糊猜测，直接要求人工复核。字典只影响评测可观测性，不授权 RAG、LLM 或 Provider 执行。</span>
 
 实现落点：`core/rag_safety_events.py`、`data/evaluation/rag_safety_event_catalog_v0.json`、`data/evaluation/rag_gold_v3_holdout_runtime.template.json`、`RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md`、Gold evaluator/private aggregate/failure analyzer/page 5 看板及对应测试。当前 public 固定 Precision@3=47.44%、覆盖式/返回式=100%、project Gate 仍 `FAIL`；新 v3 仍为空模板，不能写成 RAG 通过。
+
+## 19. 2026-08-30 当前部署与 Provider 规则收口
+
+<span style="color:#C00000"><strong>部署规则。</strong> 为获得短期可分享演示 URL，代码包已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)，预定使用 Streamlit Community Cloud Private/受邀 Beta。Cloud App 必须由用户在控制台选择 `main/app.py`、配置 Secrets 并确认访问名单；URL 由控制台生成，仓库和代码不承诺某个自定义 slug 一定可用。仓库不包含 `.env`、照片/结果图、本机 SQLite/JSONL、模型缓存、隐藏答案和报告。</span>
+
+<span style="color:#C00000"><strong>火山候选规则。</strong> 火山美颜 API V2 已核对到官方“创点/购买支持后付费 API 套餐”的准入说明；公开资料未给出个人免费额度或按次 API 价格，公开 SDK 年包从 6 万元起且不是 V2 API 的报价。因此 V0 暂不购买、不配置 Key、不发送照片；保留 Card/Adapter shell 供未来候选评估。只有取得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才可另行申请进入 `reviewed_active`。腾讯 BeautifyPic 是当前唯一继续使用的已验证图片执行 Provider。</span>
+
+<span style="color:#C00000"><strong>验证结果。</strong> 本轮重新跑通 `pytest 146 passed, 4 warnings`、Ruff、format、compileall、`git diff --check` 和 Streamlit HTTP 200 启动探针；这些证据证明部署包可构建和本地入口可启动，不等于 Cloud App 已部署、真实照片已获跨境授权或生产服务已具备。</span>

@@ -29,7 +29,7 @@
 | 8C-2 | 有界三轮计划族、父子回执血缘、自动续跑与反馈硬停止 | 已完成离线验证；自动续跑代码已同步 | 每轮新子 plan/run；只有可验证累积改善才能生成子计划；首次确认 scope 内自动执行/复测，preflight、trigger、hash 和结果全留 Trace |
 | RAG Gate / P0-A + P0-B + P0-C | 工具知识库、索引、召回/融合、受限 evidence 回接 | **已完成本地验收** | 已实现独立 SQLite 权威库、3 张审核 Card/10 条原子规则、metadata + FTS5、local dense/RRF/rerank、依据卡、脱敏 Trace，以及 8A/8C 的 direct/reference/conflict evidence 回接；不接 LLM、新 Provider、图片执行或 external/hybrid 复测 |
 | Gold Set v2 evaluator / blind input | public/annotations/holdout 隔离、指标、人工审核材料 | **已完成本地验收；当前基线未通过** | 52 题 public + 20 题 holdout 输入、阈值 Gate、HTML/Markdown/JSON 报告和私有 aggregate-only scorer 已实现；public/private aggregate 均 `FAIL`；live Judge 未实现 |
-| 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效 SDK | **已完成离线验收** | Card、typed Adapter、权限/预算 preflight、smoke 已实现；两者均未联网/发图，仍为 `candidate` |
+| 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效 SDK | **已完成离线验收；火山 V0 暂缓** | Card、typed Adapter、权限/预算 preflight、smoke 已实现；两者均未联网/发图，仍为 `candidate`，当前实际执行链只用 Tencent |
 
 ## 检查点 6.1｜真实照片质量门（已完成并验收）
 
@@ -1375,7 +1375,7 @@ uv run python scripts/analyze_rag_failures.py
 
 ### 当前验证与下一步
 
-本轮已重新运行 `pytest`（146 passed, 4 warnings）、Ruff、format、compileall、`git diff --check`；`uv run python` 可直接导入 `app.py`，本机 Streamlit 8510 端口返回 HTTP 200 后已正常停止。待推送 Git tree 还需最后确认不含密钥、照片、账本和隐藏答案。验证通过后创建私有 GitHub 仓库 `z1834691-coder/portrait-consistency-agent` 并推送 `main`；Streamlit Community Cloud 的“创建 App、选择入口、配置 Secrets、确认 Private/受邀名单”仍需用户在控制台完成，Cloud URL 由控制台生成。
+本轮已重新运行 `pytest`（146 passed, 4 warnings）、Ruff、format、compileall、`git diff --check`；`uv run python` 可直接导入 `app.py`，本机 Streamlit 8510 端口返回 HTTP 200 后已正常停止。Git tree 已确认不含密钥、照片、账本和隐藏答案，私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent) 已创建并推送 `main`；Streamlit Community Cloud 的“创建 App、选择入口、配置 Secrets、确认 Private/受邀名单”仍需用户在控制台完成，Cloud URL 由控制台生成。
 
 ### 明确边界
 

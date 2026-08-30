@@ -790,3 +790,9 @@ answerless public run
 ```
 
 已更新 `services/rag_gold_eval.py`、私有 aggregate 投影、failure analyzer、page 5 看板、公开事件目录和 v3 custody 文档，并补充单元测试。评测仍是离线、无网络、无照片、无 LLM；RAG 的 `execution_authorized=false`、候选 Provider fail-closed 和 hidden 独立性未改变。下一道门是产品负责人审核 canonical 事件目录、生成并审核 v3 Gold/holdout，以及决定是否批准某个候选 Provider 进入正式准入流程。
+
+## 27. 2026-08-30 当前 Provider 与部署收口
+
+火山美颜 API V2 的官方准入/计费资料已补齐到 [Provider Spike](PROVIDER_VOLCENGINE_SPIKE.md)：需要购买支持后付费 API 的创点套餐，公开资料没有个人免费额度或按次 API 价格；公开 SDK 年包起价也不是 V2 API 报价。产品负责人因此冻结 V0 不购买、不填 Key、不发图片，火山只保留 `candidate`/fail-closed 壳；RAG 命中它的知识不能改变这一权限。当前图片执行只走已验证的腾讯 BeautifyPic。
+
+部署方面，代码已推送至私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)，Streamlit Community Cloud 仍需用户在控制台创建 Private App、选择 `main/app.py` 并配置 Secrets。部署包已通过 `pytest 146 passed, 4 warnings`、Ruff、format、compileall、`git diff --check` 和 HTTP 200 启动探针；这些是构建/启动证据，不是 RAG 通过、生产持久化或公网用户测试证据。

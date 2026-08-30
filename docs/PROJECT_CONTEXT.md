@@ -56,9 +56,9 @@
 
 ## 2026-08-30 当前实现快照
 
-Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。
+Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前执行链只用 Tencent。
 
-当前交叉校验：全量 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 failure-pattern/优化看板收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；下一步是审核事件目录、生成 v3 独立验收集，并继续完成新 Provider 的书面能力/License/隐私/价格/延迟、真实 receipt、Gold 回归与产品准入。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，实际 Cloud 创建仍待用户操作。
+当前交叉校验：全量 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 failure-pattern/优化看板收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；下一步是审核事件目录、生成 v3 独立验收集，并继续完成新 Provider 的书面能力/License/隐私/价格/延迟、真实 receipt、Gold 回归与产品准入。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`，实际 Cloud App 创建仍待用户操作。
 
 ## 2026-08-30 failure-pattern 实现快照
 

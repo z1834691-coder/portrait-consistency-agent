@@ -404,3 +404,13 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 ## 18. 2026-08-30 最新评测治理状态
 
 本文件中较早章节保留当时的测试快照；当前同步状态以本节为准：全量回归为 `146 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 仍为空的 answerless 模板，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+
+## 19. 2026-08-30 部署与候选 Provider 当前合同边界
+
+本节不新增业务合同，只固定当前运行包的可追溯边界：
+
+- GitHub 私有仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent) 的 `main` 已包含当前代码、测试、审核 Provider Card 和文档；`.env`、照片/结果图、SQLite/JSONL、模型缓存、隐藏答案和本机报告由发布面排除。
+- Community Cloud 只是 Private/受邀短期演示入口；它的 URL、Secrets、访问名单和 Cloud 存储不构成六个业务合同中的生产持久化、跨会话锚点 TTL 或删除 SLA 证据。
+- 火山美颜 V2 的 candidate request 仍只能返回 `blocked/not_run`；官方“需要购买支持后付费 API 的创点套餐”与“公开 SDK 年包起价”只属于准入/预算事实，不会生成 `ProviderRun`，不改变 Tencent-only V0 执行链。
+
+本轮没有修改 `ReferenceProfile`、`PhotoQualityResult`、`IntentFrame`、`EditPlan`、`ProviderRun`、`VerificationResult` 的字段职责；代码、测试和文档交叉检查保持一致。
