@@ -102,3 +102,14 @@ make run
 ## 2026-08-30 评测治理当前状态
 
 Precision C、Holdout A、Safety ID C 已实现：public 报告同时显示固定/覆盖式/返回式 Precision；v2 hidden 只作历史 aggregate，v3 只创建了 answerless 模板；已知安全标签可映射为 `RAG_EVT_*`，未知标签保持人工复核。重跑 public/failure analyzer 时必须显式提供 predictions；不能用空 pending 报告替代正式结果。
+
+## 2026-08-30｜RAG lifecycle audit
+
+新增本地命令：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/audit_rag_lifecycle.py
+```
+
+它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。本轮全量回归为 `150 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。

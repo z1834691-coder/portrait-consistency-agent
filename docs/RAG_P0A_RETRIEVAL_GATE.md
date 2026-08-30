@@ -73,5 +73,9 @@ route
 
 - P0-A 的中文自然语言召回能力还不应被夸写：当前依靠受控 feature/Provider 关键词和 FTS，不是 embedding/向量语义检索。
 - **历史说明（已由 P0-C 覆盖）：** 当时 P0-A 尚未接入 `edit_planner.py` 或 `verification.py`。现在 P0-C 已受限消费 P0-A/P0-B evidence：8A/8C 仅获得 direct/reference/conflict 引用和 bad case，`execution_authorized=false`；参数、权限、Adapter 与外部调用仍不由检索器决定。
-- 没有 RAG lifecycle worker、RAG 专属 Dashboard、真实用户检索数据、Recall@k/MRR/nDCG 阈值或生产级知识更新任务；这些属于后续 P0-B/产品数据阶段。
+- **历史说明（已由 P0-D 覆盖）：** P0-A 当时没有 lifecycle worker 或 Dashboard；当前已补上 metadata-only `RagLifecycleAudit`、审计账本和 page 4 入口，但仍没有自动生命周期 worker、真实用户检索数据、Recall@k/MRR/nDCG 质量通过或生产级知识更新任务。
 - P0-B/P0-C 现已完成本地混合检索与受限 evidence 回接；仍不能说已经有 LLM 工具路由、RAG 自动修图或新图片 Provider。完整决策依据见 [RAG_DECISION_GATE.md](RAG_DECISION_GATE.md)，当前回接实现见 [RAG_P0C_ADVISORY_INTEGRATION_GATE.md](RAG_P0C_ADVISORY_INTEGRATION_GATE.md)，人工 Gold Set 见 [RAG_GOLD_SET_DRAFT.md](RAG_GOLD_SET_DRAFT.md)。
+
+### 2026-08-30 当前同步
+
+P0-A 的 SQLite/FTS5 仍是知识权威来源；P0-D lifecycle audit 只读取其元数据和原子规则计数，当前 3 张审核 Card/10 条 active chunks 无 lifecycle issue。审计不改变 P0-A 召回、不自动发布或删除，RAG 依旧只能提议。

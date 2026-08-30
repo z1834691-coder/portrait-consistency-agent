@@ -806,3 +806,31 @@ answerless public run
 火山美颜 API V2 的官方准入/计费资料已补齐到 [Provider Spike](PROVIDER_VOLCENGINE_SPIKE.md)：需要购买支持后付费 API 的创点套餐，公开资料没有个人免费额度或按次 API 价格；公开 SDK 年包起价也不是 V2 API 报价。产品负责人因此冻结 V0 不购买、不填 Key、不发图片，火山只保留 `candidate`/fail-closed 壳；RAG 命中它的知识不能改变这一权限。当前图片执行只走已验证的腾讯 BeautifyPic。
 
 部署方面，代码已推送至私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)，Streamlit Community Cloud 仍需用户在控制台创建 Private App、选择 `main/app.py` 并配置 Secrets。部署包已通过 `pytest 146 passed, 4 warnings`、Ruff、format、compileall、`git diff --check` 和 HTTP 200 启动探针；这些是构建/启动证据，不是 RAG 通过、生产持久化或公网用户测试证据。
+
+## 28. 2026-08-30｜P0-D RAG 生命周期审计收口
+
+### 为什么补这一层
+
+P0-A/P0-B/P0-C 已分别解决“能存和检索”“能做本地混合召回”“能把依据受限地提供给 8A/8C”。但工具文档会更新、撤回或互相冲突，dense 索引也可能落后于 SQLite 权威账本；没有显式审计，系统无法解释当前证据是否仍可用。P0-D 因此把知识更新的“发现—人工判断—发布—重建—回归”变成可观察流程，而不是让 LLM 或后台任务偷偷改变检索结果。
+
+### 已实现的链路
+
+```text
+Provider Card/Policy 元数据
+→ 知识条目与原子规则计数
+→ P0-D 非变更生命周期审计
+→ RagLifecycleAudit + 脱敏 Trace
+→ SQLite 审计账本 / JSON / HTML
+→ RAG 治理看板
+→ 产品负责人决定人工更新、重建索引和回归
+```
+
+审计会确定性标记 `expired`、`withdrawn`、`conflict_pending_review`、`not_yet_effective`、`candidate_not_published`、`review_due`、`missing_source_uri` 与 `zero_chunks` 等状态，并比较 active chunk、dense vector 与 manifest 数量。审计不会读取来源正文、照片、向量、原始用户文本或密钥，也不会联网、调用 LLM/Provider、改变知识状态、发布候选、删除数据、重建索引或授权工具。
+
+### 本轮结论
+
+当前已审核的 3 张 Tencent Provider Card 共 10 条有效原子规则：生命周期问题数为 0，dense index=`in_sync`，审计快照已写入本地脱敏账本并可在 page 4 看板打开。P0-D 与 P0-A/P0-B/P0-C、`RAGLifecycle*` 合同、报告 allow-list 和 4 条新测试已同步；RAG 仍是 advisory-only，公开/holdout project Gate 仍按真实评测结果保留 `FAIL`，不能将生命周期审计写成质量通过。
+
+### 收口边界
+
+截至本节，RAG 本地工程（权威账本、FTS、dense/RRF/rerank、受限 consumer、失败分析、proposal-only correction、生命周期审计、报告与两个看板）已具备可重放和可审计的实现。尚未完成的事项属于独立产品/外部 Gate：v3 Holdout 逐题审核与一次性盲测、正式 LLM Judge 是否启用、新 Provider 的 License/成本/隐私/真实 receipt/Gold 准入、生产级定时 worker 与 PostgreSQL/对象存储迁移、external/hybrid 复测 Adapter；这些不应被 P0-D 自动推进。

@@ -137,6 +137,38 @@ class RagBadCaseDiagnosis(str, Enum):
     HARD_FACT_CONFLICT = "hard_fact_conflict"
 
 
+class RagLifecycleIssueCode(str, Enum):
+    """Deterministic lifecycle findings produced by the audit-only worker."""
+
+    REVIEW_DUE = "review_due"
+    EXPIRED = "expired"
+    WITHDRAWN = "withdrawn"
+    CONFLICT_PENDING_REVIEW = "conflict_pending_review"
+    NOT_YET_EFFECTIVE = "not_yet_effective"
+    CANDIDATE_NOT_PUBLISHED = "candidate_not_published"
+    MISSING_SOURCE_URI = "missing_source_uri"
+    ZERO_CHUNKS = "zero_chunks"
+
+
+class RagLifecycleAction(str, Enum):
+    """Human-review action; none of these actions mutates the authority store."""
+
+    KEEP_ACTIVE = "keep_active"
+    REVIEW_REQUIRED = "review_required"
+    HOLD_NOT_YET_EFFECTIVE = "hold_not_yet_effective"
+    BLOCKED_FROM_RETRIEVAL = "blocked_from_retrieval"
+
+
+class RagIndexStatus(str, Enum):
+    """Status of the derived dense index relative to the SQLite authority."""
+
+    NOT_CHECKED = "not_checked"
+    NOT_BUILT = "not_built"
+    IN_SYNC = "in_sync"
+    STALE = "stale"
+    UNAVAILABLE = "unavailable"
+
+
 class KnowledgeItem(RagContractModel):
     """One complete, reviewed source version, retained for provenance."""
 
@@ -170,6 +202,72 @@ class KnowledgeItem(RagContractModel):
             raise ValueError("expires_at must be after effective_from")
         if self.supersedes == self.knowledge_id:
             raise ValueError("knowledge item cannot supersede itself")
+        return self
+
+
+class RagLifecycleItemAudit(RagContractModel):
+    """Safe metadata-only lifecycle audit for one knowledge source."""
+
+    knowledge_id: SafeId
+    provider: str = Field(min_length=1, max_length=96)
+    operation: str = Field(min_length=1, max_length=128)
+    source_version: str = Field(min_length=1, max_length=96)
+    lifecycle_status: KnowledgeLifecycleStatus
+    effective_from: datetime
+    review_due_at: datetime
+    expires_at: datetime | None = None
+    chunk_count: int = Field(ge=0)
+    source_uri_count: int = Field(ge=0)
+    issue_codes: list[RagLifecycleIssueCode] = Field(default_factory=list, max_length=12)
+    recommended_action: RagLifecycleAction
+
+    @model_validator(mode="after")
+    def validate_issue_codes(self) -> RagLifecycleItemAudit:
+        if len(self.issue_codes) != len(set(self.issue_codes)):
+            raise ValueError("lifecycle issue codes must be unique")
+        return self
+
+
+class RagIndexAudit(RagContractModel):
+    """Safe comparison between active knowledge and a derived dense index."""
+
+    status: RagIndexStatus
+    index_key: str | None = Field(default=None, max_length=128)
+    model_id: str | None = Field(default=None, max_length=256)
+    actual_revision: str | None = Field(default=None, max_length=256)
+    active_chunk_count: int = Field(ge=0)
+    manifest_document_count: int = Field(ge=0)
+    indexed_vector_count: int = Field(ge=0)
+    reason_codes: list[str] = Field(default_factory=list, max_length=12)
+
+    @model_validator(mode="after")
+    def validate_reason_codes(self) -> RagIndexAudit:
+        if len(self.reason_codes) != len(set(self.reason_codes)):
+            raise ValueError("index reason codes must be unique")
+        return self
+
+
+class RagLifecycleAudit(RagContractModel):
+    """Complete, replayable lifecycle audit; it is intentionally non-mutating."""
+
+    audit_id: SafeId
+    audit_version: str = Field(default="rag-lifecycle-audit-v0.1", min_length=1, max_length=64)
+    as_of: datetime
+    knowledge_item_count: int = Field(ge=0)
+    active_item_count: int = Field(ge=0)
+    active_chunk_count: int = Field(ge=0)
+    issue_counts: dict[str, int] = Field(default_factory=dict)
+    item_audits: list[RagLifecycleItemAudit] = Field(default_factory=list, max_length=500)
+    index: RagIndexAudit
+    auto_status_change_allowed: Literal[False] = False
+    auto_publish_allowed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> RagLifecycleAudit:
+        if self.active_item_count > self.knowledge_item_count:
+            raise ValueError("active_item_count cannot exceed knowledge_item_count")
+        if any(value < 0 for value in self.issue_counts.values()):
+            raise ValueError("issue counts cannot be negative")
         return self
 
 

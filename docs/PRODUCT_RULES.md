@@ -559,3 +559,13 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 <span style="color:#C00000"><strong>Holdout。</strong> 按 Holdout A 在项目工作区外生成了 36 道 v3 题目、分离答案草案和逐题审核表，状态为 `OWNER_REVIEW_DRAFT`。题目和答案不被应用/evaluator 读取；产品负责人审核完成后，正式 runtime 只允许导入 `case_id + query`，正式评分最多一次，不能用 v2/v3 hidden 逐题答案补规则。</span>
 
 <span style="color:#C00000"><strong>Tencent Web License。</strong> 测试 License 已通过控制台提交并显示“正常”，绑定精确主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13。密钥和 Token 只由产品负责人在密码管理器/部署 Secrets 中保管，不得写入仓库、Trace、报告或聊天。</span>
+
+## 20. 2026-08-30｜RAG 知识生命周期审计规则
+
+**背景与问题。**P0-A/P0-B 已能检索已审核 Provider Card，但“实时”不能被理解成自动抓网页或自动修改知识库；如果资料过期、撤回、冲突或 dense 索引落后，继续检索会把旧事实带入 8A/8C。为了兼顾可用性、成本和可追溯性，先把生命周期治理做成一个可显式触发的审计模块。
+
+**调研与判断。**知识库的权威来源是审核过的结构化 Card/Policy，dense/FTS 索引都是可重建派生物；因此需要同时检查来源元数据和索引计数，而不是让 LLM 猜资料是否仍有效。审计只读元数据、原子规则数和 manifest，不读取照片、向量、原文正文、用户文本或密钥。
+
+**冻结决策。**生命周期审计只生成 `RagLifecycleAudit` 与脱敏 Trace：过期/撤回/冲突条目阻断检索，未生效/候选条目保持 hold，到期复审/缺 URI/零规则进入人工复核，健康条目保持 active；`auto_status_change_allowed=false`、`auto_publish_allowed=false`。知识更新必须由产品负责人人工审核后改 Card/Policy、重建派生索引并重跑回归。RAG 仍只能提议，不能授权 Provider 或图片出站。
+
+**效果与边界。**当前 3 张审核 Tencent Card、10 条有效原子规则的审计结果为 `complete`、无生命周期问题、dense manifest=`in_sync`；审计记录可落 SQLite 并在治理看板查看。该结果证明知识账本与索引在本次快照一致，不证明 RAG 质量 Gate 通过，也不构成自动实时同步、生产合规或新 Provider 准入。

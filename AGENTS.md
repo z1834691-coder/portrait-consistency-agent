@@ -126,3 +126,15 @@ The current GitHub/Streamlit deployment package is intentionally private and exc
 `.env`, photos, result images, SQLite/JSONL, model cache, hidden answers, and local
 evaluation reports. Community Cloud data hosting and ephemeral disk are not evidence of
 production persistence, data-residency compliance, or a public service.
+
+## 2026-08-30 RAG lifecycle audit snapshot
+
+`RagLifecycleAudit` is now the metadata-only preflight for the local RAG knowledge base.
+It checks reviewed Card/Policy status, validity dates, source URI, atomic-rule counts and
+the derived dense manifest; it writes only a redacted audit ledger/report and never changes
+knowledge state, publishes candidates, deletes data, rebuilds indexes, calls a model/provider,
+or grants execution permission. The current snapshot is 3 reviewed Tencent Cards, 10 active
+chunks, no lifecycle issues and `index_status=in_sync`. Full regression after this addition
+is 150 passed with 4 existing Pillow deprecation warnings; the RAG project quality Gate is
+still FAIL. If a future task changes RAG code or policy, rerun the lifecycle audit and the
+full consistency checklist before describing the RAG work as closed.

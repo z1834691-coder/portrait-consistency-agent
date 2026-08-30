@@ -267,6 +267,35 @@ class LocalDenseIndex:
             "dense_vectors": int(vector_count["count"]),
         }
 
+    def manifest_snapshot(self) -> list[dict[str, object]]:
+        """Return safe manifest/vector counts for lifecycle consistency audits."""
+
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.index_key, m.model_id, m.requested_revision, m.actual_revision,
+                       m.dimension, m.document_count, m.created_at,
+                       (SELECT COUNT(*) FROM dense_index_vectors AS v
+                        WHERE v.index_key = m.index_key) AS indexed_vector_count
+                FROM dense_index_manifest AS m
+                ORDER BY m.created_at DESC, m.index_key ASC
+                """
+            ).fetchall()
+        return [
+            {
+                "index_key": str(row["index_key"]),
+                "model_id": str(row["model_id"]),
+                "requested_revision": str(row["requested_revision"]),
+                "actual_revision": str(row["actual_revision"]),
+                "dimension": int(row["dimension"]),
+                "document_count": int(row["document_count"]),
+                "indexed_vector_count": int(row["indexed_vector_count"]),
+                "created_at": str(row["created_at"]),
+            }
+            for row in rows
+        ]
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row

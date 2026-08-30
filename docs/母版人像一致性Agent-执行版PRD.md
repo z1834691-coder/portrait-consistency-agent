@@ -3,7 +3,7 @@
 > 文档版本：`v0.9-current`
 > 最近同步：2026-08-30
 > 文档性质：**当前产品与工程的共同真相源，持续更新**
-> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层：它只能提议/留证，不能新增执行权限、外部/混合复测或 Provider；RAG 专属本地管理员 Dashboard 已实现并完成页面验证。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 已创建为 Private 应用，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转；腾讯 Web License 测试 License 已提交并在控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13。canonical Safety Event 目录已获产品负责人审核通过；v3 Holdout 已在工作区外生成题目/答案键审核草案，但仍不是正式 Holdout，也未回到仓库。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、自动 lifecycle/observability worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
+> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层；P0-D 已补齐 metadata-only 生命周期审计、索引 manifest 一致性检查、审计账本和 page 4 入口：这些模块只能提议/留证，不能新增执行权限、外部/混合复测或 Provider。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 已创建为 Private 应用，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转；腾讯 Web License 测试 License 已提交并在控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13。canonical Safety Event 目录已获产品负责人审核通过；v3 Holdout 已在工作区外生成题目/答案键审核草案，但仍不是正式 Holdout，也未回到仓库。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、生产级定时 lifecycle worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
 > 提交目标：2026-09-04 前完成真实可演示闭环和录屏备份
 
 ## 0. 这份文档和原启动蓝图是什么关系
@@ -942,7 +942,7 @@ V0 计划==由确定性视觉模块完成==：
 | 主体匹配        | 腾讯 IAI `CompareFace` 3.0 + 独立 Adapter | Adapter 已实现；真实同图 smoke 已验证   | 只做当前会话 1:1 同人路由；供应商原始分不作为产品一致性分数展示               |
 | 内容安全        | 腾讯 IMS `ImageModeration` + 独立 Adapter | Adapter 已实现；服务开通后已获得真实 `Block` 与另一张授权照片的 `Pass` | `Pass` 放行，`Review/Block` V0 保守拦截；两条样例路由已验证，但不代表完整安全覆盖 |
 | LLM         | DeepSeek V4 Flash + 本地模板 fallback     | IntentFrame Adapter 已实现，固定文本 live receipt 已验证 | 只做意图、一个澄清问题和候选路由；不读图片或生物特征                    |
-| RAG         | Provider Card → 本地 SQLite + metadata + FTS5（P0-A）→ local dense/RRF/rerank（P0-B）→ 受限 advice（P0-C）→ 本地治理 Dashboard → Gold evaluator → failure-pattern 分析/优化 Dashboard | 已实现/本地验证：独立知识库、3 张来源卡/10 条原子规则、FTS 前 5/8、dense 前 8、RRF/rerank 前 10、依据卡、Trace、P0-C 的 direct/reference/conflict 路由、只读看板、Gold public/holdout 隔离与 HTML 报告、failure-pattern/SOP/候选差值看板、144 条自动化测试 | 证据已受限回接 8A/8C；RAG 不授权执行。public 与私有 holdout 聚合均已跑出，当前阈值 Gate 为 `FAIL`；自动 worker、新 Provider 正式准入和 external/hybrid 执行仍待新的评测产品 Gate |
+| RAG         | Provider Card → 本地 SQLite + metadata + FTS5（P0-A）→ local dense/RRF/rerank（P0-B）→ 受限 advice（P0-C）→ 本地治理 Dashboard → Gold evaluator → failure-pattern 分析/优化 Dashboard → lifecycle audit（P0-D） | 已实现/本地验证：独立知识库、3 张来源卡/10 条原子规则、FTS 前 5/8、dense 前 8、RRF/rerank 前 10、依据卡、Trace、P0-C 的 direct/reference/conflict 路由、只读看板、Gold public/holdout 隔离与 HTML 报告、failure-pattern/SOP/候选差值看板、P0-D metadata-only 生命周期审计与 150 条自动化测试 | 证据已受限回接 8A/8C；RAG 不授权执行。public 与私有 holdout 聚合均已跑出，当前阈值 Gate 为 `FAIL`；自动 worker、新 Provider 正式准入和 external/hybrid 执行仍待新的评测产品 Gate |
 | 部署          | 本机 Streamlit；未来受邀入口待定               | 平台/访问控制/硬件采购均待定              | 本机不是长期服务器；没有公网或采购授权                             |
 
 本地命令：
@@ -1102,7 +1102,8 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | 接受概率模型                               | **未来候选**     | 数据/评测规则已定义                                                              | V0 禁止显示                                               |
 | RAG P0-A / P0-B 本地检索                         | **已实现并本地验证**     | SQLite `KnowledgeItem/KnowledgeChunk`、3 张来源卡/10 条原子规则、metadata/FTS5、dense8/RRF10/rerank10、过期/冲突/缺槽/注入降级、依据卡、Trace、15 条检索回归与默认禁止下载 smoke | 只排序已审核工具知识；不读照片/原话、不调用 LLM/腾讯、不产生参数/ProviderRun |
 | RAG P0-C 受限 evidence 回接                    | **已实现并本地验证**     | `RagAdvisoryDecision` / `RagBadCaseRecord`、8A/8C advice 注入、direct/reference/conflict 分层、`EditPlan`/验证合同引用、G01/G09/miss/baseline 4 条回归与本地 smoke | `execution_authorized=false`；不新增 Provider、参数、外部/混合复测或自动 worker，也不产生人工 Gold Set 数值结论 |
-| RAG 专属治理 Dashboard                         | **已实现并本地页面验证** | `pages/4_RAG治理看板.py` 读取独立知识账本的脱敏聚合；`rag_dashboard_snapshot` / `knowledge_catalog` 和定向回归验证不返回 source body、raw query、照片或密钥 | 本机只读管理员视图；不是 Gold 评测通过率、训练 Dataset、自动 lifecycle/observability worker 或部署级管理员鉴权 |
+| RAG 专属治理 Dashboard                         | **已实现并本地页面验证** | `pages/4_RAG治理看板.py` 读取独立知识账本的脱敏聚合；`rag_dashboard_snapshot` / `knowledge_catalog`、lifecycle audit 和定向回归验证不返回 source body、raw query、照片或密钥 | 本机只读管理员视图；不是 Gold 评测通过率、训练 Dataset、自动 lifecycle worker 或部署级管理员鉴权 |
+| RAG 生命周期审计（P0-D）                         | **已实现并本地验证** | `RagLifecycleAudit`、`rag_lifecycle_audits`、dense manifest、`scripts/audit_rag_lifecycle.py`、JSON/HTML 报告、page 4 显式入口与 4 条测试；当前 3 items/10 active chunks、issue=0、index=`in_sync` | metadata-only、只报告不变更；人工审核后才能更新/发布/重建，不能把审计结果写成 RAG 质量通过 |
 | RAG Gold Set v2 离线评测器                     | **已实现并本地验证；当前基线未通过** | `services/rag_gold_eval.py`、public 52 题、annotations、holdout 20 题、盲审输入合同、JSON/Markdown/HTML 报告和阈值 Gate；public prediction 与私有 aggregate holdout score 已实际生成；Precision C 双口径、Safety ID C 字典已实现 | public 固定分母 Precision@3=47.44%、覆盖式/返回式=100%，私有 holdout Route=25.00%，两者 project Gate 均 `FAIL`；私有旧 Markdown 仍需 machine-normalized event ID；live Judge 未实现 |
 | RAG failure-pattern / 自校正候选 / 优化 Dashboard | **已实现并本地验证；候选未推广** | `services/rag_failure_analysis.py`、`rag-correction-candidate-v0.1`、脱敏 JSON/HTML、page 4 报告集合与 page 5 优化看板；公开回归差值和六步 SOP 可回放 | 只读 public/隐藏 aggregate；不读 hidden 答案、照片、向量或原始文本；不改变 active baseline、权限、Provider 或 project Gate（当前仍 `FAIL`） |
 | 新 Provider candidate shells                 | **已实现并 fail-closed 验证；火山 V0 暂缓** | 火山美颜 API V2.0、腾讯特效 SDK 的 Card、typed Adapter、权限/预算 preflight、离线测试和 smoke；V0 实际执行仍 Tencent-only | 火山需购买创点且公开价格/试用未闭合，腾讯特效仍无 License/真实 receipt；均无 SDK/API、密钥、图片出站、Gold 回归或产品准入 |
@@ -1112,7 +1113,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 2026-08-30 当前验证：
 
 ```text
-.venv/bin/pytest -q                     → `146 passed, 4 warnings`（2026-08-30 评测治理冻结与安全事件 ID 实现后的实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、Holdout 模板与 Provider shell 回归；4 条为既有 Pillow 弃用警告）
+.venv/bin/pytest -q                     → `150 passed, 4 warnings`（2026-08-30 RAG P0-D 生命周期审计收口后的实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C/P0-D、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、Holdout 模板与 Provider shell 回归；4 条为既有 Pillow 弃用警告）
 DeepSeek 默认 smoke                     → offline_guarded；network_called=false（证明默认不联网）
 DeepSeek --allow-live                   → passed；parser_mode=llm；schema_validated=true；model=deepseek-v4-flash；2957 ms；1471 tokens
 Tencent CompareFace --allow-live        → succeeded，RequestId=b89e828a-8038-41d3-a598-575fdba23521
@@ -1236,7 +1237,7 @@ Gold Set v2（开发/挑战/隐藏）
 - `docs/RAG_GOLD_EVALUATOR.md`、`docs/RAG_GOLD_JUDGE_PROMPT.md`、`docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md`：分别记录一页说明、盲审输入/输出合同和人工逐题审核模板。
 - `data/evaluation/rag_gold_v2_public.json`：52 道无答案开发/挑战运行题；`rag_gold_v2_annotations.json`：仅 dev/challenge 答案键；`rag_gold_v2_holdout_runtime.json`：20 道只含 `case_id/query` 的隐藏运行包。
 - `data/provider_cards/volcengine_beauty_api_v2.json`、`data/provider_cards/tencent_effect_sdk.json` 与对应 Adapter shell：均明确 `candidate`、未接入真实 SDK/API、无图片出站、无密钥、无真实费用/License/地区确认；默认 fail-closed。
-- 真实命令证据：全量 `pytest` 为 `146 passed, 4 warnings`；public 52 题 deterministic baseline 与无答案 holdout 20 题 prediction 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、两个 Provider shell smoke、双口径 evaluator 和 canonical event parser 均明确 `network_called=false`。
+- 真实命令证据：全量 `pytest` 为 `150 passed, 4 warnings`；public 52 题 deterministic baseline 与无答案 holdout 20 题 prediction 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator 和 canonical event parser 均明确 `network_called=false`。
 
 ### 17.6 下一道产品决策门
 
@@ -1334,7 +1335,7 @@ Gold Set v2（开发/挑战/隐藏）
 
 <span style="color:#C00000"><strong>本轮产品决策。</strong> 火山美颜真实接入从 V0 移出：不购买套餐、不配置 Key、不发送用户/测试照片；Candidate Card 和 fail-closed Adapter shell 继续保留，未来只有获得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才重新提交 `reviewed_active` 决策。9 月 4 日 Demo 继续只依赖已真实验证的腾讯 BeautifyPic/IMS 路径，RAG 命中火山知识不能授权它。</span>
 
-<span style="color:#C00000"><strong>带来的效果与边界。</strong> 主链路不再被高额或不透明供应商费用阻塞，代码仍可迭代扩展；同时保留了未来证明“如何做 Provider 准入”的面试证据。当前私有 GitHub 部署包已通过 146 个测试和 Streamlit HTTP 200 启动探针，但 Cloud App、Secrets、访问名单和真实受邀照片测试仍需单独确认，不能写成生产上线。</span>
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 主链路不再被高额或不透明供应商费用阻塞，代码仍可迭代扩展；同时保留了未来证明“如何做 Provider 准入”的面试证据。当前私有 GitHub 部署包已通过 150 个测试和 Streamlit HTTP 200 启动探针，但 Cloud App、Secrets、访问名单和真实受邀照片测试仍需单独确认，不能写成生产上线。</span>
 
 ### 17.17 2026-08-30 产品设计：安全事件目录审核通过，v3 Holdout 进入工作区外审核草案
 
@@ -1345,3 +1346,46 @@ Gold Set v2（开发/挑战/隐藏）
 <span style="color:#C00000"><strong>本轮产品决策。</strong> 产品负责人审核通过 `rag-safety-events-v0.1` 公开目录；v3 Holdout 采用“工作区外生成与保管、产品负责人逐题审核、正式运行只接 `case_id + query`、答案键不回仓库”的方案。已生成 36 道重新表述的 v3 题目与分离答案草案，状态明确为 `OWNER_REVIEW_DRAFT`，不被 evaluator 读取。腾讯 Web 测试 License 允许提交并已在控制台创建/显示为“正常”，绑定主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13；密钥和 Token 不写入项目任何位置。
 
 <span style="color:#C00000"><strong>带来的效果与边界。</strong> hard-safety 评测现在具备产品负责人确认过的稳定事件词表；新 Holdout 具备可审核、可移交、可回滚的独立载体，但在用户完成逐题审核并把最终答案键移入自己独立控制的位置前，不能写“v3 已通过”或用它调参。腾讯 License 的真实资源已存在，但不因此改变 RAG 只能提议、火山候选 fail-closed 或当前 Tencent 图片链路的权限边界。</span>
+
+## 附录 B. 2026-08-30 产品设计与工程收口：RAG 知识生命周期审计
+
+### B.1 背景、问题与调研
+
+RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来源可能撤回，审核时间可能到期，派生向量索引也可能和当前有效规则数量不一致。原有 P0-A/P0-B 已经保存了 `effective_from`、`review_due_at`、`expires_at`、生命周期状态和索引 manifest，但页面只能展示计数，没有一条可以重复运行、留下证据、又不会偷偷改知识的生命周期检查链。
+
+本轮检查了 `KnowledgeItem/KnowledgeChunk` 的权威 SQLite 结构、P0-B 的 dense manifest、现有治理 Dashboard 和“人工审核更新、不可自动发布”的产品边界。判断是：在知识数量和部署规模仍较小的 Demo 阶段，先做显式触发的 metadata audit，比后台自动爬网、自动改状态或自动重建索引更可解释、更容易回滚，也不会把未经审核的资料带进执行链。
+
+### B.2 冻结的产品设计决策
+
+<span style="color:#C00000"><strong>1. RAG 生命周期采用“审计先行、人工发布”：系统检查到期、待复审、撤回、冲突、候选未发布、尚未生效、缺少来源和索引失配，并给出 `keep_active / review_required / hold_not_yet_effective / blocked_from_retrieval` 建议；审计绝不自动改 `KnowledgeItem.lifecycle_status`、发布 candidate、删除知识或重建索引。</strong></span>
+
+<span style="color:#C00000"><strong>2. 审计只读已审核知识元数据和派生索引 manifest，不读取 source body、用户照片、原始用户话术、人脸向量、密钥或 Provider 回执；可持久化的只有来源 ID/版本、问题代码、建议动作、索引计数和脱敏 Trace。</strong></span>
+
+<span style="color:#C00000"><strong>3. 派生索引不是权威源。`in_sync` 仅表示当前有效 chunk 数、manifest 文档数和向量数相等；`stale/not_built/unavailable` 只触发“人工审核或显式重建”的提示，不能由审计器自动修复。</strong></span>
+
+### B.3 实际链路与用户/开发者可见结果
+
+```text
+人工审核的 Provider Card / Policy
+→ KnowledgeItem + KnowledgeChunk（权威 SQLite）
+→ 显式运行 lifecycle audit
+→ 分类来源生命周期问题 + 检查 dense manifest
+→ 生成 RagLifecycleAudit + 脱敏 Trace
+→ 写入 rag_lifecycle_audits / JSON / HTML
+→ 管理员看板查看建议
+→ 产品负责人决定复审、更新、撤回或显式重建
+```
+
+工程入口是 `scripts/audit_rag_lifecycle.py`，页面 4 的“运行一次生命周期审计”按钮调用同一服务。实际 smoke 已得到：`knowledge_items=3`、`active_chunks=10`、`issue_counts={}`、`index_status=in_sync`。这证明审计链和当前索引一致，不证明资料永不过期，也不证明 RAG Gold 通过。
+
+### B.4 实现矩阵同步与剩余边界
+
+| 能力 | 当前状态 | 真实边界 |
+|---|---|---|
+| 生命周期元数据审计 | **已实现并测试** | 只读分类，不自动改状态/发布/删除 |
+| dense 索引一致性检查 | **已实现并测试** | 只比较 manifest/向量/有效 chunk 数；重建仍需显式动作 |
+| 审计账本与 Trace | **已实现并测试** | SQLite 只保存安全摘要；不保存正文、照片或密钥 |
+| HTML 与治理 Dashboard | **已实现并测试** | 本机管理员视图；不是后台 worker、生产监控或自动修复 |
+| RAG 质量 Gate | **仍为 FAIL** | public/holdout 既有结果不能因生命周期审计而改变 |
+
+因此，RAG 当前所有可在不改变产品权限的范围内完成的本地工程闭环（P0-A、P0-B、P0-C、失败分析、自校正候选、评测报告、双看板、生命周期审计）均已落地；v3 Holdout 的产品负责人逐题审核/正式盲测、LLM Judge 是否正式启用、新 Provider 准入和 external/hybrid 复测仍保持独立决策门。

@@ -13,6 +13,7 @@ import streamlit as st
 from streamlit.components.v1 import html as render_component
 
 from portrait_consistency_agent.core.settings import AppSettings
+from portrait_consistency_agent.services.rag_lifecycle import audit_rag_lifecycle
 from portrait_consistency_agent.services.rag_p0a import seed_reviewed_provider_knowledge
 from portrait_consistency_agent.services.rag_report_registry import (
     available_rag_reports,
@@ -114,6 +115,24 @@ def _safe_bad_case_rows(store: LocalKnowledgeStore) -> list[dict[str, object]]:
     ]
 
 
+def _safe_lifecycle_rows(audit: object) -> list[dict[str, object]]:
+    """Project lifecycle contracts to a compact, source-body-free table."""
+
+    item_audits = getattr(audit, "item_audits", [])
+    return [
+        {
+            "来源": item.knowledge_id,
+            "Provider": item.provider,
+            "操作": item.operation,
+            "版本": item.source_version,
+            "生命周期": item.lifecycle_status.value,
+            "问题": ", ".join(code.value for code in item.issue_codes) or "无",
+            "建议动作": item.recommended_action.value,
+        }
+        for item in item_audits
+    ]
+
+
 def _render_report_collection() -> None:
     """Show the allow-listed visual reports without exposing private keys."""
 
@@ -153,7 +172,8 @@ def main() -> None:
     settings = AppSettings()
     store = get_store(PROJECT_ROOT / settings.knowledge_database_path)
     snapshot = store.rag_dashboard_snapshot()
-    dense_snapshot = LocalDenseIndex(PROJECT_ROOT / settings.rag_vector_database_path).snapshot()
+    dense_index = LocalDenseIndex(PROJECT_ROOT / settings.rag_vector_database_path)
+    dense_snapshot = dense_index.snapshot()
 
     st.title("RAG 治理看板（本地管理员原型）")
     st.caption(
@@ -267,6 +287,37 @@ def main() -> None:
             "新增 Provider 不能只靠这张卡：仍必须经历 Card、Adapter、权限/预算、真实回执、"
             "Gold 回归和产品冻结，才能进入 reviewed_active。"
         )
+
+        st.subheader("知识生命周期审计（明确触发、只生成建议）")
+        st.caption(
+            "审计会检查待复审、到期、撤回、冲突、尚未生效和派生索引失配；不会自动改状态、"
+            "发布候选、删除资料或重建索引。"
+        )
+        if st.button("运行一次生命周期审计", key="run_rag_lifecycle_audit"):
+            lifecycle_run = audit_rag_lifecycle(store, dense_index=dense_index, persist=True)
+            st.success(
+                f"已记录审计 {lifecycle_run.audit.audit_id}；索引状态："
+                f"{lifecycle_run.audit.index.status.value}。未修改知识状态。"
+            )
+            st.dataframe(
+                _safe_lifecycle_rows(lifecycle_run.audit),
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.json({"trace": list(lifecycle_run.trace)})
+        else:
+            recent_audits = store.recent_lifecycle_audits(limit=1)
+            if recent_audits:
+                latest = recent_audits[0]
+                audit_payload = latest["audit"]
+                if isinstance(audit_payload, dict):
+                    st.info(
+                        f"最近审计：{latest['created_at']}；索引状态："
+                        f"{audit_payload.get('index', {}).get('status', 'unknown')}；"
+                        f"问题摘要：{audit_payload.get('issue_counts', {}) or '无'}"
+                    )
+            else:
+                st.info("尚未运行生命周期审计；点击上方按钮生成第一条可回放记录。")
 
         _render_report_collection()
 

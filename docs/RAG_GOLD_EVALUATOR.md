@@ -175,3 +175,7 @@ v2 的 H01–H20 和私有 aggregate 保留为历史泛化诊断，不再用于�
 ### 当前审计边界
 
 上述变更只扩展评测的可解释性和保管流程，不改变 RAG `execution_authorized=false`、候选 Provider fail-closed、图片/向量不入库、不调用 LLM/Provider 的离线边界。正式质量报告必须显式传入 predictions；不传预测时的 `pending` 安全默认继续保留。
+
+## 2026-08-30 当前同步
+
+评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。当前全量回归为 `150 passed, 4 warnings`，public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 仍须工作区外独立审核后才能正式盲测。生命周期审计通过不等于 RAG 质量通过。

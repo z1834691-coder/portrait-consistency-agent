@@ -20,6 +20,7 @@ from portrait_consistency_agent.core.rag_contracts import (
     KnowledgeLifecycleStatus,
     RagAdvisoryDecision,
     RagBadCaseRecord,
+    RagLifecycleAudit,
     RagQuery,
     RagRetrievalResult,
     RagStage,
@@ -123,6 +124,14 @@ class LocalKnowledgeStore:
                     stage TEXT NOT NULL,
                     diagnosis TEXT NOT NULL,
                     payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS rag_lifecycle_audits (
+                    audit_id TEXT PRIMARY KEY,
+                    as_of TEXT NOT NULL,
+                    audit_payload_json TEXT NOT NULL,
+                    trace_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 );
                 """
@@ -618,6 +627,57 @@ class LocalKnowledgeStore:
                 ),
             )
 
+    def record_lifecycle_audit(
+        self,
+        *,
+        audit: RagLifecycleAudit,
+        trace: list[dict[str, object]],
+    ) -> None:
+        """Persist a metadata-only lifecycle audit without changing knowledge."""
+
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO rag_lifecycle_audits (
+                    audit_id, as_of, audit_payload_json, trace_json, created_at
+                ) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(audit_id) DO UPDATE SET
+                    as_of = excluded.as_of,
+                    audit_payload_json = excluded.audit_payload_json,
+                    trace_json = excluded.trace_json,
+                    created_at = excluded.created_at
+                """,
+                (
+                    audit.audit_id,
+                    audit.as_of.isoformat(),
+                    json.dumps(audit.model_dump(mode="json"), ensure_ascii=False, sort_keys=True),
+                    json.dumps(trace, ensure_ascii=False, sort_keys=True),
+                    utc_now().isoformat(),
+                ),
+            )
+
+    def knowledge_lifecycle_items(self) -> list[tuple[KnowledgeItem, int]]:
+        """Return source metadata and chunk counts, never chunk body text."""
+
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT i.item_payload_json, COUNT(c.chunk_id) AS chunk_count
+                FROM knowledge_items AS i
+                LEFT JOIN knowledge_chunks AS c ON c.knowledge_id = i.knowledge_id
+                GROUP BY i.knowledge_id
+                ORDER BY i.knowledge_id ASC
+                """
+            ).fetchall()
+        return [
+            (
+                KnowledgeItem.model_validate(json.loads(row["item_payload_json"])),
+                int(row["chunk_count"]),
+            )
+            for row in rows
+        ]
+
     def chunks_for_knowledge_ids(
         self,
         knowledge_ids: Iterable[str],
@@ -746,6 +806,17 @@ class LocalKnowledgeStore:
             latest_advice_row = connection.execute(
                 "SELECT MAX(created_at) AS latest_at FROM rag_advisory_runs"
             ).fetchone()
+            lifecycle_audit_count_row = connection.execute(
+                "SELECT COUNT(*) AS count FROM rag_lifecycle_audits"
+            ).fetchone()
+            latest_lifecycle_row = connection.execute(
+                """
+                SELECT audit_payload_json, created_at
+                FROM rag_lifecycle_audits
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            ).fetchone()
 
         query_stages: dict[str, int] = {}
         for row in query_stage_rows:
@@ -781,6 +852,22 @@ class LocalKnowledgeStore:
                 "review_overdue": overdue,
                 "latest_query_at": latest_query_row["latest_at"],
                 "latest_advisory_at": latest_advice_row["latest_at"],
+                "lifecycle_audit_runs": int(lifecycle_audit_count_row["count"]),
+                "latest_lifecycle_audit_at": (
+                    latest_lifecycle_row["created_at"] if latest_lifecycle_row else None
+                ),
+                "latest_lifecycle_issue_counts": (
+                    json.loads(latest_lifecycle_row["audit_payload_json"]).get("issue_counts", {})
+                    if latest_lifecycle_row
+                    else {}
+                ),
+                "latest_lifecycle_index_status": (
+                    json.loads(latest_lifecycle_row["audit_payload_json"])
+                    .get("index", {})
+                    .get("status", "not_checked")
+                    if latest_lifecycle_row
+                    else "not_checked"
+                ),
             }
         )
         return snapshot
@@ -894,6 +981,32 @@ class LocalKnowledgeStore:
                 "stage": row["stage"],
                 "diagnosis": row["diagnosis"],
                 "payload": json.loads(row["payload_json"]),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
+
+    def recent_lifecycle_audits(self, *, limit: int = 20) -> list[dict[str, object]]:
+        """Return safe lifecycle audit summaries for the local admin dashboard."""
+
+        if not 1 <= limit <= 100:
+            raise ValueError("lifecycle audit limit must be between 1 and 100")
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT audit_id, as_of, audit_payload_json, trace_json, created_at
+                FROM rag_lifecycle_audits
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "audit_id": row["audit_id"],
+                "as_of": row["as_of"],
+                "audit": json.loads(row["audit_payload_json"]),
+                "trace": json.loads(row["trace_json"]),
                 "created_at": row["created_at"],
             }
             for row in rows

@@ -47,3 +47,16 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 - **安全事件 ID C**：使用版本化确定性字典映射已知标签；未知标签不猜，hard-safety 必须是 `MANUAL_REVIEW_REQUIRED`，由产品负责人确认后才可自动评分。
 
 当前报告新增 `precision_at_k_effective`、`precision_at_k_returned`、按 Gold 条数分层结果、`safety_event_catalog_version` 和未知事件计数；这些是可追溯证据，不是自动自校正授权。候选修正仍然 proposal-only，RAG 仍不能授予图片出站或 Provider 调用权限。
+
+## 2026-08-30 生命周期审计接入
+
+在六步 failure SOP 之前增加一个只读前置检查：先运行 `scripts/audit_rag_lifecycle.py`，确认来源状态和派生索引快照。若条目过期、撤回、冲突、尚未生效、候选未发布、缺来源 URI 或没有原子规则，先把它记录为知识生命周期问题，禁止用同义词、rerank 或 Prompt 补丁掩盖；若 dense manifest 与 active chunk/vector 数量不一致，先记录索引 stale，再重建派生索引并回归。审计只报告，不自动改状态、发布、删除或重建。
+
+生命周期干净但检索仍错，才进入原有“指标→召回→证据关系→安全→路由”定位；检索 miss 必须区分“知识库没有资料”“过滤掉了过期/未发布资料”“FTS/dense 空召回”和“rerank 排序错误”。每次审计都生成 `RagLifecycleAudit`、安全元数据摘要和可回放 Trace；报告与 Dashboard 不展示来源正文、照片、向量、答案键或密钥。该前置步骤让知识时效问题与 retriever failure 分开，避免错误地把产品事实问题当模型调参问题。
+
+重跑命令：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/audit_rag_lifecycle.py
+```

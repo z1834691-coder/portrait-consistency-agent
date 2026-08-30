@@ -1409,3 +1409,56 @@ owner approval of canonical catalog
 ### 当前阻塞与下一步
 
 当前不是继续按 v2 hidden 逐题修规则，而是产品负责人审核 v3 草案。审核通过后，受限 runner 才能生成只含 `case_id + query` 的正式输入并进行一次盲测；v3 草案不能被写成“RAG 已通过”。候选 Provider 仍需完整 License/隐私/预算/真实 receipt/Gold 准入，RAG 仍只能提议。
+
+## 2026-08-30｜RAG P0-D 生命周期审计与本地工程收口
+
+### 本轮背景
+
+P0-A/P0-B/P0-C 已具备知识入库、混合检索和受限证据回接，但此前没有一条可重放的“资料是否仍有效、索引是否跟上”审计链。若把过期/撤回/冲突资料继续送入 8A/8C，问题会被误归因成检索器或 Prompt 质量。因此本轮只补齐知识生命周期治理，不扩大工具能力或执行权限。
+
+### 已完成
+
+- 新增 `RagLifecycleItemAudit`、`RagIndexAudit`、`RagLifecycleAudit` 三个治理合同；六个业务合同字段职责不变。
+- 新增 metadata-only `services/rag_lifecycle.py` 与 `scripts/audit_rag_lifecycle.py`：检查审核状态、生效/复审/过期/撤回/冲突、来源 URI、原子规则数和 dense manifest；不会自动修改、发布、删除或重建。
+- SQLite 新增 `rag_lifecycle_audits` 脱敏审计账本；dense index 提供安全 manifest；报告 allow-list 增加 `rag_lifecycle_audit.html`；page 4 增加显式“运行一次生命周期审计”入口。
+- 同步了执行版 PRD、PRODUCT_RULES、CONTRACTS、AGENT_PROMPTS、RAG_DECISION_GATE、RAG_FAILURE_ANALYSIS_SOP、DECISION_LOG、README、AGENTS 和运行文档；新增 4 条生命周期测试。
+
+### 完整 Trace（真实本地运行）
+
+```text
+3 张已审核 Tencent Provider Card
+→ 10 条 active 原子规则
+→ metadata-only lifecycle audit
+→ issue_counts={}
+→ dense index status=in_sync
+→ RagLifecycleAudit persisted=true
+→ reports/rag_lifecycle_audit.json + .html
+→ page 4 只读展示
+```
+
+审计报告明确 `network_called=false`、`photo/body/raw_text/secret` 不进入输出，`auto_status_change_allowed=false`、`auto_publish_allowed=false`。它是知识治理账本，不是训练 Dataset、自动同步 worker 或质量通过证明。
+
+### 实际验证
+
+```text
+./.venv/bin/pytest -q
+→ 150 passed, 4 warnings
+./.venv/bin/ruff check src tests pages scripts
+→ passed
+./.venv/bin/ruff format --check .
+→ passed
+./.venv/bin/python -m compileall -q app.py src pages scripts
+→ passed
+./.venv/bin/python scripts/audit_rag_lifecycle.py
+→ complete；3 items / 10 chunks；issue_counts={}；index=in_sync；persisted=true
+Streamlit page 4/5 HTTP smoke
+→ `200`；页面入口可启动，生命周期审计/优化看板仍是本机只读视图
+git diff --check
+→ passed
+```
+
+### RAG 中期结论与边界
+
+RAG 的本地工程能力已经收口：独立 SQLite 权威知识库、FTS5、dense/RRF/rerank、P0-C advisory consumer、失败分析、proposal-only correction、生命周期审计、脱敏报告和两个治理看板均可重放、可测试、可追溯。质量方面仍不能宣称通过：public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；历史 private holdout aggregate Route=`25.00%`、Gate=`FAIL`；v3 Holdout 仍是工作区外审核草案，未正式盲测。
+
+剩余事项属于新的产品/外部决策门，而不是本轮 RAG 代码遗漏：v3 题目和答案键人工审核后的一次性盲测；是否启用脱敏 LLM Judge；新 Provider 的 Card/Adapter/License/预算/隐私/真实 receipt/Gold 准入；生产级定时审计 worker、PostgreSQL/对象存储与删除 SLA；external/hybrid 复测 Adapter；真实受邀用户数据收集与运营看板验证。以上事项冻结前，RAG 不能直接授权工具或图片出站。

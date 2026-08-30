@@ -403,7 +403,7 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 ## 18. 2026-08-30 最新评测治理状态
 
-本文件中较早章节保留当时的测试快照；当前同步状态以本节为准：全量回归为 `146 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 仍为空的 answerless 模板，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `150 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 仍为空的 answerless 模板，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
 
 ## 19. 2026-08-30 部署与候选 Provider 当前合同边界
 
@@ -420,3 +420,11 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 本轮仍没有修改六个业务合同的字段或职责。产品负责人已审核通过 `rag-safety-events-v0.1` 公开事件目录；v3 Holdout 题目、答案键和审核表在项目工作区外以 `OWNER_REVIEW_DRAFT` 保存，尚未进入 evaluator 或运行合同。正式 Holdout 运行继续只接受无答案的 `case_id + query`，答案键不得写入合同表、Trace、部署包或公开报告。
 
 腾讯 Web 测试 License 已在控制台创建并显示“正常”，绑定精确 Cloud 主机名。License Key/Token 属于外部敏感凭据，不进入 `ProviderRun` 或任何合同字段；它只证明 Web License 资源状态，不改变 RAG `execution_authorized=false`、ProviderRun 必须由真实 Adapter 生成或候选 Provider fail-closed 的边界。
+
+## 21. 2026-08-30 RAG 生命周期审计合同补充
+
+本节新增的是 RAG 治理合同，不替换六个业务合同。`RagLifecycleItemAudit` 表示一张已入库知识卡的安全元数据检查结果（来源、版本、审核/复审时间、状态、原子规则条数和问题代码）；它不携带来源正文、照片、向量、用户文本或密钥。`RagIndexAudit` 表示派生 dense 索引与当前有效原子规则数量是否一致；索引只是可重建派生物，SQLite 知识账本仍是唯一权威来源。`RagLifecycleAudit` 是一次完整、不可变的审计快照，汇总条目问题、索引状态、审计版本、时间和脱敏 Trace。
+
+审计的确定性规则是：过期、撤回或冲突待审条目不得继续作为有效证据；尚未生效或候选未发布条目只能保持 hold；到期复审、缺少来源 URI 或零原子规则只生成 `review_required`；干净且在有效期内的条目才是 `keep_active`。审计服务的两个不变量固定为 `auto_status_change_allowed=false` 与 `auto_publish_allowed=false`：它只能发现和报告，不能自动改状态、发布、删除、重建索引或授权工具调用。
+
+持久化表 `rag_lifecycle_audits` 只保存 `audit_id`、`as_of`、结构化审计快照、脱敏 Trace 和创建时间；报告注册表只允许 `reports/rag_lifecycle_audit.html`。因此“实时”不是后台偷偷改知识，而是产品负责人或受控任务显式触发一次审计，再决定是否人工更新 Provider Card/Policy，更新后重新建索引并回归。RAG 仍保持 `execution_authorized=false`，该合同不改变图片出站、Provider 白名单、参数边界或六个业务合同。

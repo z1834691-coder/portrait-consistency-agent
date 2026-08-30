@@ -54,6 +54,13 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description="公开集诊断与隐藏集聚合错误类型的脱敏分析。",
         scope="public_aggregate_plus_private_aggregate_only",
     ),
+    RagReportArtifact(
+        key="lifecycle_audit",
+        title="RAG｜知识生命周期审计",
+        filename="rag_lifecycle_audit.html",
+        description="来源生命周期、复审提醒和派生索引一致性的脱敏审计。",
+        scope="knowledge_metadata_only",
+    ),
 )
 
 

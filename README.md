@@ -26,6 +26,7 @@
 - <span style="color:#C00000"><strong>Gold Set v2：已实现独立离线评测器、无答案 public 集（34 dev + 18 challenge）、20 题 holdout 输入包、独立答案键、盲审输入合同和可视化 HTML 报告生成。当前 public deterministic baseline 与私有 holdout aggregate 均已运行且 `FAIL`：公开集的固定分母 Precision@3=47.44%，私有隐藏集 Route=25.00%。这说明当前基线还不具备可宣称的泛化效果。</strong></span>
 - <span style="color:#C00000"><strong>Provider 扩展：火山美颜 API V2.0 与腾讯特效 SDK 已建立 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 smoke 入口；两者均未接入 SDK/API、未发送图片、未使用密钥，状态保持 `candidate`/fail-closed。产品决策是火山 V0 暂不购买/接入，当前执行链只用 Tencent。</strong></span>
 - <span style="color:#C00000"><strong>RAG failure-pattern：已生成脱敏的公开分层指标、隐藏集聚合错误类型、SOP 与 proposal-only 自校正候选；候选公开回归无指标回退但未推广，project Gate 仍为 `FAIL`。RAG 治理看板现可嵌入公开评测、隐藏聚合和失败分析 HTML，另有只读 RAG 优化看板。</strong></span>
+- <span style="color:#C00000"><strong>RAG 生命周期审计：已实现 metadata-only `RagLifecycleAudit`、显式审计脚本、SQLite 审计账本、dense manifest 一致性检查和治理看板入口。当前 3 张审核 Tencent Card/10 条有效规则审计为 `complete`、issue 数为 0、index=`in_sync`；审计不自动发布/改状态/删除/重建索引，RAG 仍只能提议。</strong></span>
 - <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)；只读探针返回登录跳转。腾讯 Web License 已以纯主机名提交并在控制台显示“正常”（2026-08-30 至 2026-09-13）。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
 
 ## 重要边界
@@ -69,11 +70,11 @@ portrait-consistency-agent/
 ├── src/portrait_consistency_agent/
 │   ├── agent/                     # DeepSeek 文本解析 Adapter + 本地模板 fallback
 │   ├── core/                      # v0.4 合同、独立 RAG 合同、Policy、本地设置
-│   ├── services/                  # 质量门 / Profile / 8A/8B/8C / RAG 检索+advice+评测+失败分析 / Provider Adapter shells
+│   ├── services/                  # 质量门 / Profile / 8A/8B/8C / RAG 检索+advice+评测+失败分析+生命周期审计 / Provider Adapter shells
 │   └── storage/                   # 运行账本 SQLite/JSONL + 独立 RAG SQLite/FTS/派生向量索引
 ├── storage/                       # 本地脱敏 DB（Git 忽略；当前产品不写结果图）
 ├── logs/                          # 本地 JSONL trace（Git 忽略）
-└── tests/                         # 当前 146 个自动化测试（另有 4 条 Pillow 已知弃用警告）
+└── tests/                         # 当前 150 个自动化测试（另有 4 条 Pillow 已知弃用警告）
 ```
 
 ## 本地命令
@@ -95,6 +96,7 @@ uv run python scripts/smoke_rag_p0a.py
 uv run python scripts/smoke_rag_p0b.py
 uv run python scripts/smoke_rag_advisory.py
 uv run python scripts/analyze_rag_failures.py
+uv run python scripts/audit_rag_lifecycle.py
 uv run python scripts/evaluate_rag_gold_v2.py --html reports/rag_gold_v2_pending.html
 uv run python scripts/smoke_volc_beauty.py
 uv run python scripts/smoke_tencent_effect_shell.py
@@ -104,10 +106,14 @@ uv run python scripts/smoke_rag_p0b.py --allow-model-download
 uv run python scripts/smoke_deepseek_intent.py --allow-live
 ```
 
-2026-08-30 当前收尾校验：`uv run pytest -q` 实际为 `146 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、public/holdout baseline、私有 aggregate scorer、RAG advisory、两个 Provider shell smoke 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 弃用警告。private scorer 只输出聚合结果和错误类型；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project Gate 为 `FAIL`，不得写成通过。
+2026-08-30 当前收尾校验：全量 `pytest` 实际为 `150 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、public/holdout baseline、私有 aggregate scorer、RAG advisory、RAG lifecycle audit、两个 Provider shell smoke 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 已知弃用警告。private scorer 只输出聚合结果和错误类型；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project Gate 为 `FAIL`，不得写成通过。
 
 ## 2026-08-30 评测治理冻结
 
 Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅历史聚合，v3 正式 runtime 模板位于 `data/evaluation/rag_gold_v3_holdout_runtime.template.json`，题目/答案草案已在项目工作区外独立生成并待审核。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；当前 project Gate 仍 `FAIL`。
 
 不要将 `.env`、真实照片、下载后的结果图片、SQLite 文件或 JSONL 日志提交到 Git。DeepSeek Key 必须从密码管理器直接粘贴到本机 `.env`，不要发送到聊天。外部腾讯首轮调用只能在用户明确同意且使用已授权照片时，以 `--allow-live` 或页面的明确确认触发；8C-2 后继调用若仍在同一首次授权 scope 内，需先通过自动 preflight 并写入 Trace，scope 变化则重新确认。DeepSeek smoke 同样必须显式传 `--allow-live`。
+
+## 2026-08-30 RAG 生命周期审计收口
+
+`scripts/audit_rag_lifecycle.py` 会对审核知识卡的状态、有效期、来源 URI、原子规则数和 dense manifest 做一次 metadata-only 审计，并把 `RagLifecycleAudit` 写入本地脱敏账本、JSON/HTML 和 RAG 治理看板。当前快照为 3 张 Tencent Card、10 条 active 规则、issue 数 0、index=`in_sync`。它不会读照片、来源正文、用户原话、向量、答案键或密钥，也不会联网、调用 LLM/Provider、自动发布、改状态、删除或重建索引；知识变更仍需人工审核后重建并回归。该模块完成的是 RAG 工程治理闭环，不代表 public/holdout project Gate 通过。

@@ -98,5 +98,9 @@ route
 - 当前只有 3 张 Provider Card / 10 条规则，无法据此声称已经证明自然语言检索质量、Recall@k、MRR、nDCG 或真实用户效果；P0-B 的“语义补召回”只是在隔离 fixture 上证明路径可用。
 - 本机 CPU 冷加载约 10.5 秒，后续单次案例约 0.6–0.7 秒；这是单机开发证据，不是线上 p50/p95，也还未决定受邀 Beta 的硬件/部署方案。
 - 模型缓存约 1.1 GB，适合本机开发但会影响后续部署镜像、冷启动与费用；这属于部署 Gate 的输入，不代表必须永久沿用此 reranker。
-- 目前没有 RAG lifecycle worker、专属 Dashboard、人工审阅 Gold Set、长期真实查询数据或参数自动校准。
+- **历史说明（已由 P0-D 覆盖）：** P0-B 当时没有 lifecycle worker 或专属 Dashboard；当前已补上 metadata-only lifecycle audit、审计账本和 page 4 入口，但仍没有自动 worker、长期真实查询数据或参数自动校准。
 - **原“RAG 正式回接 8A/8C”门已由 P0-C 完成。** 当前下一门是人工 Gold Set 的具体问法/人数/阈值、lifecycle/observability worker 与 RAG Dashboard、候选新 Provider 的正式准入，以及 external/hybrid 复测 Adapter。P0-B/P0-C 仍不能驱动图片编辑或外部/混合复测。
+
+### 2026-08-30 当前同步
+
+P0-B 的 dense/RRF/rerank 仍是可重建派生索引，不是权威知识源。P0-D 会比较 active chunk、manifest 文档数和向量数；当前审计为 `index_status=in_sync`。模型不可用时 P0-B 继续安全退回 P0-A，不因 lifecycle audit 或 dense 结果获得执行权限。
