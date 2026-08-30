@@ -414,3 +414,9 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 - 火山美颜 V2 的 candidate request 仍只能返回 `blocked/not_run`；官方“需要购买支持后付费 API 的创点套餐”与“公开 SDK 年包起价”只属于准入/预算事实，不会生成 `ProviderRun`，不改变 Tencent-only V0 执行链。
 
 本轮没有修改 `ReferenceProfile`、`PhotoQualityResult`、`IntentFrame`、`EditPlan`、`ProviderRun`、`VerificationResult` 的字段职责；代码、测试和文档交叉检查保持一致。
+
+## 20. 2026-08-30 评测与 License 状态同步
+
+本轮仍没有修改六个业务合同的字段或职责。产品负责人已审核通过 `rag-safety-events-v0.1` 公开事件目录；v3 Holdout 题目、答案键和审核表在项目工作区外以 `OWNER_REVIEW_DRAFT` 保存，尚未进入 evaluator 或运行合同。正式 Holdout 运行继续只接受无答案的 `case_id + query`，答案键不得写入合同表、Trace、部署包或公开报告。
+
+腾讯 Web 测试 License 已在控制台创建并显示“正常”，绑定精确 Cloud 主机名。License Key/Token 属于外部敏感凭据，不进入 `ProviderRun` 或任何合同字段；它只证明 Web License 资源状态，不改变 RAG `execution_authorized=false`、ProviderRun 必须由真实 Adapter 生成或候选 Provider fail-closed 的边界。

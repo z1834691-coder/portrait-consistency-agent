@@ -90,8 +90,8 @@ Adapter：[tencent_effect.py](../src/portrait_consistency_agent/services/tencent
 
 当前 `blocked` 的原因是 SDK 路线缺少与目标运行表面匹配的 License、平台集成、精确静态图能力、权限/预算和真实 receipt；不是已有 Tencent BeautifyPic/CAM 权限失效。Web 教程是浏览器 JavaScript/WebGL 路线，不能直接当作 Python + Streamlit 后端 REST API。手动登录腾讯云 Vcube/腾讯特效控制台，先选择 Web 静态图或 PC/移动 SDK 表面，申请对应测试 License、绑定域名/AppId、下载匹配版本，再用明确授权内部照片验证。测试 License 规则见[官方快速上手](https://cloud.tencent.com/document/product/616/80189)。开通后仍需回到 Card→Adapter→权限/预算→真实 receipt→Gold 回归→产品负责人冻结，不能仅凭 License 把 Candidate 升级为可执行。
 
-## 10. 2026-08-30 控制台现场证据
+## 10. 2026-08-30 控制台现场证据（历史快照，已由下方状态更新）
 
-已在腾讯云视立方控制台打开 `Web 端 License` 管理页并进入“新建测试版 License”表单。当前页面显示：正式 License=0、测试 License=0；测试表单要求填写 `Project Name`，并至少绑定精确 `Domain` 或小程序 `AppId`。页面明确提示测试有效期 14 天、可续期 1 次、总计 28 天。产品负责人已创建 Streamlit Private App，现场验证可填写的精准域名为 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`（不带 `https://`、路径或尾部斜杠）；该表单尚未提交，因此当前仍没有 License、SDK Token、真实静态图 receipt 或可执行 Adapter。
+已在腾讯云视立方控制台打开 `Web 端 License` 管理页并进入“新建测试版 License”表单。以下保留提交前的历史状态：测试表单要求填写 `Project Name`，并至少绑定精确 `Domain` 或小程序 `AppId`，测试有效期 14 天、可续期 1 次、总计 28 天。产品负责人随后已提交精准域名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，当前控制台显示测试 License“正常”（2026-08-30 至 2026-09-13）；但 SDK 细项能力、真实静态图 receipt 和可执行 Adapter 仍未通过准入。
 
-这条现场证据把下一步缩小为：产品负责人确认是否提交已预填的免费测试 License。若提交阶段仍拒绝该 `streamlit.app` 主机名，问题就不是 128 字节，而是供应商对第三方托管子域名/域名归属的服务端限制；此时不购买正式套餐，改评估自有域名反向代理或本机 `localhost` Spike。提交后仍要下载/接入对应 Web SDK，做单图 smoke，核验细项参数是否真的在 Web 表面可用；不能把“表单提交成功”当成图片能力通过。
+这条现场证据把后续工作缩小为：下载/接入对应 Web SDK，做单图 smoke，核验细项参数是否真的在 Web 表面可用，并补齐隐私/预算/Gold 回归；不能把“表单提交成功”当成图片能力通过。

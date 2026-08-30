@@ -125,4 +125,4 @@
 
 ### 控制台现场状态（2026-08-30）
 
-腾讯 Web License 管理页已打开到“新建测试版 License”表单；当前正式/测试 License 均为 0。表单要求项目名和精确域名或小程序 AppId，测试期为 14 天、可续期 1 次（总计 28 天）。这解决了“从哪里申请”的问题，但没有替用户选择域名或提交申请；本机 `127.0.0.1` 是否可作为精确域名必须以控制台实际校验为准。火山控制台已打开到 IAM/API Key 登录页，尚未登录，因此火山服务开通、Key、创点和权限仍未验证。
+腾讯 Web License 管理页的“正式/测试 License 均为 0”是提交前历史快照。产品负责人已提交 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app` 精确主机名的测试 License，当前控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13；这只解决 Web License 资源绑定，不等于腾讯特效 SDK 细项能力或静态图 Adapter 已通过。火山候选仍按本文件的套餐/权限/真实 receipt Gate 保持 fail-closed。

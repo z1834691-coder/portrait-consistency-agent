@@ -1,6 +1,6 @@
 # 母版人像一致性 Agent
 
-当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created; Tencent Web License exact-host form verified but not submitted`
+当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created / Tencent Web License normal`
 
 目标：在 2026-09-04 前完成一个真实可运行、可录屏、可追溯的 Demo。它帮助用户以一张确认的母版建立五官与脸型标准，再对本人单张或同组照片进行诊断、受确认保护的编辑和复测；它不是身份搜索、审美评分或生产服务。
 
@@ -26,7 +26,7 @@
 - <span style="color:#C00000"><strong>Gold Set v2：已实现独立离线评测器、无答案 public 集（34 dev + 18 challenge）、20 题 holdout 输入包、独立答案键、盲审输入合同和可视化 HTML 报告生成。当前 public deterministic baseline 与私有 holdout aggregate 均已运行且 `FAIL`：公开集的固定分母 Precision@3=47.44%，私有隐藏集 Route=25.00%。这说明当前基线还不具备可宣称的泛化效果。</strong></span>
 - <span style="color:#C00000"><strong>Provider 扩展：火山美颜 API V2.0 与腾讯特效 SDK 已建立 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 smoke 入口；两者均未接入 SDK/API、未发送图片、未使用密钥，状态保持 `candidate`/fail-closed。产品决策是火山 V0 暂不购买/接入，当前执行链只用 Tencent。</strong></span>
 - <span style="color:#C00000"><strong>RAG failure-pattern：已生成脱敏的公开分层指标、隐藏集聚合错误类型、SOP 与 proposal-only 自校正候选；候选公开回归无指标回退但未推广，project Gate 仍为 `FAIL`。RAG 治理看板现可嵌入公开评测、隐藏聚合和失败分析 HTML，另有只读 RAG 优化看板。</strong></span>
-- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)；只读探针返回登录跳转。腾讯 Web License 表单已验证应填纯主机名（不带协议/路径），当前尚未提交测试 License。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
+- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)；只读探针返回登录跳转。腾讯 Web License 已以纯主机名提交并在控制台显示“正常”（2026-08-30 至 2026-09-13）。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
 
 ## 重要边界
 
@@ -43,7 +43,7 @@
 
 ## 下一开发 Gate
 
-RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断，v3 独立 holdout 仍为空模板；已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。下一步是产品负责人审核事件目录、独立生成/审核 v3 题目与答案键，并继续完成候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入。P0-C 只提议和留证，不能改变图片执行权限。
+RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断；v3 已在工作区外生成 `OWNER_REVIEW_DRAFT`（正式 runtime 仍为空模板）；已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。下一步是产品负责人逐题审核 v3 草案，再决定正式 runtime 与一次性盲测；候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入仍独立推进。P0-C 只提议和留证，不能改变图片执行权限。
 
 ## 2026-08-30 RAG 优化闭环（当前真实状态）
 
@@ -108,6 +108,6 @@ uv run python scripts/smoke_deepseek_intent.py --allow-live
 
 ## 2026-08-30 评测治理冻结
 
-Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅历史聚合，v3 独立模板位于 `data/evaluation/rag_gold_v3_holdout_runtime.template.json`，尚未填题。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；当前 project Gate 仍 `FAIL`。
+Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅历史聚合，v3 正式 runtime 模板位于 `data/evaluation/rag_gold_v3_holdout_runtime.template.json`，题目/答案草案已在项目工作区外独立生成并待审核。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；当前 project Gate 仍 `FAIL`。
 
 不要将 `.env`、真实照片、下载后的结果图片、SQLite 文件或 JSONL 日志提交到 Git。DeepSeek Key 必须从密码管理器直接粘贴到本机 `.env`，不要发送到聊天。外部腾讯首轮调用只能在用户明确同意且使用已授权照片时，以 `--allow-live` 或页面的明确确认触发；8C-2 后继调用若仍在同一首次授权 scope 内，需先通过自动 preflight 并写入 Trace，scope 变化则重新确认。DeepSeek smoke 同样必须显式传 `--allow-live`。

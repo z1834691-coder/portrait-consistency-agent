@@ -3,7 +3,7 @@
 > 文档版本：`v0.9-current`
 > 最近同步：2026-08-30
 > 文档性质：**当前产品与工程的共同真相源，持续更新**
-> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层：它只能提议/留证，不能新增执行权限、外部/混合复测或 Provider；RAG 专属本地管理员 Dashboard 已实现并完成页面验证。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 已创建为 Private 应用，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转；腾讯 Web License 表单已现场验证纯主机名可接受，但尚未提交测试 License。v3 Holdout 仍只有空运行模板，题目与答案键尚未生成。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、自动 lifecycle/observability worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
+> 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层：它只能提议/留证，不能新增执行权限、外部/混合复测或 Provider；RAG 专属本地管理员 Dashboard 已实现并完成页面验证。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 已创建为 Private 应用，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转；腾讯 Web License 测试 License 已提交并在控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13。canonical Safety Event 目录已获产品负责人审核通过；v3 Holdout 已在工作区外生成题目/答案键审核草案，但仍不是正式 Holdout，也未回到仓库。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、自动 lifecycle/observability worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
 > 提交目标：2026-09-04 前完成真实可演示闭环和录屏备份
 
 ## 0. 这份文档和原启动蓝图是什么关系
@@ -1335,3 +1335,13 @@ Gold Set v2（开发/挑战/隐藏）
 <span style="color:#C00000"><strong>本轮产品决策。</strong> 火山美颜真实接入从 V0 移出：不购买套餐、不配置 Key、不发送用户/测试照片；Candidate Card 和 fail-closed Adapter shell 继续保留，未来只有获得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才重新提交 `reviewed_active` 决策。9 月 4 日 Demo 继续只依赖已真实验证的腾讯 BeautifyPic/IMS 路径，RAG 命中火山知识不能授权它。</span>
 
 <span style="color:#C00000"><strong>带来的效果与边界。</strong> 主链路不再被高额或不透明供应商费用阻塞，代码仍可迭代扩展；同时保留了未来证明“如何做 Provider 准入”的面试证据。当前私有 GitHub 部署包已通过 146 个测试和 Streamlit HTTP 200 启动探针，但 Cloud App、Secrets、访问名单和真实受邀照片测试仍需单独确认，不能写成生产上线。</span>
+
+### 17.17 2026-08-30 产品设计：安全事件目录审核通过，v3 Holdout 进入工作区外审核草案
+
+<span style="color:#C00000"><strong>背景与问题。</strong> 原来的 `RAG_EVT_*` 目录虽然已经把公开历史标签转换成机器可比较的 ID，但在产品负责人审核完成前只能标记为 pending；同样，v3 Holdout 不能把题目和答案键放进项目仓库，否则会污染独立验收。与此同时，腾讯测试 License 需要绑定 Community Cloud 的精确主机名，而不是完整 URL。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 我核对了公开事件目录的 48 个映射、unknown→`MANUAL_REVIEW_REQUIRED` 的保守规则，以及当前 v2/v3 的答案隔离合同；同时在腾讯 Web License 控制台核对纯主机名格式和项目状态。判断是：安全目录可以在用户逐项审核后进入稳定版本；v3 应先生成“题目/答案分离、工作区外、仅供审核”的草案，而不是直接把它当正式 Gold；测试 License 只需一次提交，之后以控制台真实状态为准。
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> 产品负责人审核通过 `rag-safety-events-v0.1` 公开目录；v3 Holdout 采用“工作区外生成与保管、产品负责人逐题审核、正式运行只接 `case_id + query`、答案键不回仓库”的方案。已生成 36 道重新表述的 v3 题目与分离答案草案，状态明确为 `OWNER_REVIEW_DRAFT`，不被 evaluator 读取。腾讯 Web 测试 License 允许提交并已在控制台创建/显示为“正常”，绑定主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13；密钥和 Token 不写入项目任何位置。
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> hard-safety 评测现在具备产品负责人确认过的稳定事件词表；新 Holdout 具备可审核、可移交、可回滚的独立载体，但在用户完成逐题审核并把最终答案键移入自己独立控制的位置前，不能写“v3 已通过”或用它调参。腾讯 License 的真实资源已存在，但不因此改变 RAG 只能提议、火山候选 fail-closed 或当前 Tencent 图片链路的权限边界。</span>

@@ -551,3 +551,11 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 <span style="color:#C00000"><strong>火山候选规则。</strong> 火山美颜 API V2 已核对到官方“创点/购买支持后付费 API 套餐”的准入说明；公开资料未给出个人免费额度或按次 API 价格，公开 SDK 年包从 6 万元起且不是 V2 API 的报价。因此 V0 暂不购买、不配置 Key、不发送照片；保留 Card/Adapter shell 供未来候选评估。只有取得书面试用/价格、License、隐私/地区、真实 schema、live receipt 和 Gold 回归后，才可另行申请进入 `reviewed_active`。腾讯 BeautifyPic 是当前唯一继续使用的已验证图片执行 Provider。</span>
 
 <span style="color:#C00000"><strong>验证结果。</strong> 本轮重新跑通 `pytest 146 passed, 4 warnings`、Ruff、format、compileall、`git diff --check` 和 Streamlit HTTP 200 启动探针；这些证据证明部署包可构建和本地入口可启动，不等于 Cloud App 已部署、真实照片已获跨境授权或生产服务已具备。</span>
+
+## 2026-08-30 当前同步：安全事件目录、v3 Holdout 与测试 License
+
+<span style="color:#C00000"><strong>安全事件目录。</strong> 产品负责人已审核通过公开 `rag-safety-events-v0.1` 目录。已知 legacy label 与 `RAG_EVT_*` canonical ID 继续确定性映射；未知或争议事件仍必须进入 `MANUAL_REVIEW_REQUIRED`。这次审核只确认词表，不改变 RAG 只能提议、Provider fail-closed 或图片权限。</span>
+
+<span style="color:#C00000"><strong>Holdout。</strong> 按 Holdout A 在项目工作区外生成了 36 道 v3 题目、分离答案草案和逐题审核表，状态为 `OWNER_REVIEW_DRAFT`。题目和答案不被应用/evaluator 读取；产品负责人审核完成后，正式 runtime 只允许导入 `case_id + query`，正式评分最多一次，不能用 v2/v3 hidden 逐题答案补规则。</span>
+
+<span style="color:#C00000"><strong>Tencent Web License。</strong> 测试 License 已通过控制台提交并显示“正常”，绑定精确主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13。密钥和 Token 只由产品负责人在密码管理器/部署 Secrets 中保管，不得写入仓库、Trace、报告或聊天。</span>

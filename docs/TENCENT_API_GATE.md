@@ -106,6 +106,10 @@
 - 随后 BeautifyPic 以显式参数 `FaceLifting=5`、`EyeEnlarging=5`、`Whitening=0`、`Smoothing=0` 成功返回，`RequestId=eb9c8393-81c0-40fa-8a4e-b8790e126ea9`，端到端网络耗时 `1924 ms`；结果图仅内存解码，Trace 只记录结果哈希和内存生命周期引用。
 - 这证明当前腾讯既有能力的“授权照片 → 内容安全 Pass → 单次参数级编辑 → 脱敏 ProviderRun”路径在一个内部样本上可用；不证明母版一致性提升、视觉自然度、批量稳定性、用户满意度或新 Provider 能力。
 
+### Web License 状态（2026-08-30）
+
+腾讯 Web 测试 License 已由产品负责人提交并在控制台显示“正常”，绑定精确主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13。此处只记录非敏感的项目、域名、状态和期限；License Key/Token 不写入本仓库、Trace、报告或回复。Web License 状态不等同于 Cloud 应用公开、图片链路生产化或新 Provider 准入。
+
 ## 后续重复验证规则
 
 1. 继续只在本机 `.env` 中保存凭据，不发送到聊天、截图或 Git；

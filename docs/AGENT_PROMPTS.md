@@ -327,7 +327,7 @@ INPUT_QUALITY、SUBJECT_MATCH、FEATURE_EXTRACTION、ACCEPTANCE_CALIBRATION、PA
 
 `IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-08-30 在 P0-B/P0-C、只读 RAG Dashboard、Gold evaluator、私有 aggregate scorer、failure analyzer、优化看板与两条 Provider candidate shell 后的最新全量 `uv run pytest -q` 为 `146 passed, 4 warnings`。
 
-仍待完成的 Gate：审核 canonical hard-safety 事件目录、在工作区外生成独立 v3 holdout 与 machine-normalized 答案键、真实 UI 多轮结果/取消/删除/明确不满意和供应商失败的端到端评测，以及未来完整 ReAct、LLM/RAG 策略选择与文字反馈澄清 Prompt 的评测。Precision C、Holdout A、Safety ID C 已冻结并落地；8C-1/8C-2 的离线测试和 smoke 已通过，但不因 fixture 通过而自动完成真实 UI 视觉效果验证。当前 Gold 基线未通过，隐藏逐题答案不得用于调参。
+仍待完成的 Gate：产品负责人逐题审核工作区外的 v3 Holdout 草案、导出正式 answerless runtime 并完成一次独立验收；真实 UI 多轮结果/取消/删除/明确不满意和供应商失败的端到端评测；未来完整 ReAct、LLM/RAG 策略选择与文字反馈澄清 Prompt 的评测。canonical Safety Event 目录已获产品负责人审核通过；Precision C、Holdout A、Safety ID C 已冻结并落地；8C-1/8C-2 的离线测试和 smoke 已通过，但不因 fixture 通过而自动完成真实 UI 视觉效果验证。当前 Gold 基线未通过，v3 草案答案不得用于调参。
 
 ## 6. 2026-08-30｜Gold Set 盲审与候选 Provider 的 Prompt/权限边界
 
@@ -350,3 +350,7 @@ Holdout v2 的聚合结果不能回流 Prompt；v3 只在正式独立验收时�
 ## 9. 2026-08-30 部署与 Provider 当前 Prompt 边界
 
 Streamlit Cloud 只是代码运行入口，不会改变 Prompt 的数据边界：Secrets 由部署平台注入，Prompt 不得读取或展示密钥、照片、Base64、人脸向量、原始 Trace、隐藏答案或本机报告。火山美颜 V2 仍为 `candidate`/fail-closed；即使 RAG 命中它的官方能力资料，Prompt 也只能提出“待准入候选”，不得生成 ProviderRun、图片出站或权限授权。当前可执行图片工具仍是已验证的腾讯 BeautifyPic 路径，且继续受既有 scope、预算、一次尝试与 8C 计划族策略约束。
+
+## 10. 2026-08-30 状态同步
+
+产品负责人已审核通过公开 `rag-safety-events-v0.1` 事件目录；因此评测/解释层可以使用稳定的 `RAG_EVT_*` 事件 ID，但 Prompt 仍不能自行分类未知事件或把事件 ID当作工具授权。v3 Holdout 题目与答案草案在工作区外以 `OWNER_REVIEW_DRAFT` 保管，任何在线 Prompt、评测 runner 或 Dashboard 都不得读取答案键。腾讯 Web 测试 License 已在外部控制台显示“正常”，但密钥/Token 不进入 Prompt、Trace 或代码。

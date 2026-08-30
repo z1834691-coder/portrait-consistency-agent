@@ -1,6 +1,6 @@
 {
   "catalog_version": "rag-safety-events-v0.1",
-  "status": "product_owner_frozen_dictionary_pending_private_key_migration",
+  "status": "product_owner_approved_2026-08-30",
   "scope": "public_annotation_vocabulary",
   "description": "Legacy public safety labels map to stable machine event IDs. Unknown labels require manual review.",
   "events": {

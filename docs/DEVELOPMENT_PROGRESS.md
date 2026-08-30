@@ -1388,3 +1388,24 @@ uv run python scripts/analyze_rag_failures.py
 ### 明确边界
 
 GitHub 私有仓库和 Cloud Private App 只是可部署演示入口，不证明生产级多租户、持久化数据库、半年主体锚点删除 SLA、数据驻留合规或公网用户测试已完成。Cloud 容器在美国且磁盘不作为长期存储；在数据出境和受邀名单未确认前，只使用合成/明确授权的测试照片。火山候选仍为 `candidate`/fail-closed，RAG 不得因检索命中而放行它。
+
+## 2026-08-30｜审核确认、v3 Holdout 工作区外草案与腾讯 License 回执
+
+### 已完成
+
+- 产品负责人已审核通过 `data/evaluation/rag_safety_event_catalog_v0.json` 的 48 个公开 canonical Safety Event 映射；目录状态已更新为 `product_owner_approved_2026-08-30`，未知事件仍保守进入 `MANUAL_REVIEW_REQUIRED`。
+- 在项目工作区外的受限目录生成 v3 Holdout 审核草案：36 道新题、分离的 canonical 答案候选和逐题审核表。草案不在 Git、不会被 evaluator/app/dashboard 读取，也没有用于调参；产品负责人需要先逐题审核，再决定是否导出正式 answerless runtime。
+- 腾讯 Web 测试 License 已在控制台显示为“正常”，绑定精确 Cloud 主机名，当前有效期显示为 2026-08-30 至 2026-09-13。License Key/Token 没有写入仓库、Trace、报告或本进展文档。
+
+### 真实证据链
+
+```text
+owner approval of canonical catalog
+→ outside-workspace v3 owner-review draft
+→ Tencent console License status=normal
+→ docs/PRD / RAG Gate / rules / contracts / prompts / decision log sync
+```
+
+### 当前阻塞与下一步
+
+当前不是继续按 v2 hidden 逐题修规则，而是产品负责人审核 v3 草案。审核通过后，受限 runner 才能生成只含 `case_id + query` 的正式输入并进行一次盲测；v3 草案不能被写成“RAG 已通过”。候选 Provider 仍需完整 License/隐私/预算/真实 receipt/Gold 准入，RAG 仍只能提议。

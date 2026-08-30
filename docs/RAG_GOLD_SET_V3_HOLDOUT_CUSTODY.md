@@ -9,8 +9,9 @@
 | 包 | 用途 | 开发者是否可读答案 | 状态 |
 |---|---|---:|---|
 | v2 `H01–H20` runtime | 历史基线和趋势观察 | 否 | 仅诊断，不再逐题调参 |
-| v3 runtime template | 新独立集的格式模板 | 无答案 | 已创建，尚未填题 |
-| v3 answer key | 与 runtime 分离的产品负责人私有文件 | 否 | 待产品负责人独立生成、审核并保管 |
+| v3 runtime template | 新独立集的格式模板 | 无答案 | 已创建；正式模板仍为空 |
+| v3 owner-review draft | 工作区外的 36 道题目与分离答案草案 | 否 | 已生成，待产品负责人逐题审核；不是正式 Holdout |
+| v3 answer key | 与 runtime 分离的产品负责人私有文件 | 否 | 草案已生成并与题目分离；最终答案键仍待产品负责人审核后独立保管 |
 
 模板位置：`data/evaluation/rag_gold_v3_holdout_runtime.template.json`。它故意是空题集，不能被误称为已完成的 Holdout，也不会产生通过分数。填充后的运行包只能包含 `case_id` 和 `query`；禁止加入 `gold_*`、`must_not`、答案、标签、实现版本或图片。
 
@@ -30,6 +31,12 @@
 - [ ] 双口径 Precision、Recall@5、MRR、nDCG@5、route/relation 和 hard-safety 口径已固定；
 - [ ] 私有 `must_not` 已转换为产品负责人确认过的 canonical event ID，仍有未知标签则保持 `MANUAL_REVIEW_REQUIRED`；
 - [ ] 聚合报告不含题干、case ID、Gold、答案键路径、照片、向量或密钥。
+
+## 2026-08-30 状态更新
+
+产品负责人已审核通过公开 `rag-safety-events-v0.1` 目录，因此 v3 草案的安全禁项使用 `RAG_EVT_*` canonical ID。v3 草案位于项目工作区之外的受限目录 `portrait-consistency-agent-v3-holdout-owner-review/`，包含题目、分离答案候选和逐题审核表；当前应用、evaluator 和 Dashboard 不读取该目录。它是供产品负责人审核的候选材料，不是已经冻结的 Gold，也没有产生正式分数。
+
+产品负责人完成审核后，保留一份只含 `case_id + query` 的 runtime 输入；答案键移到产品负责人独立控制的位置，并在正式验收最多运行一次。若答案键被开发者读取或题目被用于调参，应重新生成下一份独立 Holdout。此前 v2 的 aggregate 仍只作历史泛化诊断。
 
 ## 不可夸写边界
 

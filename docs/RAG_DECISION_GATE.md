@@ -791,6 +791,16 @@ answerless public run
 
 已更新 `services/rag_gold_eval.py`、私有 aggregate 投影、failure analyzer、page 5 看板、公开事件目录和 v3 custody 文档，并补充单元测试。评测仍是离线、无网络、无照片、无 LLM；RAG 的 `execution_authorized=false`、候选 Provider fail-closed 和 hidden 独立性未改变。下一道门是产品负责人审核 canonical 事件目录、生成并审核 v3 Gold/holdout，以及决定是否批准某个候选 Provider 进入正式准入流程。
 
+### 26.5 2026-08-30｜审核确认、v3 工作区外草案与腾讯测试 License
+
+<span style="color:#C00000"><strong>本轮状态更新。</strong> 产品负责人已审核通过公开 `rag-safety-events-v0.1` 目录。目录状态由 pending 更新为 `product_owner_approved_2026-08-30`；已知 legacy label 和 `RAG_EVT_*` 仍可确定性归一化，未知事件继续 `MANUAL_REVIEW_REQUIRED`，不因审核通过而放宽安全门。</span>
+
+<span style="color:#C00000"><strong>v3 Holdout。</strong> 按 Holdout A 生成了工作区外的 `OWNER_REVIEW_DRAFT`：36 道重新表述题目、分离的 canonical event 答案草案和逐题审核表，位置在项目仓库之外的受限目录。它们不被当前 evaluator、RAG retriever、应用或公开报告读取；产品负责人完成审核后，正式 runtime 仍只能导入无答案的 `case_id + query`。在审核完成前，不称为正式 Gold、不运行正式盲测、不用来逐题调参。</span>
+
+<span style="color:#C00000"><strong>腾讯 Web License。</strong> 产品负责人允许提交测试 License。控制台当前已显示项目 `portrait-consistency-agent-demo` 与精确主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app` 的测试 License 为“正常”，有效期显示为 2026-08-30 至 2026-09-13。密钥和 Token 属于敏感凭据，永不写入本仓库、Trace、报告或回复；该资源状态只作为外部控制台事实记录。</span>
+
+<span style="color:#C00000"><strong>下一道门。</strong> 现在不是继续修改当前 baseline，而是请产品负责人逐题审核 v3 草案；审核通过后再由受限 runner 导出 answerless runtime，并仅做一次正式验收。候选 Provider 的 License/预算/隐私/真实 receipt/Gold 回归仍独立 fail-closed；RAG 继续只能提议，不能授权图片出站。</span>
+
 ## 27. 2026-08-30 当前 Provider 与部署收口
 
 火山美颜 API V2 的官方准入/计费资料已补齐到 [Provider Spike](PROVIDER_VOLCENGINE_SPIKE.md)：需要购买支持后付费 API 的创点套餐，公开资料没有个人免费额度或按次 API 价格；公开 SDK 年包起价也不是 V2 API 报价。产品负责人因此冻结 V0 不购买、不填 Key、不发图片，火山只保留 `candidate`/fail-closed 壳；RAG 命中它的知识不能改变这一权限。当前图片执行只走已验证的腾讯 BeautifyPic。

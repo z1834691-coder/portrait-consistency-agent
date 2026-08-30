@@ -36,11 +36,15 @@ Community Cloud 的构建会读取仓库的 `uv.lock`，并在仓库根目录执
 - 错误格式：`https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app/`；表单的“确定”按钮保持禁用；
 - 正确格式：`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`；表单按钮立即变为可用；
 - 不要填写 `https://`、末尾 `/`、路径、查询参数、通配符或空格；小程序 Appid 留空；
-- 当前控制台已预填项目名 `portrait-consistency-demo` 和上述纯主机名，但尚未点击“确定”提交测试 License。
+- 当前控制台已提交项目名 `portrait-consistency-demo` 和上述纯主机名；测试 License 在控制台显示“正常”。
 
 腾讯官方资料说明 Web License 按固定域名绑定，且 Web 端测试 License 申请后有效 14 天、可续期一次至 28 天；Streamlit 官方资料说明 Community Cloud 应用可使用 6–63 字符自定义 `streamlit.app` 子域名。若纯主机名仍在提交阶段被服务端拒绝，问题就不是字节长度，而是供应商对第三方托管子域名/域名归属的服务端限制；此时不要购买正式套餐，先用自有域名反向代理或本机 `localhost` 做单独 License Spike，并重新核验 referer。
 
 官方依据：[腾讯 Web 端 License 计费与精准域名说明](https://cloud.tencent.com/document/product/616/86942)、[腾讯 Web 测试 License 说明](https://cloud.tencent.com/document/product/616/80189)、[腾讯 Web License 常见问题](https://cloud.tencent.com/document/product/1143/45381)、[Streamlit 应用 URL 设置](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app/app-settings)。
+
+## 2026-08-30｜提交后的真实状态
+
+腾讯控制台现显示 `portrait-consistency-demo` 的 Web 测试 License 为“正常”，绑定上述精确主机名，有效期为 2026-08-30 至 2026-09-13。控制台中的 License Key/Token 只由产品负责人保存到密码管理器或部署平台 Secrets；本仓库、Trace、报告和聊天不保存或复述这些凭据。该 License 只闭合 Web 端资源绑定，不代表应用已公开、真实照片已获跨境授权或生产部署已完成。
 
 ## Secrets 配置
 

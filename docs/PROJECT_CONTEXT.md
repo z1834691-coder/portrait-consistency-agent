@@ -19,7 +19,7 @@
 - 同一人物门控、质量门和可执行性判断是目标照片进入修图前的前置条件；
 - 多脸照片在条件达标时让用户选择目标脸，系统自动隔离背景和其他人脸，只编辑所选单脸；批量模式中的单张失败不阻塞其他照片，但必须先告知用户；
 - V0 不显示任何接受概率；用户交互可以生成弱标签，模型可以生成合成边界案例，但人工金标准必须独立保留；
-- 受邀 Streamlit 部署方向已冻结为“私有 GitHub + Community Cloud Private/受邀 Beta”；Cloud Private App 已创建，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转。访问名单、Secrets、费用和真实照片授权仍需单独确认；Cloud 容器在美国且磁盘不保证持久化，不能当作生产服务器或长期数据存储。腾讯 Web License 现场表单已核验应填纯主机名，不带协议/路径。
+- 受邀 Streamlit 部署方向已冻结为“私有 GitHub + Community Cloud Private/受邀 Beta”；Cloud Private App 已创建，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转。访问名单、Secrets、费用和真实照片授权仍需单独确认；Cloud 容器在美国且磁盘不保证持久化，不能当作生产服务器或长期数据存储。腾讯 Web License 已按纯主机名提交并在控制台显示“正常”，有效期显示为 2026-08-30 至 2026-09-13。
 - 产品数据闭环已确认分层记录短期任务事实、意图/反馈/继续使用信号、上下文退出/沉默和长期 Profile 建立率、首次成功修图率、7/30 日回访、WAU/MAU、会话完成率、失败后重传率、明确满意/不满意比例；`product_events` 仍是运行账本，不是训练 Dataset。**本机运营/RAG Dashboard 页面已经实现**，但真实受邀用户采集、足够时间窗后的长期聚合与任何留存结论仍待开发和验证。
 - LLM 数据边界已确认：DeepSeek 仅收脱敏最小必要文本，不收照片、向量、锚点或原始 Trace；失败走本地模板，OpenRouter/跨境默认关闭，ZDR 需供应商证据核验。处理、外部 Provider、半年锚点和公开演示分别授权；多人须全员授权，未成年人拒绝。
 
@@ -58,7 +58,7 @@
 
 Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前执行链只用 Tencent。
 
-当前交叉校验：全量 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 failure-pattern/优化看板收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；下一步是审核事件目录、生成 v3 独立验收集，并继续完成新 Provider 的书面能力/License/隐私/价格/延迟、真实 receipt、Gold 回归与产品准入。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，但腾讯 Web License 测试申请仍未提交。
+当前交叉校验：全量 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 failure-pattern/优化看板收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；canonical Safety Event 目录已获产品负责人审核，v3 题目/答案草案已在工作区外生成并待逐题审核，下一步是完成正式 answerless runtime 与一次性盲测，并继续完成新 Provider 的书面能力/License/隐私/价格/延迟、真实 receipt、Gold 回归与产品准入。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。
 
 ## 2026-08-30 failure-pattern 实现快照
 
@@ -66,4 +66,4 @@ Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev +
 
 ## 2026-08-30 评测治理冻结快照
 
-Precision C 已实现为固定/覆盖式/返回式三种并行口径；Holdout A 已将 v2 降级为历史诊断并创建 v3 answerless 模板；Safety ID C 已建立 `RAG_EVT_*` 确定性字典，未知标签保持人工复核。public 报告固定 Precision@3=`47.44%`、覆盖式/返回式=`100%`，project Gate 仍 `FAIL`。这些变更只扩展评测和保管可观测性，不改变 RAG advisory、Provider fail-closed 或图片执行权限。
+Precision C 已实现为固定/覆盖式/返回式三种并行口径；Holdout A 已将 v2 降级为历史诊断并创建 v3 answerless 模板，工作区外另有 `OWNER_REVIEW_DRAFT` 题目/答案草案；Safety ID C 已建立并经产品负责人审核 `RAG_EVT_*` 确定性字典，未知标签保持人工复核。public 报告固定 Precision@3=`47.44%`、覆盖式/返回式=`100%`，project Gate 仍 `FAIL`。这些变更只扩展评测和保管可观测性，不改变 RAG advisory、Provider fail-closed 或图片执行权限。
