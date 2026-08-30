@@ -1457,6 +1457,8 @@ git diff --check
 → passed
 ```
 
+本轮提交 `f594948 feat: close RAG lifecycle audit and observability` 已推送到远程 `main`。Cloud 精确 URL 的只读探针返回 `303` 到 Streamlit 登录页，说明 Private 访问控制仍在生效；它不证明公网开放、云端持久化或真实照片已获跨境授权。
+
 ### RAG 中期结论与边界
 
 RAG 的本地工程能力已经收口：独立 SQLite 权威知识库、FTS5、dense/RRF/rerank、P0-C advisory consumer、失败分析、proposal-only correction、生命周期审计、脱敏报告和两个治理看板均可重放、可测试、可追溯。质量方面仍不能宣称通过：public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；历史 private holdout aggregate Route=`25.00%`、Gate=`FAIL`；v3 Holdout 仍是工作区外审核草案，未正式盲测。
