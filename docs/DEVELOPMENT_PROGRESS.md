@@ -1555,5 +1555,5 @@ external_provider_called       → false
 ## 2026-09-01｜第一位用户入口复核与 UI 文案一致性
 
 - Private Streamlit 页面已在浏览器中打开并完成只读入口检查：母版上传、目标照片、IntentFrame、8A、8B、8C 和反馈入口均存在；当前没有代用户上传照片或发起新的腾讯图片调用。
-- 修正侧边栏环境文案为“运行环境：Private Demo；本机开发端口为 `127.0.0.1:8501`”，避免把 Cloud 受邀入口误写成仅本机服务。该改动不改变合同、权限、Provider、RAG 或 Trace 行为；Cloud 需在下一次 GitHub 构建后才会显示新文案。
+- 修正侧边栏环境文案为“运行环境：Private Demo；本机开发端口为 `127.0.0.1:8501`”，避免把 Cloud 受邀入口误写成仅本机服务。该改动不改变合同、权限、Provider、RAG 或 Trace 行为；已推送 `main`，Cloud 重建后页面只读检查确认新文案已显示。
 - 代码与文案变更后重新执行全量测试、Ruff、format、compileall、`git diff --check`；结果保持 `150 passed, 4 warnings`、全部静态检查通过。真实 UI 8C 多轮图片回执仍必须由产品负责人在 Cloud 页面亲自触发。
