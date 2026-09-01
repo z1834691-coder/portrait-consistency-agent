@@ -34,6 +34,17 @@ def _load_json_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_optimization_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_optimization_loop_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -98,6 +109,7 @@ def _sop_rows(sop: object) -> list[dict[str, object]]:
 def main() -> None:
     st.set_page_config(page_title="RAG 优化看板｜母版人像一致性 Agent", page_icon="🧪")
     report = _load_json_report()
+    optimization = _load_optimization_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -107,6 +119,101 @@ def main() -> None:
         "当前 RAG baseline 尚未通过项目 Gate。隐藏集只回流聚合统计；本页不读隐藏答案键、"
         "不展示隐藏题干/编号，也不把聚合结果当作逐题调参标签。"
     )
+    if optimization is not None:
+        st.subheader("版本化自动优化迭代")
+        st.caption(
+            "逐代只改一个可解释候选；Composite 仅作比较分，不能覆盖固定项目 Gate 或 hard-safety。"
+        )
+        generations = optimization.get("generations", [])
+        generations = generations if isinstance(generations, list) else []
+        generation_table: list[dict[str, object]] = []
+        chart_rows: list[dict[str, object]] = []
+        for generation in generations:
+            if not isinstance(generation, dict):
+                continue
+            metrics = generation.get("metrics", {})
+            metrics = metrics if isinstance(metrics, dict) else {}
+            generation_table.append(
+                {
+                    "代次": generation.get("generation_id", "—"),
+                    "候选版本": generation.get("version", "—"),
+                    "状态": generation.get("status", "—"),
+                    "Composite": generation.get("composite_score", "—"),
+                    "增益": generation.get("composite_gain_vs_previous", "—"),
+                    "Route": _percent(metrics.get("route_accuracy")),
+                    "Recall@5": _percent(metrics.get("recall_at_5")),
+                    "Project Gate": generation.get("project_threshold_gate", "—"),
+                }
+            )
+            if isinstance(generation.get("composite_score"), (int, float)):
+                chart_rows.append(
+                    {
+                        "代次": str(generation.get("generation_id", "—")),
+                        "Composite": float(generation["composite_score"]),
+                    }
+                )
+        st.dataframe(generation_table, use_container_width=True, hide_index=True)
+        if chart_rows:
+            st.line_chart(chart_rows, x="代次", y="Composite")
+        anti_overfit = optimization.get("anti_overfit", {})
+        anti_overfit = anti_overfit if isinstance(anti_overfit, dict) else {}
+        status_cols = st.columns(3)
+        executed_label = " → ".join(str(x) for x in optimization.get("executed_generations", []))
+        status_cols[0].metric("执行代次", executed_label)
+        status_cols[1].metric("反过拟合", anti_overfit.get("status", "—"))
+        stop_label = (
+            "边际效益递减" if "diminishing" in str(optimization.get("stop_reason")) else "计划完成"
+        )
+        status_cols[2].metric("停止原因", stop_label)
+        public_patterns = optimization.get("failure_patterns", {})
+        public_patterns = public_patterns if isinstance(public_patterns, dict) else {}
+        case_diagnostics = optimization.get("baseline", {})
+        case_diagnostics = case_diagnostics if isinstance(case_diagnostics, dict) else {}
+        case_rows = case_diagnostics.get("case_diagnostics", [])
+        case_rows = case_rows if isinstance(case_rows, list) else []
+        st.write("公开集逐题模式计数：", public_patterns.get("public_case_pattern_counts", {}))
+        with st.expander("查看公开集逐题诊断（不含原始题干）"):
+            st.dataframe(case_rows, use_container_width=True, hide_index=True)
+        interpretations = public_patterns.get("private_pattern_interpretations", [])
+        if isinstance(interpretations, list) and interpretations:
+            st.subheader("v3 聚合模式：事实与假设分开")
+            interpretation_rows = []
+            for item in interpretations:
+                if not isinstance(item, dict):
+                    continue
+                causes = item.get("plausible_causes", [])
+                if not isinstance(causes, list):
+                    causes = []
+                interpretation_rows.append(
+                    {
+                        "模式": item.get("pattern_id", "—"),
+                        "计数": item.get("count", 0),
+                        "证据级别": item.get("evidence_level", "—"),
+                        "观察事实": item.get("what_is_observed", "—"),
+                        "可验证假设": "；".join(str(cause) for cause in causes),
+                        "下一份 Holdout 要补的证据": item.get("next_evidence_needed", "—"),
+                    }
+                )
+            st.dataframe(interpretation_rows, use_container_width=True, hide_index=True)
+            st.caption("v3 模式计数可能重叠；假设不等于隐藏集逐题答案，需在独立 Holdout v4 验证。")
+        optimization_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "optimization_loop"), None
+        )
+        if optimization_artifact is not None:
+            optimization_path = optimization_artifact.path(PROJECT_ROOT)
+            if optimization_path.is_file():
+                st.download_button(
+                    "下载自动优化迭代 HTML",
+                    data=optimization_path.read_bytes(),
+                    file_name=optimization_path.name,
+                    mime="text/html",
+                )
+                render_component(
+                    read_rag_report(optimization_artifact, PROJECT_ROOT),
+                    height=680,
+                    scrolling=True,
+                )
+
     if report is None:
         st.error("尚未找到失败分析报告。请先运行：uv run python scripts/analyze_rag_failures.py")
         return

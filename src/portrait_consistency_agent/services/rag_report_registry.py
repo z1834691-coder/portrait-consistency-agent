@@ -61,6 +61,13 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description="来源生命周期、复审提醒和派生索引一致性的脱敏审计。",
         scope="knowledge_metadata_only",
     ),
+    RagReportArtifact(
+        key="optimization_loop",
+        title="RAG｜自动优化迭代 Dashboard",
+        filename="rag_optimization_loop_v1.html",
+        description="公开集逐题诊断、候选代际回归、Rubric 和反过拟合状态。",
+        scope="public_iteration_plus_private_aggregate_context",
+    ),
 )
 
 

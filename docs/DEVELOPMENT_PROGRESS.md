@@ -1584,3 +1584,116 @@ external_provider_called       → false
 - 这是设计与前端交接文档，不是应用代码变更；当前 Streamlit 页面仍保持工程验证型原型。
 - 交互结构、低实体原则和四色家族沿用已冻结决策；具体实现 token、字体、前端承载、移动端范围、批量/多脸入口和记录持久化仍按文档中的红色待决策项处理。
 - 产品负责人确认待决策项后，才进入 UI 视觉实现 Gate；实现后必须按文档 Definition of Done 复核状态真实性、授权/隐私、可访问性和当前合同/Trace 不变量。
+
+## 2026-09-01｜RAG 失败模式驱动自动优化 Loop
+
+### 本轮背景
+
+v3 Holdout 一次性盲测的聚合错误集中在 `evidence_relation_mismatch`、`evidence_set_mismatch` 和 `route_mismatch`。本轮把 failure-pattern 分析从“报告”推进为真正可重复运行的候选优化循环，同时遵守 Holdout A：不读取 v3 逐题答案、不重复正式运行同一份 v3、不让候选自动进入现役策略。
+
+### 本轮完成
+
+- 新增 `services/rag_optimization_loop.py`：读取 public dev/challenge、公开 annotations 和 baseline predictions；逐题输出结构化 failure code；只提出受限候选。
+- 新增 `scripts/run_rag_optimization_loop.py`：V0 baseline、V1 同义词归一化、V2 relation canonical 化已实跑；V3 evidence packing 与 V4 route safety guard 在连续两代 Composite 增益为 0（低于 0.01）后按停止规则跳过。
+- 新增 [RAG 优化 Rubric](RAG_OPTIMIZATION_RUBRIC.md) 和 [RAG 优化进展](RAG_OPTIMIZATION_PROGRESS.md)，明确指标含义、固定 project Gate、Composite 权重、反过拟合和回滚方式。
+- 生成 `reports/rag_optimization_loop_v1.json/.html`；page 5 增加 V0→V4 代际表、Composite 曲线、逐题诊断展开、v3 聚合 pattern、反过拟合状态和 HTML 下载。
+- 报告额外把 v3 三类聚合 pattern 拆成“观察事实 / 可验证假设 / 下一份 Holdout 证据”三层，并标记计数可重叠；没有把聚合数字当成逐题答案。
+- 更新报告 allow-list、执行版 PRD、RAG_DECISION_GATE、DECISION_LOG、SOP、README；六类业务合同和图片执行权限没有被候选改写。
+
+### 实际回执
+
+```text
+public cases                      → 52（dev 34 + challenge 18）
+V0/V1/V2 composite                 → 0.947436 / 0.947436 / 0.947436
+V1/V2 composite gain               → 0.0 / 0.0
+public route/evidence/relation     → 100% / 100% / 100%
+public fixed Precision@3           → 47.44%（51/52 Gold 少于 3 条）
+v3 aggregate pattern               → relation 31 / set 21 / route 25
+anti-overfit                       → PASS
+network/provider/LLM/photo/hidden  → false / false / false / false / false
+active baseline changed            → false
+stop reason                        → 两代低增益，跳过 V3/V4
+```
+
+### 结论与下一步
+
+本轮证明“逐题诊断 → 单变量候选 → 回归 → 反过拟合 → 边际停止”已经是可执行、可观察、可回滚的工程链路，但没有把 RAG 质量 Gate 变成 PASS。公开集的固定 Precision 主要受 Gold 稀疏分母影响，v3 逐题根因不可见；继续在现有 52 题上堆规则会造成过拟合。下一次质量验收必须先建立独立 Holdout v4，并在新增人工审核表达/组合数据后再打开候选。v3 不再重跑。
+
+### 本轮校验
+
+```text
+pytest（含新增 5 条优化 loop 测试与账本幂等冲突回归）→ 160 passed，4 个既有 Pillow DeprecationWarning
+ruff check → All checks passed
+ruff format --check → 122 files already formatted
+compileall（app.py、src、pages、scripts）→ passed
+git diff --check → passed
+P0-A / P0-B / RAG advisory / lifecycle / 8C / 8C2 smoke → 全部 exit 0
+```
+
+## 2026-09-01｜第一位真实用户到达 8A：阻塞修复与 UX 反馈
+
+### 事实回执
+
+第一位用户亲自操作 Cloud Private 页面，已完成：母版上传与 IMS Pass、`ReferenceProfile` 建立、目标照上传与 IMS Pass、当前会话 CompareFace。CompareFace RequestId=`3f4bdc92-33b2-4ee3-844a-db34abbc5eca`，供应商原始分 `56.231842041015625`，按当前未校准 Policy 为 `uncertain`。目标照随后在 8A 被记录为 `subject_match_not_confirmed`、`quality_route_not_continuable`；RAG 返回 Tencent FaceLifting/EyeEnlarging 直接证据，但 `execution_authorized=false`。本轮没有 `EditPlan`、`ProviderRun` 或 `VerificationResult`，没有再次触发付费修图调用。
+
+### 根因、修复与可追溯性
+
+根因不是 RAG 召回、质量算法或 Tencent BeautifyPic，而是旧 UI/代码只实现了“uncertain 阻断”，没有实现产品规则里“本人且有权编辑后可在当前会话降级继续”的路径。已新增 `ConfirmationScope.subject_match_uncertain_acknowledged`（向后兼容可选字段），页面提供一次性确认；`edit_planner`、`confirm_execution` 和执行前 `_ensure_execution_allowed` 都会重新校验该字段。确认不会把 `uncertain` 改成 `match`、不会更新长期主体锚点，`no_match` 仍硬拒绝；事件、策略版本和 scope 字段写入脱敏 Trace，并增加 SQLite migration marker `contract_v0_4_subject_uncertain_ack`。
+
+### 第一位用户 UX 反馈（待 UI Gate，不在本轮擅改）
+
+- 上传母版和目标照片等待明显过长；
+- 普通用户不应在首屏直接看到脱敏 JSON；
+- A/B/C 检查点、内容安全、同人检查、Profile 冻结和多个按钮暴露了工程流程，操作成本高；
+- 用户更希望只用自然语言描述目标，系统在后台完成检查、建档、规划和路由，只在必要同意和结果处交互；
+- 当前页面视觉和交互偏工程文档，不够像 C 端产品。
+
+这些是第一位用户的事实反馈，不代表已有普适性结论，也不代表 UI 改版已完成。下一 UI Gate 需先量化各阶段耗时，再讨论图片压缩/并行预检/缓存/异步；把检查点折叠为真实进度，把 JSON/Trace 放到开发者/管理员第二层，只保留必要的首次同意和结果反馈。不能为了减少点击而删除同人或外部图片处理所需的权限门。
+
+### 本轮验证与当前下一步
+
+本地全量 `.venv/bin/pytest -q` 已得到 `160 passed, 4 warnings`；新增测试覆盖“uncertain 未确认阻断、确认后在 bounded scope 内继续、no_match 仍阻断、Trace 记录确认事实”，并修复了同一合同 ID 携带变化上下文时可能泄漏 `sqlite3.IntegrityError` 的幂等冲突路径。最终文档同步后已再次运行 Ruff、格式、compileall 和 diff 检查。Cloud 需要拉取本轮提交并重建；重建后第一位用户只需刷新、在 uncertain 提示处勾选一次确认，再继续 8A→8B→8C。直到产生真实 `ProviderRun`、修后 `VerificationResult` 和反馈，首轮 UI 测试仍不能写成完成或视觉效果已验证。
+
+## 2026-09-01｜最终交叉校验：账本幂等冲突修复
+
+### 发现的问题
+
+全量校验首次在 `test_reusing_contract_identity_with_changed_payload_fails_closed` 暴露一个边界：当相同业务合同 ID 携带变化的 `photo_id` 时，旧实现先按完整上下文查询，找不到原记录，随后由 SQLite 抛出底层唯一键异常。产品上这会把可解释的“证据 ID 已存在但内容不同”变成内部数据库错误，也削弱了 Trace/错误处理的一致性。
+
+### 修复与可观测行为
+
+`LocalTraceStore._insert_session_contract` 现在同时按完整业务上下文和真实 SQLite 唯一键（质量结果 ID、计划 ID+revision、验证 ID）检查已有记录。内容相同继续幂等复用；内容不同统一抛出可识别的 `ValueError`，不覆盖原记录，也不新增第二条事实。测试补充了“质量置信度变化”和“photo_id 变化”两种冲突路径。
+
+### 本轮实际校验
+
+```text
+pytest -q                  → 160 passed, 4 warnings
+ruff check                → All checks passed
+ruff format --check       → 122 files already formatted
+compileall                → passed
+git diff --check          → passed
+P0-A / P0-B / RAG advisory / lifecycle / 8C / 8C2 smoke → 全部 exit 0
+RAG optimization loop    → V0/V1/V2 完成，V3/V4 按低增益规则跳过，anti-overfit=PASS
+```
+
+该修复不改变 RAG 的质量结果或图片执行权限；它只让本地运行账本在 Streamlit 重放和异常输入下保持可追溯、可回滚、fail-closed。历史快照仍保留原测试数字，当前真实数字以本节、执行版 PRD和 DECISION_LOG 的最新条目为准。
+
+## 2026-09-01｜Cloud ImageModeration 页面失败的根因定位与修复
+
+### 事实
+
+第一位用户在 Cloud 页面看到 `Tencent ImageModeration request failed`。检查 Cloud 运行日志后，最稳定、可重复的异常不是腾讯安全服务返回的内容判断，而是：
+
+```text
+sqlite3.IntegrityError: UNIQUE constraint failed: photo_quality_results.quality_result_id
+```
+
+Streamlit 的控件交互会重跑整个脚本。旧实现把同一个照片质量合同再次写入 SQLite，导致页面在一次重跑中止；因此页面上的泛化失败提示不能被解读为“腾讯密钥无效”。本机随后使用明确授权照片完成真实 IMS smoke：`status=succeeded`、`Pass`、RequestId=`c95e1359-9ecb-45ac-aa94-3776fbccc0ad`。本机成功不替代 Cloud 新版本回执，但排除了“本项目腾讯服务整体不可用”的假设。
+
+### 修复
+
+`LocalTraceStore._insert_session_contract` 现在同时检查完整业务上下文和数据库真实唯一键。相同 ID、相同脱敏投影会幂等复用并写 `*_reused` 事件；相同 ID、不同内容会转成可识别的合同冲突，不覆盖旧事实、不泄漏底层 SQLite 错误。Verification 完成类产品事件只在首次落账时记录，避免 Streamlit 重跑造成看板重复计数。该修复不改变 IMS 的 Pass/Review/Block 路由、不自动重试，也不绕过安全门。
+
+### 验证和下一步
+
+本地全量校验已为 `160 passed, 4 warnings`，新增幂等复用/变化内容 fail-closed 回归均通过；Ruff、格式、compileall、diff check 和既有 RAG/8C smoke 均通过。提交并由 Cloud 重建后，产品负责人刷新页面、重新执行一次内容安全检查；若仍有腾讯真实错误，页面会显示脱敏 `error_code` 与 `RequestId`，再据此做下一步配置定位。

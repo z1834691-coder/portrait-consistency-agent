@@ -102,7 +102,7 @@ hard-safety 只能标 `MANUAL_REVIEW_REQUIRED`，不得写成安全 Gate 通过�
 shells with no SDK import, image egress or network path. Existing Tencent IMS and
 BeautifyPic each have one newly authorized internal smoke receipt; this verifies a
 single existing-provider route, not visual effectiveness or candidate-provider readiness.
-The latest cross-check is `146 passed, 4 warnings`; Ruff, compileall and `git diff --check`
+The latest cross-check is `160 passed, 4 warnings`; Ruff, compileall and `git diff --check`
 must be rerun after each change. The hidden answer key remains outside the developer-readable
 workspace and must never be copied into tests, reports, prompts, or source control.
 

@@ -15,6 +15,7 @@ from portrait_consistency_agent.core.contracts import (
     PhotoRole,
     PlanStatus,
     ProviderRunStatus,
+    SubjectMatchStatus,
 )
 from portrait_consistency_agent.core.policies import (
     build_v0_execution_policy,
@@ -62,7 +63,7 @@ class FakeBeautifyClient:
         return self.response
 
 
-def _bundle(*, session_id: str = "session_001"):
+def _bundle(*, session_id: str = "session_001", uncertain_subject: bool = False):
     target_bytes = b"authorized-target-image-bytes"
     target = replace(
         make_observation(
@@ -73,7 +74,19 @@ def _bundle(*, session_id: str = "session_001"):
         ),
         photo_sha256=hashlib.sha256(target_bytes).hexdigest(),
     )
-    quality = make_target_quality(target).model_copy(update={"session_id": session_id})
+    quality_kwargs: dict[str, object] = {}
+    if uncertain_subject:
+        base_quality = make_target_quality(target)
+        assert base_quality.subject_match_evidence is not None
+        quality_kwargs = {
+            "subject_match_status": SubjectMatchStatus.UNCERTAIN,
+            "subject_match_evidence": base_quality.subject_match_evidence.model_copy(
+                update={"raw_score": 56.23}
+            ),
+        }
+    quality = make_target_quality(target, **quality_kwargs).model_copy(
+        update={"session_id": session_id}
+    )
     intent = make_intent(
         session_id=session_id,
         target_refs=[target.photo_id],
@@ -83,6 +96,7 @@ def _bundle(*, session_id: str = "session_001"):
         target_observation=target,
         quality_result=quality,
         intent=intent,
+        subject_match_uncertain_acknowledged=uncertain_subject,
         plan_id="plan_execution_001",
     )
     assert plan_result.plan is not None
@@ -93,6 +107,7 @@ def _bundle(*, session_id: str = "session_001"):
         source_intent=intent,
         proposed_plan=plan_result.plan,
         next_turn=2,
+        subject_match_uncertain_acknowledged=uncertain_subject,
         now=now,
     )
     return {
@@ -189,6 +204,42 @@ def test_successful_execution_saves_only_redacted_receipt_and_keeps_result_bytes
     )
     assert repeated.route == "blocked"
     assert repeated.provider_run is None
+    assert len(client.calls) == 1
+
+
+def test_uncertain_subject_ack_is_carried_by_scope_and_allows_one_execution(
+    tmp_path: Path,
+) -> None:
+    store, session_id = _store(tmp_path)
+    bundle = _bundle(session_id=session_id, uncertain_subject=True)
+    confirmation = bundle["confirmation"]
+    assert confirmation.execution_intent.confirmation_scope is not None
+    assert confirmation.execution_intent.confirmation_scope.subject_match_uncertain_acknowledged
+
+    client = FakeBeautifyClient(
+        response=TencentBeautifyResponse(
+            request_id="request-uncertain-001",
+            result_image_base64=base64.b64encode(TINY_PNG).decode("ascii"),
+            result_url=None,
+        )
+    )
+    result = execute_confirmed_plan(
+        confirmed_plan=confirmation.confirmed_plan,
+        execution_intent=confirmation.execution_intent,
+        target_image_bytes=bundle["target_bytes"],
+        target_photo_id=bundle["target"].photo_id,
+        profile=bundle["profile"],
+        quality_result=bundle["quality"],
+        client=client,
+        store=store,
+        now=bundle["now"],
+    )
+
+    assert result.route == "succeeded"
+    authorization_trace = next(
+        item for item in result.trace if item["step"] == "authorization_check"
+    )
+    assert authorization_trace["subject_match_uncertain_acknowledged"] is True
     assert len(client.calls) == 1
 
 

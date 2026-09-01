@@ -10,6 +10,8 @@
 
 > <span style="color:#C00000"><strong>2026-09-01 实时补充：</strong>第一位用户在 Cloud 配置 Secrets 后，ImageModeration 已进入真实请求但返回失败；原页面仅显示通用错误，无法定位具体原因。现已补齐安全错误回执投影：页面和脱敏 Trace 仅显示腾讯 `error_code`、`RequestId` 与异常类型，不显示原始错误全文、图片或密钥；失败仍 fail closed，不自动重试、不放行照片。刷新 Cloud 应用后再次执行安全检查，即可得到下一条真实腾讯诊断回执。本次不把“请求失败”写成 IMS 通过，也不改变现有 Pass/Review/Block 路由。</span>
 
+> <span style="color:#C00000"><strong>2026-09-01 根因覆盖：</strong>Cloud 日志进一步显示页面稳定中断点为 Streamlit 重跑时重复写入同一 `photo_quality_result_id`，SQLite 抛出 `UNIQUE constraint failed`；本机明确授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此不能把此前通用页面提示直接归因为腾讯密钥失效。现已将质量/计划/验证合同写入改为“唯一键 + 脱敏投影”幂等复用；变化内容 fail closed，不覆盖历史证据，也不重复完成事件。Cloud 拉取新版本后仍须重跑一次 IMS 获取云端新回执。</span>
+
 ## 0. 这份文档和原启动蓝图是什么关系
 
 [原启动蓝图](../../outputs/人像修图一致性Agent-项目启动蓝图.md)记录了项目最初的探索、候选方案和排期，其中保留了一些后来被否决的设计，例如展示实验性 0—100 指数、把最多三轮写进合同类型、每轮最多三个参数等。它继续作为“为什么这样探索”的历史资料，但**不再代表当前实际产品**。
@@ -203,6 +205,16 @@
 <span style="color:#C00000"><strong>冻结决策。</strong> V0 默认只接受本人单人照片和成年测试者；多人照片若要继续，必须确认所有可识别人员均已授权，并由系统自动隔离目标脸、只编辑该脸，隔离/回贴/复测失败则要求先裁剪为单脸；未成年人照片拒绝进入 Beta。产品分别取得以下同意：①处理本次照片；②将照片发送给已列明的外部编辑/验证 Provider；③保存由母版派生的加密主体锚点 6 个月；④允许用于公开 Demo/视频。保存锚点前告知其属于敏感生物特征数据，到期前 30 天和 7 天提醒；用户撤回后立即失效，主存储 24 小时内删除、备份 7 天内清理并保留脱敏删除审计。公开展示前再次确认；撤回公开演示授权后不再用于新视频或新页面。所有门的状态、版本、时间和责任主体只进脱敏审计，原图和锚点不进 Trace。</span>
 
 <span style="color:#C00000"><strong>风险缓解与效果。</strong> 内容安全采用本地格式/文件预检 + 腾讯 IMS 主审核，`Review/Block` 保守拦截；未通过不建档、不做同人比对、不调用修图。权限策略还要覆盖越权查看、跨用户混用、过期锚点、撤回后的缓存/备份残留、第三方照片授权不足、公开展示范围扩大和供应商留存不明等风险。这样既保留 C 端体验，也把“能否处理、能否保存、能否出境、能否公开”变成可验证的不同产品决策。</span>
+
+### 9D. 第一位真实用户测试：从 8A 阻塞中校准产品路径（2026-09-01）
+
+<span style="color:#C00000"><strong>背景与问题。</strong> 产品负责人作为第一位用户实际完成了母版上传、IMS 内容安全、`ReferenceProfile` 建立、目标照 IMS 和当前会话 CompareFace。目标照 CompareFace 原始分为 `56.231842041015625`，按未校准策略进入 `uncertain`。8A 随即显示“当前没有可可靠展示的局部几何测量／当前没有可自动执行的参数”，并以 `subject_match_not_confirmed`、`quality_route_not_continuable` 阻止继续。RAG 当次已经返回审核过的 FaceLifting/EyeEnlarging 直接证据，但 `execution_authorized=false`；因此这次阻塞来自产品/代码没有承接 `uncertain` 的确认路径，不是 RAG 召回或图片 Provider 失败。</strong></span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 直接把 `uncertain` 当作 `match` 会制造身份事实，直接把它永久当作拒绝又会让本人照片在可接受风险下无法继续。保留 `no_match` 硬拒绝、保留内容安全和质量门，同时增加一条最小的本人/编辑权确认，能够让用户明确承担不确定性，又不会让 LLM、RAG 或供应商分数越权放行。这个事实必须属于当前照片和当前任务，不能更新长期主体锚点或变成跨会话同人证明。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> `uncertain` 时，页面提供一次结构化确认：“我确认目标照是本人，且我有权编辑；接受同人判断不确定可能带来的偏差”。确认成功后，将 `subject_match_uncertain_acknowledged=true` 写进有界 `ConfirmationScope`，8A/8B/8C 在同一照片、会话和计划族内继续；它不改写 `subject_match_status`，不填充未校准概率，不更新主体锚点。确认事件、CompareFace 策略版本和 scope 继续进入脱敏 Trace；`no_match` 仍然拒绝。</strong></span>
+
+<span style="color:#C00000"><strong>第一位用户反馈与下一轮设计输入。</strong> 用户反馈上传等待明显过长；页面直接展示脱敏 JSON；A/B/C 检查点、安全检查、同人比对、Profile 冻结等工程步骤暴露在首屏且按钮过多；自然语言入口被选项挤压；整体 UI 偏工程文档，不像 C 端产品。以上是事实反馈，不等于已经完成 UI 改版。下一 UI Gate 应把后台检查合并成真实进度，把 JSON/Trace 下沉到开发者/管理员第二层，只保留必要的首次同意和结果反馈；上传性能先用阶段耗时 Trace 定位，再决定压缩、并行预检、缓存或异步处理。<strong>这一步的效果是让真实用户测试可以越过合法的 `uncertain` 路由，同时把“隐私安全阻塞”和“交互摩擦”分开，避免为了减少按钮而删除必要权限。</strong></span>
 
 ### 10. 部署与硬件按阶段决策
 
@@ -516,7 +528,7 @@ V0 当前 Safety Policy 为：
 | `>0.50 且 <0.80` | 告知偏差风险后继续 |
 | `≥0.80` | 进入下一步 |
 
-`subject_match=uncertain` 独立进入确认/重新上传；`no_match` 拒绝，不会因为质量高而放行。
+`subject_match=uncertain` 独立进入确认/重新上传：用户明确确认“这是本人且有权编辑”后，系统才在当前照片、会话和有界计划族内继续，并把 `subject_match_uncertain_acknowledged` 记录到 `ConfirmationScope`；它不改变 `uncertain` 事实、不更新长期主体锚点。`no_match` 拒绝，不会因为质量高或口头确认而放行。
 
 ### 2.9 同一人物门控采用“当前会话腾讯 + 长期本地锚点”
 
@@ -814,7 +826,7 @@ NEW
 
 路由由当前 `QualityRoutingPolicySnapshot` 计算，0.50/0.80 是配置值，不是合同类型边界。
 
-多脸依次进入 `SELECT_FACE → ISOLATION_PENDING → CONTINUE`；隔离失败进入 `REQUIRE_USER_CROP`。目标照 subject 不确定时进入独立确认，不能被高质量置信度覆盖。
+多脸依次进入 `SELECT_FACE → ISOLATION_PENDING → CONTINUE`；隔离失败进入 `REQUIRE_USER_CROP`。目标照 subject 不确定时进入独立确认，不能被高质量置信度覆盖；确认事实只在当前有界 `ConfirmationScope` 生效，不把不确定结果升级为同人事实。
 
 ### 6.3 `IntentFrame`：用户当前要什么
 
@@ -1145,7 +1157,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | UI 内真实 API 执行                        | **已实现并离线验证** | 8B 确认按钮、确定性 Gate、Tencent Adapter、ProviderRun、会话内结果预览；6 个 fixture 测试 | 尚无新的 UI live receipt；不自动重试、不持久化结果、不代表修图有效                                   |
 | VerificationResult 与计划族续跑              | **已实现并离线验证**   | 结果图内存解码、同一几何观察器、逐特征趋势、目标证据、STOP/REPLAN/RESHOOT/MANUAL_REVIEW；子计划/父子回执/三轮上限/显式反馈/scope fail-closed 的 6 条 8C-2 测试与 fixture Trace；P0-C 可将受限策略 evidence 留入 `knowledge_refs` | 未有真实 UI 三轮照片回执；external/hybrid 复测、妆面/肤色自动验收和 LLM 自由策略未实现         |
 | 批量模式                                 | **已冻结待开发**   | 用户旅程与逐张合同                                                               | 无批量执行代码                                               |
-| 受邀 Streamlit URL / 本地服务器            | **私有 GitHub 部署包已推送；Cloud Private 页面已打开待第一位用户操作** | 私有仓库 `z1834691-coder/portrait-consistency-agent` 的 `main/app.py`、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步；页面首页可加载；第一位用户已触发一次真实 ImageModeration 失败，现可安全显示 `error_code`/`RequestId` | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略、UI 真实 Provider 回执和用户数据仍需受邀测试确认；Cloud 重建后需按真实错误码继续排查 |
+| 受邀 Streamlit URL / 本地服务器            | **私有 GitHub 部署包已推送；Cloud Private 页面已打开待第一位用户操作** | 私有仓库 `z1834691-coder/portrait-consistency-agent` 的 `main/app.py`、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步；页面首页可加载；第一位用户触发的 Cloud 页面中断已定位为 Streamlit 重跑下的 SQLite 重复合同写入，现已做幂等修复；腾讯错误仍可安全显示 `error_code`/`RequestId` | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略、UI 真实 Provider 回执和用户数据仍需受邀测试确认；Cloud 重建后仍需重跑一次 IMS 获取新回执 |
 | 接受概率模型                               | **未来候选**     | 数据/评测规则已定义                                                              | V0 禁止显示                                               |
 | RAG P0-A / P0-B 本地检索                         | **已实现并本地验证**     | SQLite `KnowledgeItem/KnowledgeChunk`、3 张来源卡/10 条原子规则、metadata/FTS5、dense8/RRF10/rerank10、过期/冲突/缺槽/注入降级、依据卡、Trace、15 条检索回归与默认禁止下载 smoke | 只排序已审核工具知识；不读照片/原话、不调用 LLM/腾讯、不产生参数/ProviderRun |
 | RAG P0-C 受限 evidence 回接                    | **已实现并本地验证**     | `RagAdvisoryDecision` / `RagBadCaseRecord`、8A/8C advice 注入、direct/reference/conflict 分层、`EditPlan`/验证合同引用、G01/G09/miss/baseline 4 条回归与本地 smoke | `execution_authorized=false`；不新增 Provider、参数、外部/混合复测或自动 worker，也不产生人工 Gold Set 数值结论 |
@@ -1153,15 +1165,15 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | RAG 生命周期审计（P0-D）                         | **已实现并本地验证** | `RagLifecycleAudit`、`rag_lifecycle_audits`、dense manifest、`scripts/audit_rag_lifecycle.py`、JSON/HTML 报告、page 4 显式入口与 4 条测试；当前 3 items/10 active chunks、issue=0、index=`in_sync` | metadata-only、只报告不变更；人工审核后才能更新/发布/重建，不能把审计结果写成 RAG 质量通过 |
 | RAG Gold Set v2 离线评测器                     | **已实现并本地验证；当前基线未通过** | `services/rag_gold_eval.py`、public 52 题、annotations、holdout 20 题、盲审输入合同、JSON/Markdown/HTML 报告和阈值 Gate；public prediction 与私有 aggregate holdout score 已实际生成；Precision C 双口径、Safety ID C 字典已实现 | public 固定分母 Precision@3=47.44%、覆盖式/返回式=100%，私有 holdout Route=25.00%，两者 project Gate 均 `FAIL`；私有旧 Markdown 仍需 machine-normalized event ID；live Judge 未实现 |
 | RAG Gold Set v3 一次性盲测                     | **已审核并完成一次私有聚合盲测；质量 Gate 未通过** | 产品负责人审核 36 题；answerless runtime、私有答案键隔离、deterministic runner/scorer、aggregate-only JSON/HTML 已完成；runner 未读答案键/照片/网络 | Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、Evidence relation=23.61%；hard-safety 0/36；不能用逐题 hidden 答案调参；live LLM Judge 未启用 |
-| RAG failure-pattern / 自校正候选 / 优化 Dashboard | **已实现并本地验证；候选未推广** | `services/rag_failure_analysis.py`、`rag-correction-candidate-v0.1`、脱敏 JSON/HTML、page 4 报告集合与 page 5 优化看板；公开回归差值和六步 SOP 可回放 | 只读 public/隐藏 aggregate；不读 hidden 答案、照片、向量或原始文本；不改变 active baseline、权限、Provider 或 project Gate（当前仍 `FAIL`） |
+| RAG failure-pattern / 自校正候选 / 优化 Dashboard | **已实现并本地验证；候选未推广** | `services/rag_failure_analysis.py`、`rag-correction-candidate-v0.1`、`services/rag_optimization_loop.py`、`scripts/run_rag_optimization_loop.py`、脱敏 JSON/HTML、page 4/5 看板；公开回归差值、逐题错误码、停止规则和六步 SOP 可回放 | 只读 public/隐藏 aggregate；不读 hidden 答案、照片、向量或原始文本；不改变 active baseline、权限、Provider 或 project Gate（当前仍 `FAIL`） |
 | 新 Provider candidate shells                 | **已实现并 fail-closed 验证；火山 V0 暂缓** | 火山美颜 API V2.0、腾讯特效 SDK 的 Card、typed Adapter、权限/预算 preflight、离线测试和 smoke；V0 实际执行仍 Tencent-only | 火山需购买创点且公开价格/试用未闭合，腾讯特效仍无 License/真实 receipt；均无 SDK/API、密钥、图片出站、Gold 回归或产品准入 |
 
 ### 13.1 当前测试证据
 
-2026-08-30 当前验证：
+2026-09-01 当前验证：
 
 ```text
-.venv/bin/pytest -q                     → `150 passed, 4 warnings`（2026-08-30 RAG P0-D 生命周期审计收口后的实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C/P0-D、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、Holdout 模板与 Provider shell 回归；4 条为既有 Pillow 弃用警告）
+.venv/bin/pytest -q                     → `160 passed, 4 warnings`（2026-09-01 RAG 失败模式自动优化 Loop 收口后的实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C/P0-D、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、优化 Loop、Provider shell 与本地账本幂等冲突回归；4 条为既有 Pillow 弃用警告）
 DeepSeek 默认 smoke                     → offline_guarded；network_called=false（证明默认不联网）
 DeepSeek --allow-live                   → passed；parser_mode=llm；schema_validated=true；model=deepseek-v4-flash；2957 ms；1471 tokens
 Tencent CompareFace --allow-live        → succeeded，RequestId=b89e828a-8038-41d3-a598-575fdba23521
@@ -1298,7 +1310,7 @@ Gold Set v2（开发/挑战/隐藏）
 - `docs/RAG_GOLD_EVALUATOR.md`、`docs/RAG_GOLD_JUDGE_PROMPT.md`、`docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md`：分别记录一页说明、盲审输入/输出合同和人工逐题审核模板。
 - `data/evaluation/rag_gold_v2_public.json`：52 道无答案开发/挑战运行题；`rag_gold_v2_annotations.json`：仅 dev/challenge 答案键；`rag_gold_v2_holdout_runtime.json`：20 道只含 `case_id/query` 的隐藏运行包。
 - `data/provider_cards/volcengine_beauty_api_v2.json`、`data/provider_cards/tencent_effect_sdk.json` 与对应 Adapter shell：均明确 `candidate`、未接入真实 SDK/API、无图片出站、无密钥、无真实费用/License/地区确认；默认 fail-closed。
-- 真实命令证据：全量 `pytest` 为 `150 passed, 4 warnings`；public 52 题 deterministic baseline 与无答案 holdout 20 题 prediction 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator 和 canonical event parser 均明确 `network_called=false`。
+- 真实命令证据：最新全量 `pytest` 为 `160 passed, 4 warnings`；public 52 题 deterministic baseline、v3 无答案 runtime prediction 和 proposal-only 优化 Loop 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator、canonical event parser 和优化 Loop 均明确 `network_called=false`。
 
 ### 17.6 下一道产品决策门
 
@@ -1462,3 +1474,46 @@ RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来�
 | RAG 质量 Gate | **仍为 FAIL** | public/holdout 既有结果不能因生命周期审计而改变 |
 
 因此，RAG 当前所有可在不改变产品权限的范围内完成的本地工程闭环（P0-A、P0-B、P0-C、失败分析、自校正候选、评测报告、双看板、生命周期审计）均已落地；v3 Holdout 的产品负责人逐题审核/正式盲测、LLM Judge 是否正式启用、新 Provider 准入和 external/hybrid 复测仍保持独立决策门。
+
+## 附录 C. 2026-09-01 产品设计：用失败模式驱动 RAG 自校正，但不让隐藏集污染开发
+
+<span style="color:#C00000"><strong>背景与问题。</strong> v3 Holdout 的一次性盲测显示，当前 RAG 的主要聚合失败类型是 `evidence_relation_mismatch`、`evidence_set_mismatch` 和 `route_mismatch`。如果直接按隐藏题逐题补关键词，Holdout 会被变成开发集；如果只写一份失败分析而不真正运行候选，又无法证明 SOP 能产生改进。因此本轮把“逐题诊断、候选修正、回归、反过拟合和停止”作为一个独立产品/工程闭环。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 我先核对公开 v2 的 52 条题目、人工 annotations、baseline predictions 和现有 failure-pattern 报告，再只读取 v3 私有 aggregate。公开集的 route、evidence exact、evidence relation、Recall@5、MRR、nDCG@5 均为 100%；51/52 题 Gold evidence 少于 3 条，固定 Precision@3=`47.44%`，覆盖式/返回式为 `100%`。这说明公开集的主要“失败”是评测分母与 Gold 稀疏度的结构性问题，不应靠向结果里塞无关证据修复；v3 聚合能证明泛化不足的方向，却不能告诉我们哪一道题该写什么规则。由此把两类证据分开：公开集可以逐题分析和回归，v3 只可作为聚合 pattern，新的正式质量验收必须另建 Holdout v4。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> RAG 继续只能提议；自校正每一代只改一个可解释变量，必须同时看安全硬门、route、证据集合/关系、Recall@5、MRR、nDCG@5 和固定 Precision@3。增加一个仅用于看板趋势的 Composite：Route 20%、Evidence exact 15%、Evidence relation 20%、Recall@5 15%、MRR 10%、nDCG@5 10%、固定 Precision@3 10%；Composite 不能替代冻结 project Gate。连续两代 Composite 增益小于 `0.01` 且没有跨过质量门时停止剩余候选；不自动改变 active baseline、Provider 白名单、权限、参数上限或 `execution_authorized=false`。</span>
+
+<span style="color:#C00000"><strong>实际处理与结果。</strong> 新增 `services/rag_optimization_loop.py` 与 `scripts/run_rag_optimization_loop.py`。V0 使用当前 deterministic baseline；V1 运行已存在的同义词归一化候选；V2 运行 relation canonical 化候选；V3 evidence packing、V4 route safety guard 在连续两代零增益后按停止规则跳过。V0/V1/V2 Composite 均为 `0.947436`，增益均为 `0.0`，hard-safety=PASS、project Gate 仍为 FAIL；52 道公开题均生成结构化诊断（51 道为 `metric_sparse_gold_denominator`、1 道为 pass）。候选 Trace 显示无网络、无 Provider、无 LLM、无图片/向量、无 hidden 答案，active baseline 未变更；反过拟合检查为 PASS。</span>
+
+<span style="color:#C00000"><strong>失败模式解释边界。</strong> v3 的 `evidence_relation_mismatch=31`、`evidence_set_mismatch=21`、`route_mismatch=25` 只来自私有聚合，三类计数可能重叠。系统把每类分成“聚合观察事实、待验证假设、下一份独立 Holdout 需要的逐题证据”，不把可能原因冒充隐藏题答案；相应内容在优化 JSON/HTML 与 page 5 看板可回放。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 产品负责人现在能在 [RAG 优化进展](RAG_OPTIMIZATION_PROGRESS.md)、[Rubric](RAG_OPTIMIZATION_RUBRIC.md)、SOP 和 page 5 看板中复盘“哪道公开题属于什么问题、每代改了什么、为什么停止、怎么回滚”。这证明自校正机制可运行且可观测，不证明 RAG 已产品化通过；同一份 v3 Holdout 不得再次正式运行或用于逐题调参。</span>
+
+### C.1 当前实现矩阵补充
+
+| 能力 | 当前状态 | 证据与边界 |
+|---|---|---|
+| 逐题 public failure pattern | **已实现并运行** | 52 条结构化诊断；不复制原始题干，只保留 ID、split、标签、题干 SHA-256 和错误码 |
+| V0→Vn proposal-only loop | **已实现并运行** | `reports/rag_optimization_loop_v1.json/.html`；V0/V1/V2 实跑，V3/V4 因停止规则跳过 |
+| RAG Rubric / Composite | **已实现并运行** | 固定 project Gate 与安全硬门优先；Composite 仅比较趋势 |
+| anti-overfit 检查 | **已实现并通过** | dev+challenge 均回归；hidden 逐题答案、网络、Provider、图片均未读取 |
+| 优化 Dashboard | **已实现并可视化** | page 5 + allow-listed HTML；只读，无自动推广按钮 |
+| v3 再次正式评分 | **明确不执行** | Holdout A 一次性规则；需要新独立 v4 才能验收优化后的泛化 |
+
+## 附录 D. 2026-09-01 产品设计：Cloud 安全失败与运行账本稳定性
+
+<span style="color:#C00000"><strong>背景与问题。</strong> 第一位用户在 Cloud 页面看到 `Tencent ImageModeration request failed`，如果只看这句提示，容易把“腾讯接口拒绝/凭据问题”“页面代码异常”和“数据库重放异常”混成一件事。本轮先核对 Cloud 日志，再用明确授权照片在本机重跑一次同一 IMS Adapter。Cloud 日志反复给出 `sqlite3.IntegrityError: UNIQUE constraint failed: photo_quality_results.quality_result_id`；本机 IMS 请求真实返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`）。因此当前高置信根因是：Streamlit 控件交互会重跑脚本，旧实现重复写同一质量合同，SQLite 唯一键阻断了页面。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 这不是通过放宽内容安全来“修好页面”的问题。若相同业务合同在重跑时被重复写入，系统需要同时做到两点：相同事实可安全重放，事实发生变化时又不能静默覆盖历史证据。否则一方面页面不稳定，另一方面 Trace/运营看板会重复计数或丢失证据。于是把 Streamlit 重放视为运行账本的正常输入，而不是让页面按钮触发隐式重试。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> 对 `PhotoQualityResult`、`EditPlan` 和 `VerificationResult` 的落账统一采用“唯一键 + 脱敏投影”幂等规则：相同唯一键且投影一致时复用原记录并留下 `*_reused` 诊断事件；相同唯一键但投影不同则 fail closed，返回可识别的合同冲突，绝不覆盖旧事实。重复重放不得重复写完成类产品事件。腾讯 IMS 的 `Pass/Review/Block` 规则、RAG `execution_authorized=false`、不自动重试和不保存原图/Base64均保持不变。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 本地新增幂等复用和变化内容冲突回归，全量校验为 `160 passed, 4 warnings`；这证明代码可在 Streamlit 重跑下保持账本一致，并能把异常解释为合同冲突，而不是泄漏底层 SQLite 错误。Cloud 拉取新版本后需要重新执行一次 IMS 才能取得云端新回执；本机 Pass 只是单样本证据，不能写成 Cloud 已通过、内容安全全面通过或完整用户端到端完成。</span>
+
+### D.1 实现矩阵更新
+
+| 能力 | 当前状态 | 证据与边界 |
+|---|---|---|
+| Cloud 重跑下合同幂等落账 | **已实现并本地验证** | 质量/计划/验证合同相同投影复用；变化投影 fail closed；重复完成事件不计数 |
+| 腾讯失败可定位 | **已实现** | 页面/脱敏 Trace 显示 `error_code`、`RequestId`；不显示原始错误全文、密钥或图片 |
+| Cloud 新版本真实 IMS 回执 | **待产品负责人重跑** | 本机 `Pass` 不能替代 Cloud 证据；仍须保持安全门 fail closed |

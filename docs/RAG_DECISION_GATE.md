@@ -873,3 +873,27 @@ owner-reviewed questions
 ### 29.4 与应用链的关系
 
 RAG 盲测的 FAIL 不会自动改变 8A/8C、Provider 白名单或图片权限；RAG 仍只能提议。8C-1/8C-2 的代码和 fixture 继续证明父子 plan/run/hash、同 scope 有界续跑和点踩硬停止，但不能代替真实 UI 多轮照片回执。真实 UI 证据需要产品负责人在 Private Streamlit 页面按 [第一位用户端到端测试说明](FIRST_USER_E2E_TEST.md) 操作后再写入新的运行记录。
+## 30. 2026-09-01｜v3 失败模式驱动的自动化优化闭环
+
+<span style="color:#C00000"><strong>背景与问题。</strong> v3 Holdout 一次性盲测暴露了 `evidence_relation_mismatch`、`evidence_set_mismatch` 和 `route_mismatch` 三类聚合错误。产品负责人要求把“每道公开题的分析、失败模式 SOP、候选修正、回归和边际效益停止”做成可重放的工程循环，同时不能用 v3 逐题答案污染开发集。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 我先复核了 v2 public 的 52 条 predictions/annotations 和现有 failure analyzer，再对照 v3 私有 aggregate。public 的 route、evidence exact、relation、Recall@5、MRR、nDCG@5 都是 100%；唯一结构性异常是 51/52 题 Gold evidence 少于 3 条，固定 Precision@3=`47.44%`。这说明 public 上没有可以靠“补一个关键词”修好的 route/relation 算法错误，而 v3 的逐题原因不可见，不能把聚合计数当监督标签。因此采用“公开逐题诊断 + v3 仅聚合上下文 + 新 Holdout 才能再次正式验收”的分层证据。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> RAG 自校正继续保持 proposal-only；每代只改一个可解释变量，按 Rubric 同时检查安全硬门、route、evidence 集合/关系、Recall@5、MRR、nDCG@5 和固定 Precision@3。Composite 只用于 Dashboard 比较，不覆盖 project Gate。连续两代 Composite 增益小于 `0.01` 且未跨过质量门时，loop 停止剩余候选；候选不自动进入 active baseline。v3 原 Holdout 不重复正式运行，后续验收必须新建独立 v4。
+
+<span style="color:#C00000"><strong>实际实现与结果。</strong> 新增 `services/rag_optimization_loop.py` 和 `scripts/run_rag_optimization_loop.py`：V0 baseline、V1 同义词归一化、V2 relation canonical 化已在 public 52 题运行；V3 evidence packing、V4 route safety guard 因两代零增益被跳过。V0/V1/V2 Composite 均为 `0.947436`，每代增益 `0.0`，hard-safety=PASS，project Gate 仍为 FAIL；反过拟合检查 PASS，所有候选 Trace 均显示未联网、未调用 Provider、未读隐藏答案，active baseline 未改变。每道 public 题生成结构化错误代码（51 题为 `metric_sparse_gold_denominator`、1 题为 pass），v3 仅保存 31/21/25 的三类错误 aggregate。</span>
+
+<span style="color:#C00000"><strong>聚合模式解释边界。</strong> 对 `relation=31`、`set=21`、`route=25`，报告进一步保存“观察事实 / 可验证假设 / 下一份独立 Holdout 需要的证据”，并明确三类计数可能重叠。假设只用于设计 v4 的逐题标注字段，不用于隐藏题 case-specific 修补；因此本轮没有把未知根因包装成已经完成的算法优化。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 现在可以完整回放“baseline → 逐题诊断 → 单变量候选 → 指标 delta → anti-overfit → 停止/回滚”，并在 page 5 看板中看到代际曲线、逐题代码、v3 聚合错误和停止原因。它证明优化机制可运行且没有越权，不证明 RAG 已达到产品化质量，也不把固定 Precision 的稀疏分母问题伪装成算法通过。</span>
+
+### 30.1 当前实现矩阵补充
+
+| 能力 | 当前状态 | 证据/边界 |
+|---|---|---|
+| public 逐题 failure pattern | **已实现并运行** | 52 条只输出 ID、split、标签、题干 SHA-256 和错误代码，不复制原始题干 |
+| V0→Vn proposal-only loop | **已实现并运行** | `rag_optimization_loop_v1.json/.html`；V0/V1/V2 实跑，V3/V4 按停止规则跳过 |
+| Rubric 与 Composite | **已实现并运行** | `RAG_OPTIMIZATION_RUBRIC.md`；Composite 仅诊断，固定 project Gate/安全硬门仍权威 |
+| 反过拟合检查 | **已实现并通过** | dev+challenge 均评分、无 hidden 逐题读取、无网络/Provider、active baseline 不变 |
+| RAG 优化 Dashboard | **已实现并可视化** | page 5 + allow-listed HTML；只读，无“应用候选”按钮 |
+| v3 再次正式验收 | **未执行且不应执行** | Holdout A 一次性规则；需新建独立 v4 |

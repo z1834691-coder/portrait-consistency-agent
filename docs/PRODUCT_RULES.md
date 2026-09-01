@@ -160,7 +160,7 @@
 
 ### 3B.4 当前实现与不可夸写边界
 
-`services/execution.py` 在确认按钮之后做确定性 Gate 校验、局部幂等拦截、一次 Tencent Adapter 调用和 ProviderRun 存储；`app.py` 只把结果字节保留在 `st.session_state`。8C-2 对子计划额外核验父 Run、上一轮 VerificationResult、结果 hash、确认 scope 和 iteration，且把上一轮结果图而非原始上传图写为本轮 input artifact。离线 fixture 测试覆盖成功、过期、换图、超时、取消、重复点击、子计划血缘和硬停止；当前仍没有新的 UI 真实照片三轮回执，不能据此宣称腾讯图片一定更像母版。本地幂等键只能阻止已保存回执后的重复点击，不是断电、并发多实例或供应商侧的 exactly-once 承诺。
+`services/execution.py` 在确认按钮之后做确定性 Gate 校验、局部幂等拦截、一次 Tencent Adapter 调用和 ProviderRun 存储；`app.py` 只把结果字节保留在 `st.session_state`。8C-2 对子计划额外核验父 Run、上一轮 VerificationResult、结果 hash、确认 scope 和 iteration，且把上一轮结果图而非原始上传图写为本轮 input artifact。离线 fixture 测试覆盖成功、过期、换图、超时、取消、重复点击、子计划血缘和硬停止；当前仍没有新的 UI 真实照片三轮回执，不能据此宣称腾讯图片一定更像母版。本地幂等键只能阻止已保存回执后的重复点击，不是断电、并发多实例或供应商侧的 exactly-once 承诺。合同落账还会按真实唯一键预检：同一 ID 的投影发生变化时统一 fail-closed 为 `ValueError`，不覆盖旧证据，也不泄漏 SQLite 唯一键异常。
 
 ## 3C. 检查点 8C：修后验证、计划族续跑与反馈（8C-1/8C-2 已实现）
 
@@ -297,7 +297,23 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 - `quality_confidence`：照片质量和姿态是否适合分析；
 - `editability_confidence`：当前外部工具是否有足够能力完成调整。
 
-同一人物不匹配时直接拒绝；同一人物不确定时不能静默执行，应提示重新上传或补充确认。
+同一人物不匹配时直接拒绝；同一人物不确定时不能静默执行。系统应提示用户确认“这是本人且我有权编辑”，并把一次性确认写入有界 `ConfirmationScope` 后再继续；未确认仍要求重新上传/停止，`no_match` 不受该确认影响。
+
+### 4.1.1 第一位真实用户的 8A 阻塞与 UX 反馈（2026-09-01）
+
+<span style="color:#C00000"><strong>真实回执。</strong> 第一位用户的母版 IMS、Profile 建立和目标照 IMS 均成功；CompareFace 原始分为 `56.231842041015625`，按未校准策略是 `uncertain`。原页面没有提供本人/编辑权确认，所以 8A 以 `subject_match_not_confirmed` 与 `quality_route_not_continuable` 停止。RAG 已返回审核过的 Tencent 能力依据，但保持 `execution_authorized=false`；本次不是 RAG 或修图 API 失败。</span>
+
+<span style="color:#C00000"><strong>已冻结修正。</strong> 新增 `subject_match_uncertain_acknowledged` 一次性确认字段：确认后可在当前会话、当前照片和有界计划族内继续，但不把供应商不确定结果升级成 `match`，不更新主体锚点；`no_match` 仍硬拒绝。确认事件和 scope 必须进入脱敏 Trace。新增字段是向后兼容的可选策略扩展，保留合同 `v0.4`，并由迁移标记/测试追踪。</span>
+
+<span style="color:#C00000"><strong>用户体验反馈。</strong> 用户反馈上传等待明显过长、页面直接显示脱敏 JSON、首屏暴露 A/B/C 检查点和过多按钮、自然语言入口被工程选项挤压、整体视觉偏工程文档而非 C 端产品。它们先作为 P0 UX 发现记录，不能在没有 UI 决策的情况下擅自改权限或流程；下一 Gate 应把检查点合并为后台真实进度、将 JSON/Trace 下沉到开发者/管理员第二层，只保留必要的首次同意和结果反馈，同时先埋点各阶段耗时再决定压缩/并行/缓存。</span>
+
+## 2026-09-01｜Cloud ImageModeration 失败的真实根因与账本幂等修正
+
+<span style="color:#C00000"><strong>产品/工程背景。</strong> 第一位用户在 Cloud 页面看到“ImageModeration request failed”。本机使用同一类已获授权照片完成了真实 IMS 请求并得到 `status=succeeded`/`Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），所以不能把这条页面提示直接判断为“腾讯密钥无效”或绕过内容安全。Cloud 运行日志进一步显示，Streamlit 每次控件交互重跑脚本时，旧实现会重复写入同一个 `photo_quality_result_id`，SQLite 返回 `UNIQUE constraint failed: photo_quality_results.quality_result_id`；这条数据库异常会中断页面并被用户感知为流程失败。</span>
+
+<span style="color:#C00000"><strong>冻结修正。</strong> `LocalTraceStore` 现在对照片质量、EditPlan 和 VerificationResult 同时按完整业务上下文与真实唯一键预检：同一 ID 携带相同脱敏投影时幂等复用并记录 `*_reused`；同一 ID 携带不同内容时抛出可识别的冲突错误，绝不覆盖旧证据或静默合并。验证完成的产品事件只在首次落账时写入，避免 Streamlit 重跑重复计数。该修正只解决运行账本的可重复提交，不放宽 IMS 的 Pass/Review/Block 门控、不增加重试、不改变 RAG advisory-only 或图片权限。</span>
+
+<span style="color:#C00000"><strong>用户可见结果与边界。</strong> Cloud 拉取新版本后，同一页面重跑不会再因重复质量记录触发底层 SQLite 崩溃；如果腾讯本身仍返回错误，页面继续只显示脱敏 `error_code` 与 `RequestId`，失败仍 fail closed。当前仍需要产品负责人刷新 Cloud、重新执行一次内容安全检查；本机 smoke 的成功不能替代 Cloud 的新回执，也不能写成完整用户端到端通过。</span>
 
 ### 4.2 质量维度与阈值策略
 
@@ -533,7 +549,7 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 
 Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审输入合同和答案不泄漏 HTML/Markdown/JSON 报告已落地；public deterministic baseline 已生成并评分，固定分母 Precision@3=47.44%，project Gate=`FAIL`；answerless holdout 20 题也已运行，产品负责人在工作区外私有目录完成一次仅聚合比对，Route=25.00%、Recall@5=38.24%、MRR=52.94%、nDCG@5=41.56%，project Gate=`FAIL`。私有 Markdown 的自然语言 `must_not` 尚未规范成 canonical event ID，因此 hard-safety 明确为 `MANUAL_REVIEW_REQUIRED`，不伪报通过；隐藏逐题答案不回流规则、Prompt 或调参。
 
-火山美颜 API V2.0 与腾讯特效 SDK 已落地为 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；两者均未接 SDK/API、未发图片、未使用密钥，必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`。本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。最新全量同步校验为 `pytest 146 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已通过。
+火山美颜 API V2.0 与腾讯特效 SDK 已落地为 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；两者均未接 SDK/API、未发图片、未使用密钥，必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`。本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。最新全量同步校验为 `pytest 160 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 均通过。
 
 ## 2026-08-30 评测治理冻结（Precision C / Holdout A / Safety ID C）
 
@@ -576,3 +592,11 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 产品负责人已完成 v3 Holdout 36 题的逐题审核，并按 Holdout A 完成一次工作区外私有聚合盲测。运行器只接收无答案 `case_id + query`；答案键不回流仓库、应用、Prompt 或检索规则。盲测未调用 LLM、网络、照片或 Provider，结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety 0/36 违规（PASS），project quality Gate=`FAIL`。
 
 这次失败是质量信号，不是执行授权信号：RAG 仍然只能提议，不能新增参数、Provider、权限或图片出站；后续只能在 public/dev/challenge 上修正并回归，需要再次验收时必须另建独立 Holdout。Streamlit Private 页面已打开，但真实照片端到端、UI 多轮图片回执和用户反馈必须由产品负责人亲自完成；Codex 不代上传、不代点击外部图片调用。
+
+## 2026-09-01｜失败模式驱动的 RAG 自动优化规则
+
+<span style="color:#C00000"><strong>背景与判断。</strong> v3 一次性盲测暴露 relation、evidence set 和 route 三类聚合问题。产品负责人要求把失败模式真正转成逐题分析、候选修正和可观察回归，但不能读取 v3 逐题答案。复核 public v2 后确认：52 题的 route/evidence/relation/排序指标均为 100%，唯一公开结构性异常是 51 题 Gold 少于 3 条导致固定 Precision@3=`47.44%`；因此不能用 public 结果伪造算法增益或用 v3 聚合数字写 case 特例。</span>
+
+<span style="color:#C00000"><strong>冻结规则。</strong> 自校正 loop 只读取 public dev/challenge 和公开 annotations；v3 只允许 aggregate context；同一 v3 不得再次正式评分。每一代只改一个可解释变量，先跑安全硬门和质量 Rubric，再由产品负责人决定推广或回滚。Composite（Route 20%、Evidence exact 15%、Evidence relation 20%、Recall@5 15%、MRR 10%、nDCG@5 10%、固定 Precision@3 10%）只用于 Dashboard 趋势，不替代固定 project Gate。连续两代增益 `<0.01` 且未跨过质量门，停止剩余候选；候选不能自动改权限、Provider 白名单、参数上限或 `execution_authorized=false`。</span>
+
+<span style="color:#C00000"><strong>实际状态。</strong> `rag_optimization_loop-v0.1` 已运行 V0 baseline、V1 同义词归一化和 V2 relation canonical 化；Composite 均为 `0.947436`、增益均为 `0.0`，anti-overfit=`PASS`，V3/V4 按停止规则跳过。报告只保留 public case ID、split、标签、题干 SHA-256 和错误代码；page 5 增加逐题表、代际曲线、v3 aggregate pattern、停止原因和 HTML 下载。该规则形成可回放的优化机制，但不把当前 RAG 写成已通过。</span>

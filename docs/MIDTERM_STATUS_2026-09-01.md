@@ -36,6 +36,10 @@
 
 固定分母 Precision@3 为 27.78%；覆盖式为 59.72%，返回式为 77.78%。三种口径都保留用于解释稀疏 Gold，不能用覆盖式/返回式替换项目 Gate。该结果只能用于本次质量判断，不能把 hidden 逐题答案回流为规则补丁。
 
+## RAG 失败模式优化 Loop 当前结果
+
+已把 v3 的聚合错误（`evidence_relation_mismatch`、`evidence_set_mismatch`、`route_mismatch`）接入 proposal-only 的自动迭代链：公开集逐题诊断 → 单变量候选 → 回归 → anti-overfit → 边际停止。V0 baseline、V1 同义词归一化、V2 relation canonical 化均已运行，Composite 都为 `0.947436`、增益为 `0.0`；连续两代低于 `0.01` 后按规则跳过 V3/V4。anti-overfit=`PASS`，没有读取 v3 逐题答案、没有联网/调用 LLM/Provider/照片，现役 baseline 未改变。当前 RAG quality Gate 仍为 `FAIL`；详细事实/假设区分见 [RAG 优化进展](RAG_OPTIMIZATION_PROGRESS.md)、[Rubric](RAG_OPTIMIZATION_RUBRIC.md)、[SOP](RAG_FAILURE_ANALYSIS_SOP.md) 和 [RAG 优化 Dashboard](../reports/rag_optimization_loop_v1.html)。
+
 ## 第一位用户测试与 UI 8C 当前状态
 
 - 已打开 Private Streamlit 页面，并完成首页结构和安全边界检查；页面显示母版上传、目标照片、自然语言意图、8A/8B/8C 入口及反馈控件。
@@ -72,9 +76,9 @@
 2026-09-01 本地复核结果：
 
 ```text
-pytest -q                         → 151 passed, 4 warnings
+pytest -q                         → 160 passed, 4 warnings
 ruff check                        → passed
-ruff format --check               → 114 files already formatted
+ruff format --check               → 122 files already formatted
 compileall                        → passed
 git diff --check                  → passed
 8C-1 verification smoke           → 4 路由 fixture 全部输出预期
@@ -88,3 +92,9 @@ RAG lifecycle audit               → 3 items / 10 active chunks / issue_counts=
 ## 收尾顺序
 
 现在最短且可信的收尾路径是：先由产品负责人完成一次真实页面流程并录下证据 → 根据真实结果决定是否做一次同 scope 子轮 → 形成短期运营数据截图和一条完整脱敏 Trace → 对 RAG 失败只做 public/dev 迭代 → 以新的独立 holdout 复验 → 最后把当前限制写进 Demo 视频和面试叙事。这样项目可以作为一个诚实的、可运行的 Agent 原型提交，同时保留继续成为完整产品的清晰路线。
+
+## 2026-09-01｜Cloud ImageModeration 失败的根因与修复
+
+第一位用户在 Cloud 页面看到腾讯安全请求失败。日志交叉检查后发现，页面实际稳定中断点是 Streamlit 重跑重复插入同一 `photo_quality_result_id`，SQLite 抛出 `UNIQUE constraint failed`；本机明确授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），所以不能把泛化页面文案当成腾讯密钥失效。
+
+已修复为幂等合同落账：相同业务唯一键和相同脱敏事实复用原记录；内容变化则以可识别冲突 fail closed；重复重放不重复计入完成类产品事件。该修复保护可追溯性，不改变 IMS 安全门、RAG advisory-only 或图片出站权限。Cloud 拉取新提交并重建后，仍须由产品负责人刷新页面、重新执行一次 IMS，取得新的云端真实回执后才能继续首位用户端到端测试。

@@ -1,6 +1,8 @@
 import json
 import sqlite3
 
+import pytest
+
 from portrait_consistency_agent.core.contracts import (
     FeedbackEvidenceStrength,
     IntentAction,
@@ -109,11 +111,16 @@ def test_store_persists_all_six_contracts_and_trace(tmp_path) -> None:
             "SELECT migration_id FROM schema_migrations WHERE migration_id = ?",
             ("contract_v0_4_verification_observation",),
         ).fetchone()
+        subject_ack_migration = connection.execute(
+            "SELECT migration_id FROM schema_migrations WHERE migration_id = ?",
+            ("contract_v0_4_subject_uncertain_ack",),
+        ).fetchone()
 
     assert all(count == 1 for count in counts.values())
     assert migration == ("contract_v0_2_tables",)
     assert analytics_migration == ("contract_v0_3_analytics_lifecycle",)
     assert verification_migration == ("contract_v0_4_verification_observation",)
+    assert subject_ack_migration == ("contract_v0_4_subject_uncertain_ack",)
     assert store.next_intent_turn(session.session_id) == 2
 
     event_types = {event["event_type"] for event in store.recent_events(session.session_id)}
@@ -166,6 +173,55 @@ def test_profile_replacement_deletes_old_feature_body_but_keeps_audit(tmp_path) 
     }
     assert rows[1]["active"] == 1
     assert audit_count == 1
+
+
+def test_reusing_identical_photo_quality_contract_is_idempotent(tmp_path) -> None:
+    store = LocalTraceStore(tmp_path / "demo.sqlite3", tmp_path / "events.jsonl")
+    store.initialize()
+    session = store.create_session()
+    quality = make_quality(session_id=session.session_id)
+
+    store.save_photo_quality_result(quality)
+    # A Streamlit rerun can reach the same deterministic quality id again.
+    store.save_photo_quality_result(quality)
+
+    with sqlite3.connect(store.database_path) as connection:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM photo_quality_results WHERE quality_result_id = ?",
+            (quality.quality_result_id,),
+        ).fetchone()[0]
+    assert count == 1
+    event_types = [event["event_type"] for event in store.recent_events(session.session_id)]
+    assert "photo_quality_result_saved" in event_types
+    assert "photo_quality_result_reused" in event_types
+
+
+def test_reusing_contract_identity_with_changed_payload_fails_closed(tmp_path) -> None:
+    store = LocalTraceStore(tmp_path / "demo.sqlite3", tmp_path / "events.jsonl")
+    store.initialize()
+    session = store.create_session()
+    quality = make_quality(session_id=session.session_id)
+    store.save_photo_quality_result(quality)
+
+    changed = quality.model_copy(update={"quality_confidence": 0.89})
+    # Keep the same identity tuple but alter the payload.  A rerun must not
+    # overwrite the original evidence or silently merge a second result.
+    with pytest.raises(ValueError, match="different payload"):
+        store.save_photo_quality_result(changed)
+
+    changed_context = quality.model_copy(update={"photo_id": "photo_changed"})
+    # The photo id participates in the lookup context but is not part of the
+    # SQLite primary key.  The contract id must still fail closed with the
+    # same actionable conflict instead of leaking sqlite3.IntegrityError.
+    with pytest.raises(ValueError, match="different payload"):
+        store.save_photo_quality_result(changed_context)
+
+    with sqlite3.connect(store.database_path) as connection:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM photo_quality_results WHERE quality_result_id = ?",
+            (quality.quality_result_id,),
+        ).fetchone()[0]
+    assert count == 1
 
 
 def test_product_events_feed_a_redacted_dashboard_snapshot(tmp_path) -> None:

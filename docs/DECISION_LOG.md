@@ -206,3 +206,31 @@
 
 | D-TECH-062 | 2026-09-01 | 第一位用户在 Cloud 页面触发 ImageModeration 前被 `TENCENT_SECRET_ID/KEY` 缺失门阻断。确认原因是 Cloud App 没有根级 Secrets（本机 `.env` 不会随 GitHub/Cloud 部署）；代码提示已改为同时指向本机 `.env` 与 Cloud App Settings → Secrets。 | 已实现并推送；等待产品负责人手动配置 Cloud Secrets | 配置成对的根级变量并重启 App 后，才允许真实 IMS/CompareFace/BeautifyPic 请求；不改变既有 IAM、授权、Provider 白名单或数据边界。 | 产品负责人配置后重跑一次 IMS 安全检查；若变成 `Unauthorized`，再按腾讯 CAM 策略排查。 |
 | D-TECH-063 | 2026-09-01 | 第一位用户配置 Cloud Secrets 后，ImageModeration 进入真实请求但页面只给出泛化失败文案；新增安全错误回执投影，页面与脱敏 Trace 同时保留 `error_code`、`provider_request_id` 和异常类型，不保留腾讯原始错误全文、图片或密钥。 | 已实现并待 Cloud 重建验证 | 让产品负责人可以用真实腾讯错误码定位 IAM/服务/参数/网络问题，同时继续 fail closed；不自动重试、不改变 Pass/Review/Block 路由和图片数据边界。 | 产品负责人刷新 Cloud 后再次执行内容安全检查；根据真实 `error_code` 决定下一项腾讯配置修复。 |
+
+## 2026-09-01 追加记录｜v3 失败模式驱动的 RAG 自动优化闭环
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-072 | 2026-09-01 | 产品负责人要求把 v3 的 `evidence_relation_mismatch`、`evidence_set_mismatch`、`route_mismatch` 转成逐题 public 诊断、SOP、候选迭代、反过拟合和边际效益停止闭环；同时确认同一 v3 不得再跑、逐题答案不回流。 | 已冻结并实现 | 失败分析成为可回放的产品质量机制，而不是事后文字说明；v3 只保留 aggregate，上线权限与 RAG advisory-only 边界不变。 | 新增独立 Holdout v4 后再做正式泛化验收。 |
+| D-TECH-064 | 2026-09-01 | 实现 `rag-optimization-loop-v0.1` 与 `RAG_OPTIMIZATION_RUBRIC.md`：V0 baseline、V1 同义词归一化、V2 relation canonical 化已运行；连续两代 Composite 增益均为 0.0（小于 0.01），V3 evidence packing/V4 route guard 按停止规则跳过。 | 已完成并本地验证 | public 52 题逐题诊断已生成；Composite=`0.947436` 仅作比较分，project Gate 仍 `FAIL`；候选不改变 active baseline、Provider、权限、参数或 hidden 数据。 | 有新的人工审核数据时，一次只改一个候选并重新跑 dev/challenge；不得读取 v3 逐题答案。 |
+| D-TECH-065 | 2026-09-01 | 新增 `reports/rag_optimization_loop_v1.json/.html`、page 5 代际曲线/逐题诊断/反过拟合展示与报告 allow-list；本轮候选 Trace 均 `network=false`、`provider=false`、`llm=false`、`hidden_answer_key_read=false`，anti-overfit=`PASS`。 | 已完成 | 形成“baseline→诊断→候选→回归→停止→人工批准/回滚”的可观测 Dashboard；不会把公开高分或隐藏安全通过写成 RAG 质量通过。 | 继续保持文档、代码、测试和报告版本同步；新 Holdout v4 才能改变泛化结论。 |
+
+## 2026-09-01 追加记录｜第一位真实用户 8A 阻塞修复与体验反馈
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-073 | 2026-09-01 | 第一位用户真实运行完成母版/目标照 IMS Pass、Profile 建立和 CompareFace；目标照原始分 `56.231842041015625` 路由为 `uncertain`，旧页面因没有本人/编辑权确认入口而在 8A 阻断。用户同时反馈上传等待过长、首屏展示脱敏 JSON、A/B/C 检查点和按钮过多、自然语言入口被 GUI 挤压、整体偏工程文档。 | 已记录；UX 改造待产品 Gate | 将“真实安全阻塞”和“交互摩擦”拆成两类问题；不把一次用户反馈写成普遍 KPI，不为减少点击擅自删除权限门 | 先完成当前真实闭环，再按耗时证据和 UI 需求文档冻结改版范围 |
+| D-TECH-066 | 2026-09-01 | 为兑现既有规则“`uncertain` 经本人且有权编辑确认后可在当前会话降级继续”，新增可选 `ConfirmationScope.subject_match_uncertain_acknowledged`、页面一次性确认、规划器/执行器双重校验、事件 Trace 和 `contract_v0_4_subject_uncertain_ack` migration marker；不改 `subject_match_status`，不更新长期锚点，`no_match` 仍硬拒绝。 | 已实现；等待 Cloud 重建 | 8A/8B/8C 获得最小、可追溯的继续路径；RAG 仍 `execution_authorized=false`；新增测试覆盖未确认阻断与确认后有界执行 | Cloud 重建后由产品负责人亲自刷新、勾选并继续；产生真实 ProviderRun/VerificationResult 后再关闭首轮 Gate |
+| D-PROD-074 | 2026-09-01 | 第一位用户测试不以 8A 暂停结束；继续条件为：用户确认本人/编辑权、当前照片与 Profile/质量/安全事实未变、计划仍在有效 scope 内。完成真实 8B/8C 后，才记录“端到端完成”；在此之前不得声称视觉改善、用户满意或修图有效。 | 已冻结 | 保留隐私与用户控制，同时避免把工程页面缺少入口误判为产品不可用；下一 UI Gate 只调整呈现与编排，不改变安全/授权/Trace 不变量 | 真实流程完成后查看 ProviderRun、VerificationResult、反馈事件和 Dashboard 快照 |
+
+| D-PROD-075 | 2026-09-01 | 产品负责人确认 v3 的 `evidence_relation_mismatch`、`evidence_set_mismatch`、`route_mismatch` 只能以 aggregate pattern 回流；报告必须把“聚合观察事实、可验证假设、下一份独立 Holdout 需要的逐题证据”分开，并明确三类计数可重叠，不能据此写 case-specific 规则。 | 已冻结并同步 | 让 failure analysis 真正服务于数据集设计，同时避免把未知根因包装成算法结论；RAG 继续 proposal-only。 | 新建 Holdout v4 时补齐 canonical relation、evidence set、route、槽位与冲突标志的逐题字段。 |
+| D-TECH-067 | 2026-09-01 | 扩展 `rag_optimization_loop-v0.1` 报告合同：新增 `private_pattern_interpretations` 与 `private_pattern_counts_non_additive`；HTML 和 page 5 同步展示事实/假设/下一证据，重新生成 optimization JSON/HTML。 | 已实现并本地验证 | v3 聚合信息可解释、可审计，但不会泄漏题干/答案键或改变现役检索、权限和 Provider。 | 新 Holdout v4 通过后再验证这些假设；本轮不重跑 v3。 |
+| D-TECH-068 | 2026-09-01 | 完成优化 Loop 后的首次最终交叉校验：全量 `pytest 158 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、P0-A/P0-B/RAG advisory/lifecycle/8C/8C2 smoke 全部通过。 | 已完成；后续发现账本幂等边界并由 D-TECH-069 修正 | 当前工作区的优化代码、报告、看板、SOP、Rubric 与执行版 PRD 口径一致；4 条 warning 仍为既有 Pillow 弃用提示。 | 以 D-TECH-069 的 160 passed 作为当前最终校验；下一质量证据必须来自新的独立 Holdout v4；真实 UI 8C 仍需产品负责人亲自完成。 |
+| D-TECH-069 | 2026-09-01 | 修复 `LocalTraceStore._insert_session_contract` 的幂等冲突边界：除完整上下文外，按真实 SQLite 唯一键预检质量结果 ID、计划 ID+revision、验证 ID；相同投影复用，变化投影统一抛出 `ValueError`，避免泄漏底层 `sqlite3.IntegrityError`。新增 `photo_id` 变化回归测试，并完成全量交叉校验。 | 已实现并验证；当前最终校验为 `pytest 160 passed, 4 warnings` | Streamlit 重放或异常上下文不覆盖既有证据；错误可以被上层稳定识别；不改变任何 Provider/RAG/图片执行权限。Ruff、format、compileall、`git diff --check`、P0-A/P0-B/RAG advisory/lifecycle/8C/8C2 smoke 与优化 Loop 均通过。 | RAG quality Gate 仍为 `FAIL`；下一质量证据必须来自独立 Holdout v4，真实 UI 多轮照片回执仍待产品负责人。 |
+
+## 2026-09-01 追加记录｜Cloud ImageModeration 页面失败的根因与幂等修复
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-TECH-070 | 2026-09-01 | Cloud 页面出现 `Tencent ImageModeration request failed` 后，检查运行日志发现可重复根因是 Streamlit 重跑时重复插入同一 `photo_quality_result_id`，SQLite 报 `UNIQUE constraint failed`；本机同类授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此不把页面泛化提示误判为密钥失效。 | 根因已定位；修复已实现并通过本地验证 | `LocalTraceStore` 对质量/计划/验证合同按唯一键和完整上下文做幂等复用；内容变化则 fail closed；不覆盖审计事实、不重复完成事件、不绕过 IMS、不自动重试。 | Cloud 拉取新提交后，产品负责人刷新并重新执行一次 IMS；若仍失败，只回传脱敏 `error_code` + `RequestId`。 |
+| D-PROD-076 | 2026-09-01 | 用户可见的安全错误继续只显示腾讯 `error_code`、`RequestId` 和简短错误类型；重复写入修复只改善页面稳定性，不能将任何 Cloud 请求自动视为安全通过。 | 已冻结并同步 | 保留 fail-closed、最小必要错误披露和可回放 Trace；本机 Pass 仅是单样本证据，Cloud 新版本仍需真实回执。 | 后续真实 UI 流程完成后，再记录 ProviderRun/VerificationResult；不以本次修复替代端到端验收。 |

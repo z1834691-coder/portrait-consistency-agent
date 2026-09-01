@@ -38,6 +38,51 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 
 任何候选通过本 SOP 只能说明“公开回归没有回退、过程可审计”，不能直接说明 RAG 已通过、已上线或图片修图有效。
 
+## 自动化迭代 Loop（v0.1）
+
+为避免“分析写成了 SOP，却没有真的按 SOP 跑候选”，本项目新增了一个可重复的本地 loop：
+
+```text
+读取 public dev/challenge + 独立人工 annotations
+→ 运行 V0 active baseline
+→ 每次只提出一个候选
+→ 运行 route/evidence/relation/排序/hard-safety 回归
+→ 记录 Composite、指标 delta、Trace 与 anti-overfit
+→ 连续两代增益 < 0.01 时停止剩余候选
+→ 保持 active baseline 不变，等产品负责人批准
+```
+
+当前候选代次的含义是：
+
+| 代次 | 改动 | 状态 |
+|---|---|---|
+| V0 | `rag-gold-baseline-deterministic-v0.2`，现役公开 baseline 参照 | 已运行 |
+| V1 | `rag-correction-candidate-v0.1`，经审核的中英/领域同义词归一化 | 已运行，未推广 |
+| V2 | relation canonical 化，只处理已审核关系别名 | 已运行，未推广 |
+| V3 | evidence 稳定去重与最多 5 条打包 | 因边际效益递减跳过 |
+| V4 | 冲突/空证据 fail-closed 路由保护 | 因边际效益递减跳过 |
+
+本轮 public 逐题分析显示：52 题的 route、evidence set 和 evidence relation 均已正确；51 题仅出现 `metric_sparse_gold_denominator`，原因是 Gold evidence 少于 3 条而固定 Precision@3 仍使用历史分母。v3 Holdout 的 `evidence_relation_mismatch`、`evidence_set_mismatch`、`route_mismatch` 只能保留为 aggregate pattern，不能拆成逐题补丁。
+
+对 v3 aggregate 的解释必须分成三层：`aggregate_fact`（计数本身）、`aggregate_fact_plus_hypothesis`（基于计数提出的可能原因）和 `case_fact`（只有新的独立 Holdout 逐题证据才能得到）。relation=31、set=21、route=25 三个计数可能重叠；本轮只记录“观察到什么、可能为什么、下一份数据要补什么”，不得把假设写成隐藏题结论。优化报告的 `private_pattern_interpretations` 和 page 5 看板按这个层级展示。
+
+loop 入口：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/run_rag_optimization_loop.py \
+  --private-aggregate /path/to/v3_holdout_blind_aggregate.json
+```
+
+产物为 `reports/rag_optimization_loop_v1.json/.html`，page 5 的 RAG 优化看板会显示代次趋势、逐题错误代码、Composite、停止原因和反过拟合状态。HTML/JSON 不保存原始题干；逐题行只保留 public case ID、split、标签、题干 SHA-256 和结构化错误代码。
+
+## 不能自动做的事
+
+- 不能读 v3 逐题答案、用隐藏题目反向写规则或重复正式运行同一份 v3；
+- 不能因 public Composite 高就替换固定 project Gate，也不能把覆盖式 Precision 当成通过；
+- 不能自动发布候选、扩大 Provider 白名单、改变权限/预算/参数上限或让 RAG 获得图片出站；
+- 不能把 public 逐题“没有算法错误”推断为隐藏集已泛化；需要新独立 Holdout v4 才能再次正式验收。
+
 ## 2026-08-30 评测治理更新
 
 本轮产品负责人冻结了三项治理规则，并已接入本 SOP：

@@ -185,6 +185,49 @@ def test_planner_generates_two_bounded_executable_changes_and_trace() -> None:
     ]
 
 
+def test_uncertain_subject_requires_ack_then_allows_bounded_plan() -> None:
+    profile = make_profile()
+    target = make_observation(
+        "photo_target",
+        PhotoRole.TARGET,
+        face_width=540,
+        eye_boxes=((0.28, 0.36, 0.11, 0.07), (0.60, 0.37, 0.11, 0.07)),
+    )
+    base_quality = make_target_quality(target)
+    assert base_quality.subject_match_evidence is not None
+    uncertain_quality = make_target_quality(
+        target,
+        subject_match_status=SubjectMatchStatus.UNCERTAIN,
+        subject_match_evidence=base_quality.subject_match_evidence.model_copy(
+            update={"raw_score": 56.23}
+        ),
+    )
+
+    blocked = diagnose_and_plan(
+        profile=profile,
+        target_observation=target,
+        quality_result=uncertain_quality,
+        intent=make_intent(),
+    )
+    assert blocked.plan is None
+    assert "subject_match_confirmation_required" in blocked.reason_codes
+
+    continued = diagnose_and_plan(
+        profile=profile,
+        target_observation=target,
+        quality_result=uncertain_quality,
+        intent=make_intent(),
+        subject_match_uncertain_acknowledged=True,
+    )
+    assert continued.plan is not None
+    assert continued.route == "plan_ready"
+    assert continued.trace[0]["subject_match_uncertain_acknowledged"] is True
+    assert any(
+        "subject_match_uncertain_acknowledged" in item.reason_codes
+        for item in continued.plan.suggestion_only_changes
+    )
+
+
 def test_planner_returns_diagnosis_only_inside_tolerance() -> None:
     profile = make_profile()
     target = make_observation(

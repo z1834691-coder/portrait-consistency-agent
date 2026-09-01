@@ -34,7 +34,7 @@ flowchart LR
 
 ## 3. 跨合同不可破坏的规则
 
-1. 六个合同都必须包含 `contract_version`，新增/删除/改义字段必须升版本、写迁移说明并补测试。
+1. 六个合同都必须包含 `contract_version`，新增/删除/改义字段必须升版本、写迁移说明并补测试。向后兼容的可选策略字段可以留在同一小版本，但必须增加明确的 schema migration 标记并补回归；本轮 `ConfirmationScope.subject_match_uncertain_acknowledged` 属于此类。
 2. `ReferenceProfile.version`、目标照片哈希、最新 `IntentFrame.intent_id`、`PhotoQualityResult`、Provider Card 版本或权限范围任一变化，旧的未执行 `EditPlan` 都必须变为 `superseded`。
 3. `EditPlan` 是不可变计划快照。对同一草案的确认会创建新 revision；修后继续则创建新的子 `EditPlan`（新 `plan_id` + `parent_plan_id`），两种情况都不能原地修改旧计划。
 4. 每次真实外部尝试都产生独立 `ProviderRun`，记录不可覆盖。检查点 8B 的 `max_attempts_per_plan=1`，当前不允许在同一计划中自动重试；8C 若在已确认计划族内继续，必须创建新的子计划和新的 Run，以 `parent_run_id` 与上一结果图输入 hash 连回父回执，不能覆盖第一条失败证据。
@@ -95,12 +95,16 @@ P0-C 的跨合同规则是：`EditPlan.knowledge_refs`、`VerificationStrategyPr
 | 三类信号 | `subject_match_status/evidence`、`quality_confidence`、`editability_confidence` | 不把同一人物、照片质量和工具能力混成一个数字；供应商原始同人分不冒充校准概率 |
 | 质量事实 | 姿态、清晰度、曝光、遮挡、完整性、表情、分辨率等 metrics/flags | 来自确定性视觉工具 |
 | 内容安全证据 | status + provider/operation/version + policy version + receipt ref/RequestId | `passed/blocked` 必须对应一次可审计的真实检查；用户声明不能冒充机器结果 |
-| 路由 | `REJECT_REUPLOAD`、`WARN_CONTINUE`、`CONTINUE`、`SELECT_FACE` | 用户看到可解释原因 |
+| 路由 | `REJECT_REUPLOAD`、`WARN_CONTINUE`、`CONTINUE`、`SELECT_FACE`、`SUBJECT_CONFIRMATION_REQUIRED` | 用户看到可解释原因；同人不确定不能静默执行 |
 | 版本 | `analysis_version`、`subject_match_evidence.model/threshold_policy_version`、`routing_policy.policy_version`、`provider_card_id/version` | 阈值、主体模型或工具能力变化后仍可回放 |
 
 ### 5.2 当前路由
 
-当前 Policy 阈值为 `≤0.50` 重新上传、`>0.50 且 <0.80` 警告后继续、`≥0.80` 继续。<span style="color:#C00000"><strong>该组阈值已冻结为只用于 quality/editability 两类内部置信度，并采用“最严格路由生效”；subject match 独立使用 match/uncertain/no_match，保存供应商原始分、分值范围、模型/阈值版本和回执。未完成授权样本校准前，`subject_match_confidence` 必须为空。</strong></span> 多脸自动隔离链路未实现前，运行时仍应拒绝或要求用户先裁剪，不能宣称已经只编辑所选脸。
+当前 Policy 阈值为 `≤0.50` 重新上传、`>0.50 且 <0.80` 警告后继续、`≥0.80` 继续。<span style="color:#C00000"><strong>该组阈值已冻结为只用于 quality/editability 两类内部置信度，并采用“最严格路由生效”；subject match 独立使用 match/uncertain/no_match，保存供应商原始分、分值范围、模型/阈值版本和回执。未完成授权样本校准前，`subject_match_confidence` 必须为空。</strong></span> `uncertain` 对应 `SUBJECT_CONFIRMATION_REQUIRED`：没有用户确认时规划器和执行器都必须阻断；用户明确确认“这是本人且我有权编辑”后，可把一次性布尔事实写入 `ConfirmationScope` 并在当前有界任务内继续，但不把状态改成 `match`、不更新长期主体锚点。`no_match` 永远硬拒绝。多脸自动隔离链路未实现前，运行时仍应拒绝或要求用户先裁剪，不能宣称已经只编辑所选脸。
+
+### 5.3 第一位用户真实回执与新增字段
+
+<span style="color:#C00000"><strong>2026-09-01 的真实 Cloud Trace 显示：母版和目标照的 IMS 均为 Pass，目标照 CompareFace 原始分 `56.231842041015625` 被路由为 `uncertain`；旧页面没有确认字段，8A 返回 `subject_match_not_confirmed` 与 `quality_route_not_continuable`，没有生成 EditPlan，也没有调用 BeautifyPic。修复后，`ConfirmationScope.subject_match_uncertain_acknowledged` 由页面一次性勾选生成，`edit_planner`、`confirm_execution` 和 `_ensure_execution_allowed` 共同校验并把该事实写入 Trace；测试覆盖“未确认阻断／确认后仅在当前 scope 继续／no_match 仍阻断”。</strong></span>
 
 ==<span style="color:#C00000"><strong>==检查点 6 接入边界：</strong>本地 `PhotoObservation` 先用 Pillow + OpenCV Haar 产生尺寸、清晰度、曝光、人脸数、眼睛可见性和粗粒度脸框/眼睛几何；它只在内存中存在，不直接写入六合同。腾讯 `CompareFace` 作为当前会话 1:1 同人 Adapter，输出 `match/uncertain/no_match` 和未校准原始分；腾讯 `ImageModeration` 作为内容安全 Adapter，`Pass` 才能放行，`Review/Block` 在 V0 都保守拦截。两类 Provider 结果必须附带独立 evidence 和 RequestId。`ReferenceProfile` v0 由单脸、通过安全且质量路由允许的母版生成，只保存归一化脸框/眼睛几何和版本字段。==</strong></span>==
 
@@ -391,7 +395,7 @@ failure-pattern 分析是评测报告层，不是六个业务合同的新字段�
 
 `rag-correction-candidate-v0.1` 是独立实验 profile：候选预测和 Trace 必须与现役 baseline 分开生成，`active_baseline_changed=false`、`promotion_decision=not_promoted_proposal_only`；候选不得写入 `IntentFrame`、`EditPlan`、`ProviderRun`、`VerificationResult` 的执行字段，不得授予 `execution_authorized`。只有产品负责人批准并完成公开安全回归后，才可另开版本化规则变更。
 
-`RagReportArtifact` 是显式 allow-list：Dashboard 只读取 `reports/` 目录下登记且已生成的 HTML，不递归发现任意文件；当前登记公开评测、隐藏聚合和 failure-pattern 三份报告。看板是只读的，不提供应用候选、调用 Provider、改写知识库或删除答案键的动作。
+`RagReportArtifact` 是显式 allow-list：Dashboard 只读取 `reports/` 目录下登记且已生成的 HTML，不递归发现任意文件；当前登记公开评测、隐藏聚合、failure-pattern 和 optimization-loop 四份报告。看板是只读的，不提供应用候选、调用 Provider、改写知识库或删除答案键的动作。
 
 ## 17. 2026-08-30 评测治理合同补充
 
@@ -403,7 +407,9 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 ## 18. 2026-08-30 最新评测治理状态
 
-本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `151 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `160 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+
+本地合同落账还要求“相同合同唯一键 + 相同脱敏投影”才可幂等复用；如果质量结果 ID、计划 ID+revision 或验证 ID 已存在但投影发生变化，写入必须 fail-closed 并返回可识别的 `ValueError`，不得覆盖旧证据或暴露底层 SQLite 唯一键异常。`LocalTraceStore` 的回归测试覆盖了质量置信度和 `photo_id` 变化两种冲突路径。
 
 ## 19. 2026-08-30 部署与候选 Provider 当前合同边界
 
@@ -429,8 +435,22 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 持久化表 `rag_lifecycle_audits` 只保存 `audit_id`、`as_of`、结构化审计快照、脱敏 Trace 和创建时间；报告注册表只允许 `reports/rag_lifecycle_audit.html`。因此“实时”不是后台偷偷改知识，而是产品负责人或受控任务显式触发一次审计，再决定是否人工更新 Provider Card/Policy，更新后重新建索引并回归。RAG 仍保持 `execution_authorized=false`，该合同不改变图片出站、Provider 白名单、参数边界或六个业务合同。
 
+## 22. 2026-09-01 RAG 优化报告合同补充
+
+本轮新增的是评测/治理报告，不是六个图片处理合同的新字段。`rag_optimization_loop_v0.1` 的输入只允许 public dev/challenge cases、公开 annotations、脱敏 predictions 和可选的 private aggregate；输出包括版本、逐题结构化错误代码、候选代次、Rubric 指标、Composite、anti-overfit、停止原因，以及 v3 聚合模式的“观察事实 / 可验证假设 / 下一份 Holdout 证据”。逐题报告不复制原始题干，只保存 public `case_id`、split、标签、题干 SHA-256、证据数量和错误代码；v3 只允许保存 aggregate pattern，且三类计数不视为互斥。
+
+每个候选的 Trace 必须由运行器真实生成，并明确 `hidden_answer_key_read=false`、`network_called=false`、`provider_api_called=false`、`llm_called=false`、`photo_or_face_vector_read=false`、`active_baseline_changed=false`。候选不能产生 `ProviderRun`、编辑参数、权限或图片出站；没有产品负责人批准，候选不替换现役 baseline。Composite 仅为 Dashboard 比较分，固定 project Gate 与 hard-safety 仍是权威门槛。
+
+`RAG_OPTIMIZATION_RUBRIC.md`、`RAG_OPTIMIZATION_PROGRESS.md`、`reports/rag_optimization_loop_v1.json/.html` 和 page 5 共同构成该治理报告的可回放证据。Holdout A 继续有效：同一 v3 不重复正式运行，逐题答案不得进入合同、Trace、Prompt 或候选代码；再次正式验收必须新建独立 Holdout v4。
+
 ## 2026-09-01 当前 v3 Holdout 与 UI 证据状态
 
 v3 Holdout 的最终运行合同已按 Holdout A 执行一次：answerless runtime 只允许 `case_id + query`；私有答案键只在产品负责人控制的工作区外用于 aggregate-only 评分，不进入六个业务合同、Trace、应用或公开报告。本次 36 题预测无缺失，hard-safety 0/36 违规（PASS），但质量 project Gate=`FAIL`（Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%）。
 
 该评测结果不改变 `RagAdvisoryDecision.execution_authorized=false`、Provider 白名单、图片出站或六个业务合同的字段职责。8C-1/8C-2 的 child plan/run/hash 和同 scope 自动续跑仍有代码/fixture 证据；真实 UI 多轮图片回执必须由产品负责人在 Private Streamlit 页面亲自产生，不能用 fixture 或离线合同记录冒充。
+
+## 23. 2026-09-01 Cloud 重放下的合同落账幂等规则
+
+第一位用户的 Cloud 页面出现 `ImageModeration request failed` 后，运行日志定位到 Streamlit 重跑时重复插入 `photo_quality_results.quality_result_id` 的底层唯一键异常。该异常属于运行账本写入问题，不是内容安全结果，也不能用“接口失败”一概替代。
+
+因此六类合同的落账实现新增一条共同规则：同一业务唯一键再次提交时，只有在脱敏投影完全一致的情况下才幂等复用；如果上下文或事实内容发生变化，必须返回可识别的合同冲突并保留旧记录。重复复用可写 `*_reused` 诊断事件，但不得重复完成类产品事件。该规则让 Streamlit 重放可安全恢复，同时保持“证据不可覆盖、ProviderRun 必须来自真实 Adapter、IMS 仍 fail closed”的边界。

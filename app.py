@@ -201,6 +201,9 @@ def _intent_user_projection(intent: IntentFrame) -> dict[str, object]:
             "target_count": len(scope.get("target_refs", [])),
             "allowed_features": scope.get("allowed_features", []),
             "max_provider_rounds": scope.get("max_provider_rounds"),
+            "subject_match_uncertain_acknowledged": scope.get(
+                "subject_match_uncertain_acknowledged", False
+            ),
             "whitening_allowed": scope.get("whitening_allowed"),
             "smoothing_allowed": scope.get("smoothing_allowed"),
             "expires_at": scope.get("expires_at"),
@@ -338,6 +341,7 @@ def render_checkpoint6(
         st.session_state.pop("cp6_profile", None)
         st.session_state.pop("cp6_subject_result", None)
         st.session_state.pop("cp6_target_quality_result", None)
+        st.session_state.pop("cp6_subject_uncertain_ack", None)
         st.session_state.pop("cp8a_plan_result", None)
         st.session_state.pop("cp6_reference_safety_ack", None)
         st.session_state.pop("cp6_reference_warning_ack", None)
@@ -469,6 +473,7 @@ def render_checkpoint6(
         st.session_state.pop("cp6_subject_result", None)
         st.session_state.pop("cp6_target_quality_result", None)
         st.session_state.pop("cp6_target_external_ack", None)
+        st.session_state.pop("cp6_subject_uncertain_ack", None)
     st.session_state.cp6_target_hash = hashlib.sha256(target_bytes).hexdigest()
     target_observation = analyze_photo_bytes(
         target_bytes,
@@ -610,8 +615,33 @@ def render_checkpoint8a(
         )
         return
 
+    subject_match_uncertain_acknowledged = False
+    if quality_result.subject_match_status.value == "uncertain":
+        st.warning(
+            "腾讯当前无法稳定确认目标照与母版是同一人。若这是你的本人照片，且你有权编辑，"
+            "可以确认后继续；系统会记录这次确认，但不会把不确定结果升级成‘同人已证实’。"
+        )
+        subject_match_uncertain_acknowledged = st.checkbox(
+            "我确认目标照是本人，且我有权编辑；接受同人判断不确定可能带来的偏差",
+            key="cp6_subject_uncertain_ack",
+        )
+
     if st.button("生成差异诊断与计划草案", key="cp8a_plan_button", type="primary"):
         try:
+            if subject_match_uncertain_acknowledged:
+                store.record_event(
+                    session_id,
+                    "subject_match_uncertain_acknowledged",
+                    {
+                        "photo_id": quality_result.photo_id,
+                        "quality_result_id": quality_result.quality_result_id,
+                        "policy_version": (
+                            quality_result.subject_match_evidence.threshold_policy_version
+                            if quality_result.subject_match_evidence is not None
+                            else None
+                        ),
+                    },
+                )
             rag_run = _rag_advisory_for(settings).advise(
                 query=build_plan_advisory_query(
                     query_id=f"rag_plan_{uuid.uuid4().hex}",
@@ -643,6 +673,7 @@ def render_checkpoint8a(
                 intent=intent,
                 store=store,
                 rag_advice=rag_run.decision,
+                subject_match_uncertain_acknowledged=subject_match_uncertain_acknowledged,
             )
             _clear_checkpoint8b_session_state()
             st.session_state.cp8a_plan_result = {
@@ -841,6 +872,9 @@ def render_checkpoint8b(
             source_intent=source_intent,
             proposed_plan=plan,
             next_turn=store.next_intent_turn(session_id),
+            subject_match_uncertain_acknowledged=bool(
+                st.session_state.get("cp6_subject_uncertain_ack", False)
+            ),
         )
         store.save_intent_frame(confirmation.execution_intent)
         store.save_edit_plan(confirmation.confirmed_plan)
@@ -1639,6 +1673,7 @@ def main() -> None:
                 "cp6_profile",
                 "cp6_subject_result",
                 "cp6_target_quality_result",
+                "cp6_subject_uncertain_ack",
                 "cp8a_plan_result",
                 "cp6_safety_cache",
                 "cp6_reference_safety_ack",

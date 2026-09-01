@@ -119,6 +119,21 @@
 - 不保存腾讯原始错误全文、图片、Base64、密钥，也不自动重试；本次失败继续 fail closed，不进入 Profile/同人/修图；
 - 这一步只补齐“真实失败可定位”的可观测性，不代表 Cloud ImageModeration 已成功。产品负责人刷新应用后，再执行一次明确授权的内容安全检查即可得到下一条真实腾讯诊断回执。
 
+### 2026-09-01｜Cloud 页面失败的二次定位：Streamlit 重跑导致账本重复写入
+
+产品负责人随后在 Cloud 页面看到 `Tencent ImageModeration request failed`。这次不能只看页面文案判断腾讯接口失败：Cloud 日志中反复出现了明确的
+`sqlite3.IntegrityError: UNIQUE constraint failed: photo_quality_results.quality_result_id`。
+Streamlit 每次按钮/复选框交互都会重跑页面脚本，旧实现把同一张照片的同一份质量合同再次写入 SQLite，数据库拒绝重复唯一键，页面因此中断。
+
+已完成修正：
+
+- `photo_quality_results`、`edit_plans`、`verification_results` 写入现在按真实唯一键和完整业务上下文做幂等预检；相同脱敏内容安全复用，变化内容明确报合同冲突；
+- 重放复用会写 `*_reused` 事件，但不会重复写完成类产品事件，避免看板重复计数；
+- 不保存原图/Base64/腾讯原始错误全文，不自动重试，不绕过 IMS；腾讯返回 `Review/Block` 仍然 fail closed；
+- 本机对明确授权照片的真实 ImageModeration smoke 已成功（`status=succeeded`、`Pass`、RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），这证明本机凭据和服务链可用，但不等于 Cloud 新版本已取得成功回执。
+
+Cloud 重建后，产品负责人需要刷新页面并再次执行一次内容安全检查。若仍失败，页面会提供脱敏 `error_code` 与 `RequestId`；只需回传这两个字段即可继续定位，不能回传密钥、原图或完整错误文本。
+
 ## 后续重复验证规则
 
 1. 继续只在本机 `.env` 中保存凭据，不发送到聊天、截图或 Git；

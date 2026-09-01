@@ -112,10 +112,24 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
   uv run python scripts/audit_rag_lifecycle.py
 ```
 
-它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。本轮全量回归为 `151 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。Cloud ImageModeration 若真实调用失败，页面和 Trace 会保留脱敏错误码与 RequestId 供定位。
+它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。最新全量回归为 `160 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。Cloud ImageModeration 若真实调用失败，页面和 Trace 会保留脱敏错误码与 RequestId 供定位。
 
 ## 2026-09-01｜v3 Holdout 与第一位用户入口
 
 v3 Holdout 已由产品负责人逐题审核，并在项目工作区外按 Holdout A 完成一次正式的 answerless 私有聚合盲测。运行器只读取 `case_id + query`，未读取答案键、照片、人脸向量，未调用 LLM、Provider 或网络；质量 project Gate=`FAIL`，hard-safety=PASS。聚合结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%。逐题答案不回流开发，不能用这份 hidden 继续调参。
 
 Streamlit Community Cloud Private 页面已打开，第一位用户应按 [第一位用户端到端测试说明](FIRST_USER_E2E_TEST.md) 亲自完成上传、授权、首次执行、8C 复测和反馈。Codex 不代上传照片、不代点击外部图片调用；当前没有新的 UI 真实多轮图片回执。8C-1/8C-2 的自动化 fixture 只证明控制逻辑和 Trace。
+
+## 2026-09-01｜第一位用户 8A 阻塞修复与下一次运行
+
+第一位用户的真实 Trace 已到达 8A：母版/目标照 IMS Pass、Profile 建立成功，CompareFace 原始分 `56.231842041015625` 为 `uncertain`。旧页面因没有本人/编辑权确认入口而阻断，未调用 BeautifyPic；RAG 只提供了 Tencent 能力 evidence，`execution_authorized=false`。代码现已增加 `subject_match_uncertain_acknowledged` 一次性确认，并在 `edit_planner`、8B `confirm_execution`、执行前 Gate 中重复校验；`no_match` 仍硬拒绝，Trace 记录确认事件和策略版本。
+
+Cloud 重建后，产品负责人刷新页面，在同人不确定提示处确认“目标照是本人且有权编辑”，再生成 8A；随后继续原有 8B/8C 流程。该确认不代表同人已经被模型证实，也不更新长期主体锚点。首轮真实 `ProviderRun`、`VerificationResult`、视觉改善和用户反馈仍需页面实际产生。
+
+## 2026-09-01｜Cloud 页面异常恢复
+
+如果页面显示 `Tencent ImageModeration request failed`，先查看页面下方的脱敏 `error_code`/`RequestId`。本轮 Cloud 日志还发现了另一条确定性根因：Streamlit 重跑重复插入同一 `photo_quality_result_id`，触发 SQLite 唯一键异常并中断页面。已在 `LocalTraceStore` 增加幂等复用与变化内容冲突保护；本地全量回归为 `160 passed, 4 warnings`。
+
+Cloud 拉取新版本后无需重新配置本机 `.env`：只需刷新页面，重新执行一次当前照片的 IMS 检查。Cloud Secrets 仍必须保留在 Cloud App 的根级设置中；若新的真实腾讯错误仍出现，只回传错误码和 RequestId，不绕过安全门或重复上传无授权照片。
+
+第一位用户同时反馈上传等待过长、首屏显示 JSON、按钮/检查点过多、自然语言入口被工程选项挤压和视觉偏工程文档；这些先作为 UI Gate 输入。当前页面仍是工程验证壳，暂不把上述反馈冒险改成权限或路由变更。

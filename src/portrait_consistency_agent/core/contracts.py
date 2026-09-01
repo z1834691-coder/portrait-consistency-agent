@@ -758,6 +758,11 @@ class ConfirmationScope(ContractModel):
     target_refs: list[SafeId] = Field(min_length=1)
     allowed_features: list[EditableFeature] = Field(default_factory=list)
     max_provider_rounds: PositiveInt
+    # CompareFace's provisional ``uncertain`` route is not proof of identity.
+    # If the user explicitly confirms that the target is their own photo and
+    # they have the right to edit it, this fact travels with the bounded scope
+    # so 8A/8B/8C can replay the decision without turning it into a match score.
+    subject_match_uncertain_acknowledged: bool = False
     whitening_allowed: bool = False
     smoothing_allowed: bool = False
     budget_limit_cny: Annotated[float, Field(ge=0.0)] | None = None

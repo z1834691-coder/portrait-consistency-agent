@@ -40,6 +40,14 @@ P0-A/P0-B 是**受限工具知识检索器**，不是另一个“让 LLM 读资�
 
 未来如果将 RAG evidence 注入 LLM，只能传递**默认 3 条、最多 5 条，已 metadata 过滤且带来源/版本/关系标签的结构化摘要**；不传原文全文、裸检索分数、未采用候选或隐藏 Trace。若存在 `conflict_information`，Prompt 只能解释冲突并提出 `manual_review/manual_suggestion/stop`，不能从冲突中选择可执行事实；若 `unknown_stopped`，Prompt 必须承认“没有足够已审核依据”，不能猜能力或 API。LLM 只能解释“为什么支持/为什么降级”，状态机仍决定能否消费，Adapter 仍决定能否执行。
 
+### 0.5 第一位用户测试后的同人不确定边界（已落地）
+
+CompareFace 返回 `uncertain` 时，Prompt/LLM/RAG 都不能把它改写为 `match` 或生成执行授权。页面只提供一次性的结构化事实确认：“目标照是本人，且我有权编辑，并接受同人判断不确定可能带来的偏差”；系统把确认写入 `ConfirmationScope.subject_match_uncertain_acknowledged`，再由规划器和执行器重新校验。该字段只允许当前照片、当前会话和当前有界计划族继续，不更新长期主体锚点；`no_match` 仍然硬拒绝。模型不生成这个布尔值，也不读取照片或供应商原始分。Trace 记录事件、策略版本和 scope 投影，用户看到的是简短解释而不是内部数值。
+
+### 0.6 Cloud 重放与合同落账边界
+
+Streamlit 的控件交互会让页面脚本重新运行。任何 Prompt、LLM 输出或“重新运行”信号都不能制造第二次事实；合同写入由 `LocalTraceStore` 的确定性幂等层负责。相同业务唯一键且脱敏投影相同，只能复用原记录并留下 `*_reused` 诊断事件；同一唯一键但内容不同，必须 fail closed，不覆盖旧证据。LLM 不得生成 `ProviderRun`、安全通过、重复尝试或完成事件。Cloud 若仍收到腾讯错误，页面只展示脱敏 `error_code`/`RequestId`，不能把数据库重放异常或模型话术当作 IMS 通过。
+
 ## 1. IntentFrame：意图解析与澄清 Prompt
 
 <span style="color:#C00000"><strong>【补充完成：IntentFrame 完整版 System Prompt】</strong></span>
@@ -325,7 +333,7 @@ INPUT_QUALITY、SUBJECT_MATCH、FEATURE_EXTRACTION、ACCEPTANCE_CALIBRATION、PA
 
 ## 5. Prompt 上线 Gate
 
-`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-09-01 Cloud 错误回执修复后，最新全量回归为 `151 passed, 4 warnings`，并继续要求错误码/RequestId 只进入脱敏投影。
+`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-09-01 Cloud 错误回执修复后，最新全量回归为 `160 passed, 4 warnings`，并继续要求错误码/RequestId 只进入脱敏投影。
 
 仍待完成的 Gate：产品负责人逐题审核工作区外的 v3 Holdout 草案、导出正式 answerless runtime 并完成一次独立验收；真实 UI 多轮结果/取消/删除/明确不满意和供应商失败的端到端评测；未来完整 ReAct、LLM/RAG 策略选择与文字反馈澄清 Prompt 的评测。canonical Safety Event 目录已获产品负责人审核通过；Precision C、Holdout A、Safety ID C 已冻结并落地；8C-1/8C-2 的离线测试和 smoke 已通过，但不因 fixture 通过而自动完成真实 UI 视觉效果验证。当前 Gold 基线未通过，v3 草案答案不得用于调参。
 
@@ -366,3 +374,9 @@ Streamlit Cloud 只是代码运行入口，不会改变 Prompt 的数据边界�
 产品负责人已完成 v3 Holdout 36 题逐题审核，并按 Holdout A 完成一次独立的 answerless 盲测。正式回执为 `36/36` 有预测、`hidden_answer_key_read=false`、未调用 LLM/网络/图片 Provider；hard-safety `0/36` 违规，质量 project Gate 仍为 `FAIL`。因此本次答案不得回流 Prompt，后续只能在 public/dev/challenge 上做可回归候选修正，并用新的独立 Holdout 重新验收。
 
 Private Streamlit 页面已打开，第一位用户的真实照片流程和 UI 8C 多轮图片回执仍待产品负责人亲自触发。8C-1/8C-2 的代码与 fixture 只能证明结构化观察、父子计划/回执血缘、同 scope 有界续跑和反馈硬停止；不能在 Prompt、简历或 Demo 中写成真实视觉改善。当前 RAG 仍是 advisory-only，任何 Prompt 都不能解除权限、生成 ProviderRun、读取答案键或把“模型建议”当作成功事实。
+
+## 13. 2026-09-01 RAG 优化 Loop 的 Prompt 边界
+
+本轮没有新增一个让 LLM 自由改规则的 Prompt。失败模式优化由确定性运行器执行：它读取 public dev/challenge、公开 annotations 和脱敏 predictions，生成结构化错误代码，再逐代运行一个受限候选。v3 Holdout 只可作为聚合上下文；逐题答案、题干、原始用户文本、照片、向量、密钥和完整隐藏 Trace 不得进入 Prompt 或候选代码。
+
+如果未来 LLM 参与解释候选，它只能看到脱敏指标和结构化 evidence 摘要；不能凭自评制造 route/evidence 正确事实，不能改变固定 project Gate、hard-safety、Provider 白名单、权限、参数上限或 `execution_authorized=false`。候选必须先通过 public dev/challenge 回归、anti-overfit 和停止规则，再由产品负责人批准或回滚。当前实际运行未调用 LLM、网络或 Provider，详情见 [RAG 优化进展](RAG_OPTIMIZATION_PROGRESS.md)。

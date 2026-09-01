@@ -1,8 +1,14 @@
 # 母版人像一致性 Agent
 
+## 2026-09-01 Cloud ImageModeration 页面失败的根因与修复
+
+第一位用户在 Cloud 页面看到 `Tencent ImageModeration request failed`。Cloud 运行日志的稳定异常是 Streamlit 控件重跑时重复写入同一个 `photo_quality_result_id`，SQLite 抛出 `UNIQUE constraint failed`；这不是可以绕过的内容安全结果。代码已改为：同一业务唯一键和相同脱敏事实幂等复用，事实发生变化则以可识别冲突停止，不覆盖旧证据；重复重放也不会重复计入完成类运营事件。页面仍只展示脱敏腾讯 `error_code`/`RequestId`，不自动重试、不放行 `Review/Block`、不保存原图或密钥。
+
+本机用明确授权照片完成的真实 IMS smoke 返回 `status=succeeded`、`Pass`、RequestId=`c95e1359-9ecb-45ac-aa94-3776fbccc0ad`；这证明本机服务链可用，但不代替 Cloud 新版本回执。提交并重建后，请刷新 Private App、重新执行一次内容安全检查；如果仍失败，只回传页面显示的 `error_code` 和 `RequestId`。
+
 当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created / Tencent Web License normal`
 
-> **最新状态（2026-09-01）：** 产品负责人已审核 v3 Holdout 36 题并完成一次私有聚合盲测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、hard-safety=PASS，但 project quality Gate=`FAIL`。Private Streamlit 页面已打开，等待产品负责人亲自完成第一位用户照片流程；8C-2 多轮控制目前只有代码/fixture 证据，不能写成真实 UI 多轮图片回执。
+> **最新状态（2026-09-01）：** 产品负责人已审核 v3 Holdout 36 题并完成一次私有聚合盲测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、hard-safety=PASS，但 project quality Gate=`FAIL`。第一位用户已完成母版/目标照 IMS、Profile 建立和 CompareFace；目标照原始分 `56.231842041015625` 为 `uncertain`，旧页面在 8A 因缺少本人/编辑权确认入口而暂停。代码已补齐一次性确认路径，Cloud 重建后可继续 8A→8B→8C；尚无真实 BeautifyPic ProviderRun/VerificationResult。
 
 目标：在 2026-09-04 前完成一个真实可运行、可录屏、可追溯的 Demo。它帮助用户以一张确认的母版建立五官与脸型标准，再对本人单张或同组照片进行诊断、受确认保护的编辑和复测；它不是身份搜索、审美评分或生产服务。
 
@@ -19,6 +25,7 @@
 - 当前会话同人门：腾讯 IAI CompareFace 3.0。真实同图 smoke 已成功，原始分仅作后台证据，不显示为相似度或概率；
 - Profile v0：只保存归一化几何和版本信息，不保存母版原图、EXIF、肤色/妆面、身体、明文向量或密钥；
 - 检查点 8A：已接入严格双眼测量、逐特征差异诊断和确定性 `EditPlan` 草案；页面可展示规则、局部差异和脱敏 Trace；
+- <span style="color:#C00000"><strong>8A 同人不确定路径：CompareFace 为 `uncertain` 时，用户确认“目标照是本人且有权编辑”后，系统把一次性 `subject_match_uncertain_acknowledged` 放入有界 scope，继续规划；不改成 `match`、不更新长期主体锚点，`no_match` 仍硬拒绝。</strong></span>
 - 检查点 8B：页面已接入“明确告知 → 用户确认 → 照片/Profile/Gate/scope 校验 → 一次 BeautifyPic 调用 → 脱敏 ProviderRun → 当前会话内预览/下载”。6 个离线执行案例和 fixture Trace 已通过；开发期间未新发起 UI 真实照片调用；8C-1/8C-2 可在会话内对结果复测、生成下一轮子计划并保留父子血缘；
 - BeautifyPic：已完成一次历史真实工具调用 Gate；8B 首轮页面执行链只在用户实际勾选/点击并使用授权照片时才可能调用腾讯，绝不自动发送照片；8C-2 在同一首次授权 scope 内由 Agent 受限自动续跑子轮，调用前后写入 preflight/ProviderRun/Verification Trace，scope 改变则停止并重新授权；
 - 运营账本：匿名 `product_events` 与本地管理员 Dashboard 已实现，用于会话、建档、意图、工具调用、复测、显式反馈、重传和 WAU/MAU 的脱敏聚合；后续还需真实采集 Profile 建立率、首次成功修图率、7/30 日回访、会话完成率、失败后重传率和明确满意/不满意比例；它不是 Dataset，也不是线上 KPI 结论；
@@ -33,6 +40,7 @@
 - <span style="color:#C00000"><strong>Cloud 凭据入口：本机 `.env` 不会随部署进入 Cloud；要触发真实腾讯安全/同人/修图请求，必须在该 App 的 Settings → Secrets 以根级变量配置 `TENCENT_SECRET_ID` 与 `TENCENT_SECRET_KEY`，保存后重启。缺少任一项时系统 fail-closed，不发送照片。</strong></span>
 - <span style="color:#C00000"><strong>Cloud 腾讯错误回执：如果 ImageModeration 已读到密钥但请求失败，页面现在会安全显示腾讯 `error_code` 与 `RequestId`，并将同样的非敏感字段写入脱敏 Trace；不会显示原图、密钥或腾讯原始错误全文。没有 `RequestId` 时明确显示“未返回”，不能把失败误写成内容安全通过。</strong></span>
 - <span style="color:#C00000"><strong>视觉交互方向已冻结、尚未实现：</strong>产品采用“中心舞台式首页／对齐工作台 + 母版档案 + 结果记录”的三空间结构；Agent 只在澄清、真实进度、边界与结果时用人话发声，参数/回执/脱敏 Trace 位于第二层。参考图的层次语法与雾紫、肉粉／奶油粉、墨黑、桃红四色体系已冻结；页面遵守奥卡姆剃刀，只突出当前任务、一个上传动作和一个自然语言入口。当前低实体页面样张仍待产品负责人审核，不等于已部署 UI，不改变照片权限、工具调用或数据边界。</span>
+- <span style="color:#C00000"><strong>第一位用户 UX 反馈（待 UI Gate）：</strong>上传等待过长；首屏不应展示脱敏 JSON；A/B/C 检查点和按钮过多；自然语言入口被 GUI 挤压；视觉偏工程文档。当前只记录为事实反馈，尚未擅自改 UI 或删除必要权限门。</span>
 
 ## 重要边界
 
@@ -49,7 +57,7 @@
 
 ## 下一开发 Gate
 
-RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断；v3 已在工作区外完成产品负责人审核并完成一次正式 answerless 盲测，质量 project Gate=`FAIL`、hard-safety=`PASS`。已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。下一步优先是第一位用户完成真实页面流程、必要时记录一次 UI 8C-2 子轮，并在 public/dev/challenge 上修复 RAG 失败模式；候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入仍独立推进。P0-C 只提议和留证，不能改变图片执行权限。
+RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断；v3 已在工作区外完成产品负责人审核并完成一次正式 answerless 盲测，质量 project Gate=`FAIL`、hard-safety=`PASS`。已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。当前真实用户流程已到达 8A 的 `uncertain` 确认边界；Cloud 重建后完成一次确认即可继续，尚无真实 ProviderRun/VerificationResult。随后再收集体验反馈并进入 UI Gate；候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入仍独立推进。P0-C 只提议和留证，不能改变图片执行权限。
 
 ## 2026-08-30 RAG 优化闭环（当前真实状态）
 
@@ -79,7 +87,7 @@ portrait-consistency-agent/
 │   └── storage/                   # 运行账本 SQLite/JSONL + 独立 RAG SQLite/FTS/派生向量索引
 ├── storage/                       # 本地脱敏 DB（Git 忽略；当前产品不写结果图）
 ├── logs/                          # 本地 JSONL trace（Git 忽略）
-└── tests/                         # 当前 151 个自动化测试（另有 4 条 Pillow 已知弃用警告）
+└── tests/                         # 当前 160 个自动化测试（另有 4 条 Pillow 已知弃用警告）
 ```
 
 ## 本地命令
@@ -101,6 +109,7 @@ uv run python scripts/smoke_rag_p0a.py
 uv run python scripts/smoke_rag_p0b.py
 uv run python scripts/smoke_rag_advisory.py
 uv run python scripts/analyze_rag_failures.py
+uv run python scripts/run_rag_optimization_loop.py
 uv run python scripts/audit_rag_lifecycle.py
 uv run python scripts/evaluate_rag_gold_v2.py --html reports/rag_gold_v2_pending.html
 uv run python scripts/smoke_volc_beauty.py
@@ -111,13 +120,21 @@ uv run python scripts/smoke_rag_p0b.py --allow-model-download
 uv run python scripts/smoke_deepseek_intent.py --allow-live
 ```
 
-2026-09-01 当前收尾校验：全量 `pytest` 实际为 `151 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、8C-1/8C-2 smoke、RAG advisory、RAG lifecycle audit 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 已知弃用警告。v3 private scorer 只输出聚合结果和安全事实；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project quality Gate 为 `FAIL`，不得写成通过；真实 UI 照片流程尚未由 Codex 代跑。
+2026-09-01 当前收尾校验：全量 `pytest` 实际为 `160 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、8C-1/8C-2 smoke、RAG advisory、RAG lifecycle audit 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 已知弃用警告。v3 private scorer 只输出聚合结果和安全事实；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project quality Gate 为 `FAIL`，不得写成通过；真实 UI 照片流程尚未由 Codex 代跑。
 
 ## 2026-08-30 评测治理冻结
 
 Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅作历史 aggregate，v3 已在工作区外完成产品负责人审核并完成一次正式 answerless 盲测。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；v3 quality Gate 仍 `FAIL`。
 
 不要将 `.env`、真实照片、下载后的结果图片、SQLite 文件或 JSONL 日志提交到 Git。DeepSeek Key 必须从密码管理器直接粘贴到本机 `.env`，不要发送到聊天。外部腾讯首轮调用只能在用户明确同意且使用已授权照片时，以 `--allow-live` 或页面的明确确认触发；8C-2 后继调用若仍在同一首次授权 scope 内，需先通过自动 preflight 并写入 Trace，scope 变化则重新确认。DeepSeek smoke 同样必须显式传 `--allow-live`。
+
+## 2026-09-01 RAG 自动优化 Loop（当前真实状态）
+
+本项目现在有一条 proposal-only 的失败模式自校正循环：读取 public dev/challenge 52 题和公开 annotations，逐题生成错误代码，按 Rubric 运行 V0 baseline、V1 同义词归一化、V2 relation canonical 化，再做 anti-overfit 和边际效益判断。v3 Holdout 只提供私有 aggregate 上下文，逐题答案没有读取，也没有重复正式运行。
+
+真实结果：V0/V1/V2 Composite 均为 `0.947436`，候选增益均为 `0.0`；public route/evidence/relation/Recall@5/MRR/nDCG@5 均 `100%`，固定 Precision@3=`47.44%`（51/52 题 Gold 少于 3 条），project Gate 仍 `FAIL`。连续两代增益小于 `0.01` 后，V3/V4 按停止规则跳过；anti-overfit=`PASS`，active baseline、权限、Provider、参数和 `execution_authorized=false` 均未改变。
+
+优化产物：[RAG_OPTIMIZATION_PROGRESS.md](docs/RAG_OPTIMIZATION_PROGRESS.md)、[RAG_OPTIMIZATION_RUBRIC.md](docs/RAG_OPTIMIZATION_RUBRIC.md)、`reports/rag_optimization_loop_v1.json/.html`、Streamlit page 5。Dashboard 还会把 v3 聚合错误拆成“事实/假设/下一份证据”，但不提供逐题 hidden 结论。它是只读可视化治理工具，不是自动训练、自动发布或生产监控；如要再次正式验收，必须新建独立 Holdout v4。
 
 ## 2026-08-30 RAG 生命周期审计收口
 

@@ -244,6 +244,10 @@ class LocalTraceStore:
                 "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
                 ("contract_v0_4_verification_observation", utc_now().isoformat()),
             )
+            connection.execute(
+                "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?, ?)",
+                ("contract_v0_4_subject_uncertain_ack", utc_now().isoformat()),
+            )
 
     def create_session(
         self,
@@ -408,7 +412,7 @@ class LocalTraceStore:
 
     def save_photo_quality_result(self, result: PhotoQualityResult) -> None:
         self._require_session(result.session_id)
-        self._insert_session_contract(
+        inserted = self._insert_session_contract(
             table="photo_quality_results",
             columns=("quality_result_id", "session_id", "photo_id"),
             values=(result.quality_result_id, result.session_id, result.photo_id),
@@ -417,19 +421,20 @@ class LocalTraceStore:
         )
         self.record_event(
             result.session_id,
-            "photo_quality_result_saved",
+            "photo_quality_result_saved" if inserted else "photo_quality_result_reused",
             {
                 "quality_result_id": result.quality_result_id,
                 "photo_id": result.photo_id,
                 "route": result.route,
                 "subject_match_status": result.subject_match_status,
                 "provider_card_version": result.provider_card_version,
+                "deduplicated": not inserted,
             },
         )
 
     def save_edit_plan(self, plan: EditPlan) -> None:
         self._require_session(plan.session_id)
-        self._insert_session_contract(
+        inserted = self._insert_session_contract(
             table="edit_plans",
             columns=("plan_id", "revision", "session_id", "photo_id"),
             values=(plan.plan_id, plan.revision, plan.session_id, plan.photo_id),
@@ -438,7 +443,7 @@ class LocalTraceStore:
         )
         self.record_event(
             plan.session_id,
-            "edit_plan_saved",
+            "edit_plan_saved" if inserted else "edit_plan_reused",
             {
                 "plan_id": plan.plan_id,
                 "revision": plan.revision,
@@ -446,6 +451,7 @@ class LocalTraceStore:
                 "status": plan.status,
                 "provider_card_id": plan.provider_card_id,
                 "provider_card_version": plan.provider_card_version,
+                "deduplicated": not inserted,
             },
         )
 
@@ -523,7 +529,7 @@ class LocalTraceStore:
 
     def save_verification_result(self, result: VerificationResult) -> None:
         self._require_session(result.session_id)
-        self._insert_session_contract(
+        inserted = self._insert_session_contract(
             table="verification_results",
             columns=("verification_id", "session_id", "plan_id", "provider_run_id"),
             values=(
@@ -537,23 +543,25 @@ class LocalTraceStore:
         )
         self.record_event(
             result.session_id,
-            "verification_result_saved",
+            "verification_result_saved" if inserted else "verification_result_reused",
             {
                 "verification_id": result.verification_id,
                 "plan_id": result.plan_id,
                 "provider_run_id": result.provider_run_id,
                 "overall_trend": result.overall_trend,
                 "decision": result.decision,
+                "deduplicated": not inserted,
             },
         )
-        self._record_product_event_for_session(
-            session_id=result.session_id,
-            event_type=ProductEventType.VERIFICATION_COMPLETED,
-            stage=InteractionStage.VERIFICATION,
-            evidence_strength=FeedbackEvidenceStrength.UNKNOWN,
-            related_contract_ref=result.verification_id,
-            outcome=InteractionOutcome.COMPLETED,
-        )
+        if inserted:
+            self._record_product_event_for_session(
+                session_id=result.session_id,
+                event_type=ProductEventType.VERIFICATION_COMPLETED,
+                stage=InteractionStage.VERIFICATION,
+                evidence_strength=FeedbackEvidenceStrength.UNKNOWN,
+                related_contract_ref=result.verification_id,
+                outcome=InteractionOutcome.COMPLETED,
+            )
 
     def record_product_event(self, event: ProductEvent) -> None:
         """Persist one redacted operational event for metrics, never raw user data."""
@@ -797,7 +805,16 @@ class LocalTraceStore:
         values: tuple[Any, ...],
         payload_column: str,
         payload: BaseModel,
-    ) -> None:
+    ) -> bool:
+        """Insert a contract once, or safely reuse an identical projection.
+
+        Streamlit reruns the whole script after every widget interaction.  A
+        deterministic contract id can therefore be submitted more than once
+        even though the user did not start a new operation.  Reusing an
+        identical redacted payload keeps the ledger idempotent; reusing the
+        identifier with different content remains a hard conflict so the
+        audit trail cannot silently change underneath an existing id.
+        """
         allowed_tables = {
             "photo_quality_results",
             "edit_plans",
@@ -805,16 +822,45 @@ class LocalTraceStore:
         }
         if table not in allowed_tables:
             raise ValueError(f"Unsupported contract table: {table}")
+        # The full identity tuple includes mutable context such as photo_id.
+        # Check the actual database key as well: otherwise a rerun with the
+        # same contract id but a changed photo_id would miss the first SELECT
+        # and leak a raw sqlite UNIQUE error instead of our safe conflict.
+        unique_key_columns = {
+            "photo_quality_results": ("quality_result_id",),
+            "edit_plans": ("plan_id", "revision"),
+            "verification_results": ("verification_id",),
+        }[table]
+        column_positions = {column: index for index, column in enumerate(columns)}
+        unique_key_values = tuple(values[column_positions[column]] for column in unique_key_columns)
         safe_payload = json.dumps(
             redact_for_trace(payload), ensure_ascii=False, sort_keys=True, default=str
         )
+        identity_where = " AND ".join(f"{column} = ?" for column in columns)
+        unique_key_where = " AND ".join(f"{column} = ?" for column in unique_key_columns)
         column_sql = ", ".join((*columns, payload_column, "created_at"))
         placeholder_sql = ", ".join("?" for _ in range(len(values) + 2))
         with self._connect() as connection:
+            existing = connection.execute(
+                f"SELECT {payload_column} FROM {table} WHERE {identity_where} LIMIT 1",
+                values,
+            ).fetchone()
+            if existing is None:
+                existing = connection.execute(
+                    f"SELECT {payload_column} FROM {table} WHERE {unique_key_where} LIMIT 1",
+                    unique_key_values,
+                ).fetchone()
+            if existing is not None:
+                if str(existing[payload_column]) != safe_payload:
+                    raise ValueError(
+                        f"{table} contract identity already exists with a different payload"
+                    )
+                return False
             connection.execute(
                 f"INSERT INTO {table} ({column_sql}) VALUES ({placeholder_sql})",
                 (*values, safe_payload, utc_now().isoformat()),
             )
+        return True
 
     def _record_profile_event(
         self,

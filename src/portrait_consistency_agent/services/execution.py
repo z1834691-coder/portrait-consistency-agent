@@ -178,6 +178,7 @@ def confirm_execution(
     source_intent: IntentFrame,
     proposed_plan: EditPlan,
     next_turn: int,
+    subject_match_uncertain_acknowledged: bool = False,
     now: datetime | None = None,
     policy: ExecutionPolicy | None = None,
 ) -> ConfirmationResult:
@@ -206,6 +207,7 @@ def confirm_execution(
         target_refs=[proposed_plan.photo_id],
         allowed_features=executable_features,
         max_provider_rounds=max_provider_rounds,
+        subject_match_uncertain_acknowledged=subject_match_uncertain_acknowledged,
         whitening_allowed=proposed_plan.provider_absolute_params.whitening > 0,
         smoothing_allowed=proposed_plan.provider_absolute_params.smoothing > 0,
         budget_limit_cny=proposed_plan.safety_policy.max_cost_cny,
@@ -223,9 +225,19 @@ def confirm_execution(
     output_preferences = list(source_intent.output_preferences)
     if OutputPreference.EDITED_IMAGES not in output_preferences:
         output_preferences.append(OutputPreference.EDITED_IMAGES)
-    reason_codes = list(dict.fromkeys([*source_intent.reason_codes, "user_confirmed_execution"]))[
-        :16
-    ]
+    reason_codes = list(
+        dict.fromkeys(
+            [
+                *source_intent.reason_codes,
+                "user_confirmed_execution",
+                *(
+                    ["subject_match_uncertain_acknowledged"]
+                    if subject_match_uncertain_acknowledged
+                    else []
+                ),
+            ]
+        )
+    )[:16]
     execution_intent = IntentFrame.model_validate(
         {
             **source_payload,
@@ -269,6 +281,7 @@ def confirm_execution(
             "plan_revision": confirmed_plan.revision,
             "allowed_features": [item.value for item in executable_features],
             "max_provider_rounds": scope.max_provider_rounds,
+            "subject_match_uncertain_acknowledged": scope.subject_match_uncertain_acknowledged,
             "expires_at": scope.expires_at.isoformat(),
             "policy_version": policy.policy_version,
         },
@@ -322,6 +335,7 @@ def execute_confirmed_plan(
     policy = policy or build_v0_execution_policy()
     now = now or utc_now()
     trace: list[dict[str, object]] = []
+    scope = execution_intent.confirmation_scope
     is_followup = previous_provider_run is not None or previous_verification is not None
     execution_trigger = "auto_bounded_followup" if is_followup else "initial_user_confirmation"
     try:
@@ -420,6 +434,9 @@ def execute_confirmed_plan(
             "execution_mode": "plan_family_followup" if is_followup else "first_round",
             "execution_trigger": execution_trigger,
             "user_round_confirmation_required": False if is_followup else True,
+            "subject_match_uncertain_acknowledged": bool(
+                scope and scope.subject_match_uncertain_acknowledged
+            ),
             "parent_run_id": parent_run_id,
         }
     )
@@ -719,9 +736,20 @@ def _ensure_execution_allowed(
         reasons.append("quality_hash_mismatch")
     if quality_result.content_safety_status != ContentSafetyStatus.PASSED:
         reasons.append("content_safety_not_passed")
-    if quality_result.subject_match_status != SubjectMatchStatus.MATCH:
+    if quality_result.subject_match_status == SubjectMatchStatus.NO_MATCH:
         reasons.append("subject_match_not_confirmed")
-    if quality_result.route.value not in {"continue", "warn_continue"}:
+    elif quality_result.subject_match_status == SubjectMatchStatus.UNCERTAIN and (
+        scope is None or not scope.subject_match_uncertain_acknowledged
+    ):
+        reasons.append("subject_match_confirmation_required")
+    quality_route_allowed = quality_result.route.value in {"continue", "warn_continue"}
+    uncertain_route_acknowledged = (
+        quality_result.subject_match_status == SubjectMatchStatus.UNCERTAIN
+        and scope is not None
+        and scope.subject_match_uncertain_acknowledged
+        and quality_result.route.value == "subject_confirmation_required"
+    )
+    if not quality_route_allowed and not uncertain_route_acknowledged:
         reasons.append("quality_route_not_continuable")
     if quality_result.face_count != 1:
         reasons.append("single_face_required_for_v0_execution")

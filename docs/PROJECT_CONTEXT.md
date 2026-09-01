@@ -58,11 +58,11 @@
 
 Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前执行链只用 Tencent。
 
-当前交叉校验：全量 `pytest 151 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 Cloud 错误回执修复后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
+当前交叉校验：全量 `pytest 160 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 RAG 优化 Loop 收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
 
 ## 2026-08-30 RAG 工程收口快照
 
-本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归已更新为 `151 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
+本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归已更新为 `160 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
 
 ## 2026-08-30 failure-pattern 实现快照
 
@@ -77,3 +77,21 @@ Precision C 已实现为固定/覆盖式/返回式三种并行口径；Holdout A
 产品负责人已审核 v3 Holdout 36 题，并按 Holdout A 完成一次工作区外私有聚合盲测。runtime 仅含 `case_id + query`，runner 未读答案键、照片、向量、LLM、Provider 或网络；聚合结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety=0/36（PASS），project quality Gate=`FAIL`。这份结果用于识别当前 baseline 的泛化问题，不得用于逐题调参。
 
 Streamlit Cloud Private 页面已经打开，等待产品负责人亲自完成第一位用户的真实照片流程。8C-1/8C-2 的控制逻辑和 fixture 仍已验证，但尚无新的 UI 真实多轮图片回执或视觉改善证据；详见 `FIRST_USER_E2E_TEST.md` 与 `MIDTERM_STATUS_2026-09-01.md`。
+
+## 2026-09-01 RAG 自动优化 Loop 当前事实
+
+新增 `rag_optimization_loop-v0.1`、Rubric、优化进展文档和 page 5 代际 Dashboard。公开 52 题逐题诊断显示 route/evidence/relation/排序均正确，51 题只有 Gold 稀疏分母代码；V0/V1/V2 Composite 均 `0.947436`，连续两代增益为 0 后按停止规则跳过 V3/V4。v3 仅以 aggregate pattern（relation/set/route）进入报告，逐题答案未读取、未重复正式运行。候选、active baseline、Provider 白名单、权限和 `execution_authorized=false` 均未改变；需要新独立 Holdout v4 才能再次验证泛化。
+
+优化报告同时保存每类 v3 aggregate 的“观察事实 / 可验证假设 / 下一份 Holdout 证据”，并标记 relation/set/route 计数可重叠；这些假设只指导 v4 数据设计，不是隐藏集逐题结论。
+
+## 2026-09-01 当前覆盖｜第一位真实用户 8A 阻塞与修复
+
+第一位用户已在 Cloud Private 页面完成母版/目标照 IMS、Profile 建立和 CompareFace；目标照原始分 `56.231842041015625` 路由为 `uncertain`。旧代码没有把“本人且有权编辑”的一次性确认传给 8A，因此记录 `subject_match_not_confirmed`、`quality_route_not_continuable`，没有 EditPlan、ProviderRun 或 VerificationResult。RAG 已返回 Tencent FaceLifting/EyeEnlarging 直接证据，但仍是 advisory-only，未造成阻塞。
+
+当前代码已增加 `subject_match_uncertain_acknowledged`：确认写入有界 `ConfirmationScope`，规划器和执行器双重校验，确认事件和策略版本留痕；它不改变 `uncertain`、不更新主体锚点，`no_match` 仍硬拒绝。该字段是可选向后兼容策略扩展，并有 `contract_v0_4_subject_uncertain_ack` migration marker。Cloud 重建后用户可继续 8A→8B→8C；未产生真实 ProviderRun/VerificationResult 前，不称首轮完成。
+
+第一位用户反馈：上传慢、首屏展示脱敏 JSON、工程检查点和按钮过多、自然语言入口被 GUI 挤压、整体 UI 偏工程文档。它们已记录为下一 UI Gate 的事实输入；先完成一次真实闭环并增加阶段耗时证据，再冻结 UI 重构，不为减少点击删除必要的隐私或授权门。
+
+## 2026-09-01 当前 Cloud 运行异常与修复
+
+第一位用户在 Cloud 页面触发 `Tencent ImageModeration request failed`。运行日志显示页面中断的确定性根因是 Streamlit 交互重跑时重复写入 `photo_quality_results.quality_result_id`，SQLite 抛出唯一键异常；本机真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此当前不能把通用页面提示直接归因为腾讯凭据失效。`LocalTraceStore` 已实现同一合同唯一键/相同脱敏投影的幂等复用，以及变化内容的 fail-closed 冲突；Cloud 重建后需重新触发一次 IMS 以取得新的云端回执。该修复不改变 RAG、Provider、图片权限或安全门。

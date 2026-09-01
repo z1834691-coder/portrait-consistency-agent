@@ -170,6 +170,7 @@ def _preflight_reasons(
     target_observation: PhotoObservation,
     quality_result: PhotoQualityResult,
     intent: IntentFrame,
+    subject_match_uncertain_acknowledged: bool,
 ) -> list[str]:
     reasons: list[str] = []
     if quality_result.photo_id != target_observation.photo_id:
@@ -178,9 +179,23 @@ def _preflight_reasons(
         reasons.append("quality_hash_mismatch")
     if quality_result.content_safety_status != ContentSafetyStatus.PASSED:
         reasons.append("content_safety_not_passed")
-    if quality_result.subject_match_status != SubjectMatchStatus.MATCH:
+    if quality_result.subject_match_status == SubjectMatchStatus.NO_MATCH:
         reasons.append("subject_match_not_confirmed")
-    if quality_result.route not in {QualityRoute.CONTINUE, QualityRoute.WARN_CONTINUE}:
+    elif (
+        quality_result.subject_match_status == SubjectMatchStatus.UNCERTAIN
+        and not subject_match_uncertain_acknowledged
+    ):
+        reasons.append("subject_match_confirmation_required")
+    quality_route_allowed = quality_result.route in {
+        QualityRoute.CONTINUE,
+        QualityRoute.WARN_CONTINUE,
+    }
+    uncertain_route_acknowledged = (
+        quality_result.subject_match_status == SubjectMatchStatus.UNCERTAIN
+        and subject_match_uncertain_acknowledged
+        and quality_result.route == QualityRoute.SUBJECT_CONFIRMATION_REQUIRED
+    )
+    if not quality_route_allowed and not uncertain_route_acknowledged:
         reasons.append("quality_route_not_continuable")
     if quality_result.face_count != 1 or target_observation.face_count != 1:
         reasons.append("single_face_required_for_v0_plan")
@@ -262,6 +277,13 @@ def _plan_message(
     differences: list[FeatureDifference],
     blocked_reason: str | None = None,
 ) -> str:
+    reason_labels = {
+        "subject_match_confirmation_required": "同人比对处于不确定区间，需要确认这是本人且有权编辑",
+        "subject_match_not_confirmed": "同人比对未通过，需要检查照片或重新上传",
+        "quality_route_not_continuable": "照片质量或当前可编辑性不允许继续",
+        "content_safety_not_passed": "内容安全检查未通过",
+        "single_face_required_for_v0_plan": "当前版本只处理单人脸照片",
+    }
     measured = [item for item in differences if item.normalized_gap is not None]
     measured_text = (
         f"已完成 {len(measured)} 项局部几何测量；这些百分比是照片几何差异，不是相似度概率。"
@@ -278,7 +300,10 @@ def _plan_message(
     suggestion_text = (
         " " + "；".join(item.instruction for item in suggestions) if suggestions else ""
     )
-    reason_text = f" 原因：{blocked_reason}。" if blocked_reason else ""
+    reason_text = ""
+    if blocked_reason:
+        labels = [reason_labels.get(code, code) for code in blocked_reason.split("、")]
+        reason_text = f" 原因：{'；'.join(dict.fromkeys(labels))}。"
     return measured_text + " " + action_text + suggestion_text + reason_text
 
 
@@ -291,6 +316,7 @@ def diagnose_and_plan(
     mapping_policy: EditMappingPolicy | None = None,
     safety_policy: SafetyPolicySnapshot | None = None,
     rag_advice: RagAdvisoryDecision | None = None,
+    subject_match_uncertain_acknowledged: bool = False,
     store: LocalTraceStore | None = None,
     plan_id: str | None = None,
 ) -> PlanDraftResult:
@@ -313,6 +339,7 @@ def diagnose_and_plan(
             "quality_route": quality_result.route.value,
             "content_safety": quality_result.content_safety_status.value,
             "subject_match": quality_result.subject_match_status.value,
+            "subject_match_uncertain_acknowledged": subject_match_uncertain_acknowledged,
         }
     ]
 
@@ -321,6 +348,7 @@ def diagnose_and_plan(
         target_observation=target_observation,
         quality_result=quality_result,
         intent=intent,
+        subject_match_uncertain_acknowledged=subject_match_uncertain_acknowledged,
     )
     if rag_advice is not None:
         trace.append(
@@ -566,6 +594,17 @@ def diagnose_and_plan(
                 "quality_warning",
             )
         )
+    if (
+        quality_result.subject_match_status == SubjectMatchStatus.UNCERTAIN
+        and subject_match_uncertain_acknowledged
+    ):
+        suggestions.append(
+            _suggestion(
+                EditableFeature.FACE_LIFTING,
+                "同人比对处于不确定区间；你已确认这是本人且有权编辑，系统会继续，但结果可能存在偏差。",
+                "subject_match_uncertain_acknowledged",
+            )
+        )
 
     card = load_tencent_beautify_card()
     plan = EditPlan(
@@ -607,6 +646,11 @@ def diagnose_and_plan(
         risk_notes=[
             "几何差异来自当前照片测量，未校准为概率",
             "本计划只在用户确认后允许外部编辑",
+            *(
+                ["同人比对处于不确定区间，已记录用户本人/编辑权确认；不把它升级为 match 事实"]
+                if subject_match_uncertain_acknowledged
+                else []
+            ),
             *(["RAG 仅提供已审核工具证据，未提供执行授权"] if rag_advice is not None else []),
         ],
         requires_confirmation=True,
