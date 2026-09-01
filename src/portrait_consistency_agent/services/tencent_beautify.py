@@ -74,8 +74,9 @@ class TencentBeautifyClient:
 
         if not self.settings.has_tencent_credentials:
             raise TencentCredentialsMissingError(
-                "Tencent credentials are absent. Configure both values in local .env "
-                "before a live call."
+                "Tencent credentials are absent. Configure both "
+                "TENCENT_SECRET_ID and TENCENT_SECRET_KEY in local .env or Streamlit "
+                "Cloud App Settings → Secrets before a live call."
             )
 
         try:

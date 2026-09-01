@@ -819,7 +819,10 @@ def _provider_error(
             phase=ErrorPhase.PREFLIGHT,
             category=ErrorCategory.AUTHORIZATION,
             provider_code="TENCENT_CREDENTIALS_MISSING",
-            safe_message="本机没有可用的腾讯密钥，本次没有完成修图调用。",
+            safe_message=(
+                "当前运行环境没有可用的腾讯密钥；请在本机 .env 或 Streamlit Cloud "
+                "App Settings → Secrets 配置 TENCENT_SECRET_ID 和 TENCENT_SECRET_KEY。"
+            ),
             retryable=False,
         )
     if isinstance(exc, (ValueError, binascii.Error)):

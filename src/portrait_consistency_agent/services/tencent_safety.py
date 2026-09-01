@@ -94,8 +94,9 @@ class TencentImageModerationClient:
     ) -> TencentImageModerationResponse:
         if not self.settings.has_tencent_credentials:
             raise ContentSafetyCredentialsMissingError(
-                "Tencent credentials are absent. Configure both values in local .env "
-                "before a live ImageModeration call."
+                "Tencent credentials are absent. Configure both "
+                "TENCENT_SECRET_ID and TENCENT_SECRET_KEY in local .env or Streamlit "
+                "Cloud App Settings → Secrets before a live ImageModeration call."
             )
         try:
             from tencentcloud.common import credential

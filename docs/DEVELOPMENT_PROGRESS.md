@@ -1557,3 +1557,23 @@ external_provider_called       → false
 - Private Streamlit 页面已在浏览器中打开并完成只读入口检查：母版上传、目标照片、IntentFrame、8A、8B、8C 和反馈入口均存在；当前没有代用户上传照片或发起新的腾讯图片调用。
 - 修正侧边栏环境文案为“运行环境：Private Demo；本机开发端口为 `127.0.0.1:8501`”，避免把 Cloud 受邀入口误写成仅本机服务。该改动不改变合同、权限、Provider、RAG 或 Trace 行为；已推送 `main`，Cloud 重建后页面只读检查确认新文案已显示。
 - 代码与文案变更后重新执行全量测试、Ruff、format、compileall、`git diff --check`；结果保持 `150 passed, 4 warnings`、全部静态检查通过。真实 UI 8C 多轮图片回执仍必须由产品负责人在 Cloud 页面亲自触发。
+
+## 2026-09-01｜Cloud 腾讯凭据提示修复
+
+- 第一位用户在 Cloud 页面进入内容安全步骤时看到 `Tencent credentials are absent`。定位确认：这是调用前的配置缺失，不是照片失败、IAM `Unauthorized` 或 ImageModeration 服务拒绝；Cloud 不读取产品负责人电脑上的本机 `.env`。
+- 将 ImageModeration、CompareFace、BeautifyPic 和 8B 安全错误提示统一为：在本机 `.env` 或 Streamlit Cloud App Settings → Secrets 配置根级 `TENCENT_SECRET_ID` 与 `TENCENT_SECRET_KEY`。Cloud 的 Secrets 会作为环境变量提供给应用，变量名必须与 `AppSettings` 字段一致；本次不改变合同、权限、Provider 或图片数据流。
+- 已把修复后的代码和说明提交到 `main`；保存 Secrets 后需重启/重新运行 App，再由产品负责人重新触发安全检查。若仍失败，按“变量名/是否成对/是否配置到正确 App/重启/腾讯账号权限”顺序排查。
+
+## 2026-09-01｜前端与交互设计需求文档（设计规格完成，未改应用代码）
+
+### 本轮完成
+
+- 新增[《前端与交互设计需求文档》](前端与交互设计需求文档.md)，将执行版 PRD、PRODUCT_RULES、CONTRACTS、PROJECT_CONTEXT、当前 Streamlit 页面和第一位用户测试说明中的真实边界，整理为可直接交付的 UI/UX Spec。
+- 规格覆盖：产品概念与视觉隐喻、三空间信息架构、首次/回访/单张/多脸/批量旅程、Agent 状态机映射、Intent/Plan/Consent/Execute/Verify/Feedback 交互、组件状态、图标、颜色 token、字体、动效、响应式、文案、隐私、可访问性、指标和 UI Definition of Done。
+- 明确把“已实现并验证”“已冻结待实现”和“产品经理待决策”分开；管理员 RAG/运营页面与 C 端导航隔离；不把 RAG 质量、真实视觉效果、留存或页面样张写成已验证结果。
+
+### 当前状态与下一 Gate
+
+- 这是设计与前端交接文档，不是应用代码变更；当前 Streamlit 页面仍保持工程验证型原型。
+- 交互结构、低实体原则和四色家族沿用已冻结决策；具体实现 token、字体、前端承载、移动端范围、批量/多脸入口和记录持久化仍按文档中的红色待决策项处理。
+- 产品负责人确认待决策项后，才进入 UI 视觉实现 Gate；实现后必须按文档 Definition of Done 复核状态真实性、授权/隐私、可访问性和当前合同/Trace 不变量。

@@ -141,8 +141,9 @@ class TencentCompareFaceClient:
         policy = policy or SubjectMatchPolicy.v0()
         if not self.settings.has_tencent_credentials:
             raise SubjectMatchCredentialsMissingError(
-                "Tencent credentials are absent. Configure both values in local .env "
-                "before a live CompareFace call."
+                "Tencent credentials are absent. Configure both "
+                "TENCENT_SECRET_ID and TENCENT_SECRET_KEY in local .env or Streamlit "
+                "Cloud App Settings → Secrets before a live CompareFace call."
             )
 
         try:
