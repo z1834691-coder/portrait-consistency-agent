@@ -110,6 +110,15 @@
 
 腾讯 Web 测试 License 已由产品负责人提交并在控制台显示“正常”，绑定精确主机名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，有效期显示为 2026-08-30 至 2026-09-13。此处只记录非敏感的项目、域名、状态和期限；License Key/Token 不写入本仓库、Trace、报告或回复。Web License 状态不等同于 Cloud 应用公开、图片链路生产化或新 Provider 准入。
 
+### 2026-09-01｜Cloud ImageModeration 错误回执修复
+
+第一位用户完成 Streamlit Cloud Secrets 配置后，应用已经越过本地凭据前置检查，但一次真实 `ImageModeration` 失败只显示通用提示，无法从页面直接看到腾讯的诊断事实。现已修正为：
+
+- 腾讯 API 失败时，页面显示 `error_code` 与 `RequestId`（没有 RequestId 时显示“未返回”）；
+- 当前会话脱敏 Trace 同步保存 `error_type`、`error_code`、`provider_request_id`，便于用户复制给腾讯支持或继续核对 CAM；
+- 不保存腾讯原始错误全文、图片、Base64、密钥，也不自动重试；本次失败继续 fail closed，不进入 Profile/同人/修图；
+- 这一步只补齐“真实失败可定位”的可观测性，不代表 Cloud ImageModeration 已成功。产品负责人刷新应用后，再执行一次明确授权的内容安全检查即可得到下一条真实腾讯诊断回执。
+
 ## 后续重复验证规则
 
 1. 继续只在本机 `.env` 中保存凭据，不发送到聊天、截图或 Git；

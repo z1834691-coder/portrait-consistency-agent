@@ -79,6 +79,8 @@ from portrait_consistency_agent.services.tencent_safety import (
     TencentContentSafetyApiError,
     TencentImageModerationClient,
     build_content_safety_decision,
+    safe_error_message,
+    safe_error_trace,
 )
 from portrait_consistency_agent.services.tencent_subject import (
     SubjectMatchCredentialsMissingError,
@@ -387,9 +389,9 @@ def render_checkpoint6(
                 store.record_event(
                     session_id,
                     "reference_content_safety_failed",
-                    {"photo_sha256": reference_hash, "error_type": type(exc).__name__},
+                    {"photo_sha256": reference_hash, **safe_error_trace(exc)},
                 )
-                st.error(str(exc))
+                st.error(safe_error_message(exc))
     if reference_safety is not None:
         st.write(f"已保存的安全结果：`{reference_safety.status.value}`")
 
@@ -511,9 +513,9 @@ def render_checkpoint6(
                 store.record_event(
                     session_id,
                     "target_content_safety_failed",
-                    {"photo_sha256": target_hash, "error_type": type(exc).__name__},
+                    {"photo_sha256": target_hash, **safe_error_trace(exc)},
                 )
-                st.error(str(exc))
+                st.error(safe_error_message(exc))
     if target_safety is not None:
         st.write(f"已保存的目标照安全结果：`{target_safety.status.value}`")
 

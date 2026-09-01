@@ -1564,6 +1564,13 @@ external_provider_called       → false
 - 将 ImageModeration、CompareFace、BeautifyPic 和 8B 安全错误提示统一为：在本机 `.env` 或 Streamlit Cloud App Settings → Secrets 配置根级 `TENCENT_SECRET_ID` 与 `TENCENT_SECRET_KEY`。Cloud 的 Secrets 会作为环境变量提供给应用，变量名必须与 `AppSettings` 字段一致；本次不改变合同、权限、Provider 或图片数据流。
 - 已把修复后的代码和说明提交到 `main`；保存 Secrets 后需重启/重新运行 App，再由产品负责人重新触发安全检查。若仍失败，按“变量名/是否成对/是否配置到正确 App/重启/腾讯账号权限”顺序排查。
 
+## 2026-09-01｜Cloud ImageModeration 真实错误回执可观测性修复
+
+- 第一位用户完成 Cloud Secrets 配置后，ImageModeration 已越过“凭据缺失”前置门，但页面只显示 `Tencent ImageModeration request failed. See the receipt for request_id/error_code.`，没有把可安全排查的错误码和 `RequestId` 呈现出来，导致无法区分 IAM、服务配置、参数或网络问题。
+- 新增 `safe_error_trace` / `safe_error_message`：对腾讯 API 失败只保留 `error_code`、`provider_request_id` 和异常类型；页面显示这两项回执，Trace 同步写入同一脱敏投影；不保存原图、Base64、密钥或腾讯原始错误全文。缺失 `RequestId` 时显示“未返回”。
+- 这次修复不改变安全门的 `Pass`/`Review`/`Block` 路由，也不自动重试或放行；用户下一次点击安全检查即可获得真实诊断证据。随后若错误码是 `UnauthorizedOperation`，按 CAM/IMS 权限继续处理；若是参数/服务类错误，按腾讯返回码处理。
+- 定向测试 12 条通过；全量测试 `151 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 均通过。Cloud 代码需等待 Streamlit 重建后才会显示新回执文案。
+
 ## 2026-09-01｜前端与交互设计需求文档（设计规格完成，未改应用代码）
 
 ### 本轮完成

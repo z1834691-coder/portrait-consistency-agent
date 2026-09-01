@@ -72,7 +72,7 @@
 2026-09-01 本地复核结果：
 
 ```text
-pytest -q                         → 150 passed, 4 warnings
+pytest -q                         → 151 passed, 4 warnings
 ruff check                        → passed
 ruff format --check               → 114 files already formatted
 compileall                        → passed

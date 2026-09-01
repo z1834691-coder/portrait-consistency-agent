@@ -5,7 +5,7 @@
 - Python：3.10（由 `uv` 管理）；
 - 依赖：`pyproject.toml` + `uv.lock`；当前增加 `numpy`、`opencv-python-headless`（质量/几何基线）、腾讯 IAI/IMS SDK（主体/内容安全 Adapter）。RAG P0-B 的 `torch` + `transformers` 已移为可选 `rag-local` extra：缺少它们或模型权重时会退回 P0-A，不阻塞轻量 Streamlit 部署；8A 规划器仍使用现有 Pydantic/本地标准库，不让 LLM 直接生成视觉数值；
 - 本地服务：`make run` 仍显式监听 `127.0.0.1:8501`；部署包可由 Community Cloud 从 `main/app.py` 构建，但默认保持 Private/受邀测试。Cloud 容器在美国且磁盘不保证持久化，真实照片/跨境/长期数据不得在未确认前启用；`.streamlit/config.toml` 关闭本地匿名使用统计，并启用 CORS/XSRF 默认保护；
-- 密钥：只放在忽略的 `.env`，本仓库不提供或保存任何真实凭据；
+- 密钥：本机只放在忽略的 `.env`，Cloud 只放在对应 App 的根级 Secrets；本仓库不提供或保存任何真实凭据。Cloud ImageModeration 失败时，页面和脱敏 Trace 只显示 `error_code`/`provider_request_id`，不显示原始 SDK 错误全文；
 - 数据：本地运行账本 SQLite/JSONL trace 已启用；RAG 权威知识另用 `storage/knowledge.sqlite3` 保存审核知识、FTS 索引与 P0-C advisory/bad-case 脱敏投影，P0-B 的 `storage/knowledge_vectors.sqlite3` 只保存可由权威知识重建的向量与 hash；本地模型权重位于 Git 忽略的 `storage/model_cache/`。原图不进入任何数据库、向量索引或 trace。
 
 ## 初始化

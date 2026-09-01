@@ -32,6 +32,35 @@ class TencentContentSafetyApiError(RuntimeError):
         self.request_id = request_id
 
 
+def safe_error_trace(exception: BaseException) -> dict[str, object]:
+    """Return the minimum safe provider error facts for a trace.
+
+    Tencent's SDK error body can contain request-specific detail.  The UI and
+    the local ledger therefore keep only the stable exception type, Tencent's
+    error code, and its request id when available.  The image, credentials,
+    and raw SDK message never enter this projection.
+    """
+
+    payload: dict[str, object] = {"error_type": type(exception).__name__}
+    if isinstance(exception, TencentContentSafetyApiError):
+        payload["error_code"] = exception.error_code
+        payload["provider_request_id"] = exception.request_id
+    return payload
+
+
+def safe_error_message(exception: BaseException) -> str:
+    """Create a user-readable error without exposing image or credential data."""
+
+    if isinstance(exception, TencentContentSafetyApiError):
+        request_id = exception.request_id or "未返回"
+        return (
+            "Tencent ImageModeration 调用失败。"
+            f"错误码：{exception.error_code}；RequestId：{request_id}。"
+            "请保留这两项回执用于排查，系统不会继续放行本次照片。"
+        )
+    return str(exception)
+
+
 @dataclass(frozen=True)
 class TencentImageModerationResponse:
     request_id: str

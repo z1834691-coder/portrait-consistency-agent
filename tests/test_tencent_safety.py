@@ -6,9 +6,12 @@ from portrait_consistency_agent.services.provider_cards import load_tencent_imag
 from portrait_consistency_agent.services.tencent_safety import (
     ContentSafetyCredentialsMissingError,
     ContentSafetyDecision,
+    TencentContentSafetyApiError,
     TencentImageModerationClient,
     TencentImageModerationResponse,
     build_content_safety_decision,
+    safe_error_message,
+    safe_error_trace,
 )
 
 
@@ -70,3 +73,21 @@ def test_moderation_client_refuses_network_without_credentials() -> None:
 
     with pytest.raises(ContentSafetyCredentialsMissingError, match="Streamlit Cloud"):
         client.moderate_base64(b"a")
+
+
+def test_provider_error_projection_keeps_code_and_request_id_without_raw_message() -> None:
+    error = TencentContentSafetyApiError(
+        "UnauthorizedOperation.Unauthorized",
+        "secret-bearing provider detail must not be shown",
+        request_id="request_123",
+    )
+
+    assert safe_error_trace(error) == {
+        "error_type": "TencentContentSafetyApiError",
+        "error_code": "UnauthorizedOperation.Unauthorized",
+        "provider_request_id": "request_123",
+    }
+    message = safe_error_message(error)
+    assert "UnauthorizedOperation.Unauthorized" in message
+    assert "request_123" in message
+    assert "secret-bearing" not in message

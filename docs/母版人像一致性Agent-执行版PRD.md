@@ -8,6 +8,8 @@
 
 > **最新状态覆盖（2026-09-01）：** v3 Holdout 已由产品负责人逐题审核并完成一次私有聚合盲测；质量 project Gate=`FAIL`，hard-safety=PASS，逐题答案不回流开发。Streamlit Cloud Private 页面已打开，第一位用户的真实照片流程和 UI 8C 多轮图片回执仍待产品负责人亲自操作；8C-1/8C-2 的控制逻辑与 fixture 回归已通过。阅读本文较早的历史快照时，以本覆盖条目和第 13.2、17.18 节为准。
 
+> <span style="color:#C00000"><strong>2026-09-01 实时补充：</strong>第一位用户在 Cloud 配置 Secrets 后，ImageModeration 已进入真实请求但返回失败；原页面仅显示通用错误，无法定位具体原因。现已补齐安全错误回执投影：页面和脱敏 Trace 仅显示腾讯 `error_code`、`RequestId` 与异常类型，不显示原始错误全文、图片或密钥；失败仍 fail closed，不自动重试、不放行照片。刷新 Cloud 应用后再次执行安全检查，即可得到下一条真实腾讯诊断回执。本次不把“请求失败”写成 IMS 通过，也不改变现有 Pass/Review/Block 路由。</span>
+
 ## 0. 这份文档和原启动蓝图是什么关系
 
 [原启动蓝图](../../outputs/人像修图一致性Agent-项目启动蓝图.md)记录了项目最初的探索、候选方案和排期，其中保留了一些后来被否决的设计，例如展示实验性 0—100 指数、把最多三轮写进合同类型、每轮最多三个参数等。它继续作为“为什么这样探索”的历史资料，但**不再代表当前实际产品**。
@@ -605,6 +607,8 @@ P0-B 当前不调用 LLM；当前运行时最多采纳 3 条已审核 evidence�
 
 <span style="color:#C00000"><strong>色彩收敛状态：</strong>已选定“参考图层次迁移”作为唯一视觉基线，并冻结雾紫、肉粉／奶油粉、墨黑与桃红的四色体系；同时冻结短标题／短按钮、低装饰密度和显著自然语言入口原则。新的奥卡姆式页面样张仍待产品负责人审核；当前样张不改变现有 Streamlit 代码、工具权限、照片处理链路或用户同意规则。页面审核通过后才进入 UI 视觉实现与可达性复核 Gate。</span>
 
+前端信息架构、页面状态、组件、视觉 token、动效、文案、可访问性与验收指标的执行规格见[《前端与交互设计需求文档》](前端与交互设计需求文档.md)。该专项文档只把已冻结产品边界翻译成 UI 需求，不新增业务合同或执行权限。
+
 ---
 
 ## 3. 两条主用户旅程
@@ -1141,7 +1145,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | UI 内真实 API 执行                        | **已实现并离线验证** | 8B 确认按钮、确定性 Gate、Tencent Adapter、ProviderRun、会话内结果预览；6 个 fixture 测试 | 尚无新的 UI live receipt；不自动重试、不持久化结果、不代表修图有效                                   |
 | VerificationResult 与计划族续跑              | **已实现并离线验证**   | 结果图内存解码、同一几何观察器、逐特征趋势、目标证据、STOP/REPLAN/RESHOOT/MANUAL_REVIEW；子计划/父子回执/三轮上限/显式反馈/scope fail-closed 的 6 条 8C-2 测试与 fixture Trace；P0-C 可将受限策略 evidence 留入 `knowledge_refs` | 未有真实 UI 三轮照片回执；external/hybrid 复测、妆面/肤色自动验收和 LLM 自由策略未实现         |
 | 批量模式                                 | **已冻结待开发**   | 用户旅程与逐张合同                                                               | 无批量执行代码                                               |
-| 受邀 Streamlit URL / 本地服务器            | **私有 GitHub 部署包已推送；Cloud Private 页面已打开待第一位用户操作** | 私有仓库 `z1834691-coder/portrait-consistency-agent` 的 `main/app.py`、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步；页面首页可加载 | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略、UI 真实 Provider 回执和用户数据仍需受邀测试确认 |
+| 受邀 Streamlit URL / 本地服务器            | **私有 GitHub 部署包已推送；Cloud Private 页面已打开待第一位用户操作** | 私有仓库 `z1834691-coder/portrait-consistency-agent` 的 `main/app.py`、`uv.lock`、`src/` 入口兼容、私有/受邀说明已同步；页面首页可加载；第一位用户已触发一次真实 ImageModeration 失败，现可安全显示 `error_code`/`RequestId` | Community Cloud 容器在美国且磁盘不保证持久化；真实照片、Secrets、名单、费用、删除策略、UI 真实 Provider 回执和用户数据仍需受邀测试确认；Cloud 重建后需按真实错误码继续排查 |
 | 接受概率模型                               | **未来候选**     | 数据/评测规则已定义                                                              | V0 禁止显示                                               |
 | RAG P0-A / P0-B 本地检索                         | **已实现并本地验证**     | SQLite `KnowledgeItem/KnowledgeChunk`、3 张来源卡/10 条原子规则、metadata/FTS5、dense8/RRF10/rerank10、过期/冲突/缺槽/注入降级、依据卡、Trace、15 条检索回归与默认禁止下载 smoke | 只排序已审核工具知识；不读照片/原话、不调用 LLM/腾讯、不产生参数/ProviderRun |
 | RAG P0-C 受限 evidence 回接                    | **已实现并本地验证**     | `RagAdvisoryDecision` / `RagBadCaseRecord`、8A/8C advice 注入、direct/reference/conflict 分层、`EditPlan`/验证合同引用、G01/G09/miss/baseline 4 条回归与本地 smoke | `execution_authorized=false`；不新增 Provider、参数、外部/混合复测或自动 worker，也不产生人工 Gold Set 数值结论 |

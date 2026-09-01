@@ -112,7 +112,7 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
   uv run python scripts/audit_rag_lifecycle.py
 ```
 
-它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。本轮全量回归为 `150 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。
+它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。本轮全量回归为 `151 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。Cloud ImageModeration 若真实调用失败，页面和 Trace 会保留脱敏错误码与 RequestId 供定位。
 
 ## 2026-09-01｜v3 Holdout 与第一位用户入口
 

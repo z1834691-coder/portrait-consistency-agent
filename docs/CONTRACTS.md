@@ -403,7 +403,7 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 ## 18. 2026-08-30 最新评测治理状态
 
-本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `150 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 仍为空的 answerless 模板，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `151 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
 
 ## 19. 2026-08-30 部署与候选 Provider 当前合同边界
 

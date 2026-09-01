@@ -325,7 +325,7 @@ INPUT_QUALITY、SUBJECT_MATCH、FEATURE_EXTRACTION、ACCEPTANCE_CALIBRATION、PA
 
 ## 5. Prompt 上线 Gate
 
-`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-08-30 在 P0-B/P0-C、P0-D 生命周期审计、只读 RAG Dashboard、Gold evaluator、私有 aggregate scorer、failure analyzer、优化看板与两条 Provider candidate shell 后的最新全量 `uv run pytest -q` 为 `150 passed, 4 warnings`。
+`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-09-01 Cloud 错误回执修复后，最新全量回归为 `151 passed, 4 warnings`，并继续要求错误码/RequestId 只进入脱敏投影。
 
 仍待完成的 Gate：产品负责人逐题审核工作区外的 v3 Holdout 草案、导出正式 answerless runtime 并完成一次独立验收；真实 UI 多轮结果/取消/删除/明确不满意和供应商失败的端到端评测；未来完整 ReAct、LLM/RAG 策略选择与文字反馈澄清 Prompt 的评测。canonical Safety Event 目录已获产品负责人审核通过；Precision C、Holdout A、Safety ID C 已冻结并落地；8C-1/8C-2 的离线测试和 smoke 已通过，但不因 fixture 通过而自动完成真实 UI 视觉效果验证。当前 Gold 基线未通过，v3 草案答案不得用于调参。
 

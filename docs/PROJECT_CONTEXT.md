@@ -29,7 +29,7 @@
 
 | 层 | 当前选择 | 边界 |
 |---|---|---|
-| UI | Streamlit | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；交互结构已冻结为“中心舞台首页 + 母版档案 + 结果记录”，雾紫／肉粉／墨黑／桃红四色、低实体与强 Agent 输入框原则已选定；新页面样张待审核，UI 代码待后续 Gate；暂不做公网开放 |
+| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；交互结构已冻结为“中心舞台首页 + 母版档案 + 结果记录”，雾紫／肉粉／墨黑／桃红四色、低实体与强 Agent 输入框原则已选定；[前端与交互设计需求文档](前端与交互设计需求文档.md)已把页面、组件、动效和 UI Gate 写成执行规格；新页面样张待审核，UI 代码待后续 Gate；暂不做公网开放 |
 | 状态/编排 | Python 状态机 + 受限 ReAct 工具提议 | 状态机拥有权限与迁移最终权；不要求 LangGraph，LLM 只能在当前状态白名单内提议下一工具 |
 | 数据 | SQLite + JSONL trace + 匿名 `product_events`（本地）；部署后按平台存储方案扩展 | Demo 仍不做多租户；主体锚点需加密、可删除、受限访问、183 天到期；当前只是合同/Policy，真实加密/worker 未实现 |
 | 几何与质量视觉 | OpenCV Haar + Pillow V0 基线（可替换 CV Adapter） | 已实现真实图片解码、质量/可编辑性指标和粗粒度脸框/眼睛几何；不承担同一人物判断，后续可替换为关键点模型 |
@@ -58,11 +58,11 @@
 
 Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前执行链只用 Tencent。
 
-当前交叉校验：全量 `pytest 150 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 P0-D 生命周期审计收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；canonical Safety Event 目录已获产品负责人审核，v3 题目/答案草案已在工作区外生成并待逐题审核，下一步是完成正式 answerless runtime 与一次性盲测，并继续完成新 Provider 的书面能力/License/隐私/价格/延迟、真实 receipt、Gold 回归与产品准入。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。
+当前交叉校验：全量 `pytest 151 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 Cloud 错误回执修复后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
 
 ## 2026-08-30 RAG 工程收口快照
 
-本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归已更新为 `150 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
+本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归已更新为 `151 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
 
 ## 2026-08-30 failure-pattern 实现快照
 
