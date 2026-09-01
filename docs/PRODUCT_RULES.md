@@ -504,6 +504,7 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 17. <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C + Dashboard：</strong>已实现本地 SQLite/metadata/FTS5 与本地 dense/RRF/rerank 的审核工具知识检索、来源依据卡、脱敏 Trace、8A/8C 的受限 evidence 回接，以及只读本机 RAG 治理 Dashboard；它们只回答/展示“现有工具有什么能力、限制和路由事实”，不读照片、不调 LLM/API、不产生参数或执行。Gold Set v2 评测器与答案隔离材料已实现；下一步是逐题审核/真实 predictions，再讨论自动 worker、新 Provider 正式准入和 external/hybrid Adapter。</span>
 18. <span style="color:#C00000"><strong>RAG Gold Set v2 评测：</strong>固定 34 道开发题、18 道挑战题、20 道隐藏题，同时测试工具能力、权限、隐私、生命周期、冲突和提示注入。产品负责人是唯一人工事实审核者，暂不加入第二位人工评审；盲审 LLM Judge 可以看到机器分数/指标摘要，但不能看到 Gold 答案、答案键、开发标签或实现版本。安全类必须 100% 正确拦截、0 次错误工具放行；检索/路由门槛为 Recall@5≥90%、Precision@3≥80%、MRR≥80%、nDCG@5≥85%、路由/证据关系正确率≥90%；未来解释 Faithfulness≥95%、人审—Judge 一致率≥80%、Hidden—Dev 差距≤10 个百分点。隐藏集运行器只接收无答案题目；答案键已移至产品负责人独立保管位置，工作区仅保留不含答案的保管回执。</span>
 19. <span style="color:#C00000"><strong>新 Provider 路线：</strong>选择参数级人像美化 SDK/API，并行验证火山美颜 API V2.0 静态/批量路线与腾讯特效 SDK 细粒度路线。两者目前只能建立 Candidate Card、Adapter shell、权限/预算 preflight、离线测试和 live smoke 入口；必须完成官方能力/License/隐私/地区/成本证据、真实 receipt、Gold 回归和产品负责人冻结后，才可进入 `reviewed_active`。RAG 只能提议，不能授权或直接上传照片。</span>
+20. <span style="color:#C00000"><strong>视觉／Agent 交互：</strong>冻结“中心舞台式首页／对齐工作台 + 母版档案 + 结果记录”的三空间结构。新用户只看“建立我的母版”或“我已有母版，开始本次对齐”；母版是轻量长期锚点，当前照片与本次意图居中。Agent 只在澄清、真实进度、边界和结果时发声；参数、依据、Provider 回执与脱敏 Trace 是第二层，隐藏思维链永不展示。结果页提供前后对比、下载、点赞／点踩与继续说明。动效只能表示真实状态，不能伪造调用完成。视觉基线已选为参考图的层次语法，但不使用摄影或原站资产；主色冻结为雾紫、肉粉／奶油粉、墨黑与桃红，不引入其他颜色家族。页面遵守奥卡姆剃刀：每一层只保留当前任务必要的实体；导航只保留对齐／母版／记录，首屏突出一个上传动作和一个自然语言 Agent 输入框，按钮与文案保持短句。当前视觉候选不改变任何同意、权限、外部调用、保存或审计规则，也不代表线上 UI 已升级。</span>
 
 ## 2026-08-30｜Failure Pattern 与 RAG 自校正边界（已实现）
 
@@ -569,3 +570,9 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 **冻结决策。**生命周期审计只生成 `RagLifecycleAudit` 与脱敏 Trace：过期/撤回/冲突条目阻断检索，未生效/候选条目保持 hold，到期复审/缺 URI/零规则进入人工复核，健康条目保持 active；`auto_status_change_allowed=false`、`auto_publish_allowed=false`。知识更新必须由产品负责人人工审核后改 Card/Policy、重建派生索引并重跑回归。RAG 仍只能提议，不能授权 Provider 或图片出站。
 
 **效果与边界。**当前 3 张审核 Tencent Card、10 条有效原子规则的审计结果为 `complete`、无生命周期问题、dense manifest=`in_sync`；审计记录可落 SQLite 并在治理看板查看。该结果证明知识账本与索引在本次快照一致，不证明 RAG 质量 Gate 通过，也不构成自动实时同步、生产合规或新 Provider 准入。
+
+## 2026-09-01 当前评测与真实用户边界
+
+产品负责人已完成 v3 Holdout 36 题的逐题审核，并按 Holdout A 完成一次工作区外私有聚合盲测。运行器只接收无答案 `case_id + query`；答案键不回流仓库、应用、Prompt 或检索规则。盲测未调用 LLM、网络、照片或 Provider，结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety 0/36 违规（PASS），project quality Gate=`FAIL`。
+
+这次失败是质量信号，不是执行授权信号：RAG 仍然只能提议，不能新增参数、Provider、权限或图片出站；后续只能在 public/dev/challenge 上修正并回归，需要再次验收时必须另建独立 Holdout。Streamlit Private 页面已打开，但真实照片端到端、UI 多轮图片回执和用户反馈必须由产品负责人亲自完成；Codex 不代上传、不代点击外部图片调用。

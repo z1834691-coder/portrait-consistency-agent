@@ -29,7 +29,7 @@
 
 | 层 | 当前选择 | 边界 |
 |---|---|---|
-| UI | Streamlit | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；暂不做公网开放 |
+| UI | Streamlit | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；交互结构已冻结为“中心舞台首页 + 母版档案 + 结果记录”，雾紫／肉粉／墨黑／桃红四色、低实体与强 Agent 输入框原则已选定；新页面样张待审核，UI 代码待后续 Gate；暂不做公网开放 |
 | 状态/编排 | Python 状态机 + 受限 ReAct 工具提议 | 状态机拥有权限与迁移最终权；不要求 LangGraph，LLM 只能在当前状态白名单内提议下一工具 |
 | 数据 | SQLite + JSONL trace + 匿名 `product_events`（本地）；部署后按平台存储方案扩展 | Demo 仍不做多租户；主体锚点需加密、可删除、受限访问、183 天到期；当前只是合同/Policy，真实加密/worker 未实现 |
 | 几何与质量视觉 | OpenCV Haar + Pillow V0 基线（可替换 CV Adapter） | 已实现真实图片解码、质量/可编辑性指标和粗粒度脸框/眼睛几何；不承担同一人物判断，后续可替换为关键点模型 |
@@ -71,3 +71,9 @@ Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev +
 ## 2026-08-30 评测治理冻结快照
 
 Precision C 已实现为固定/覆盖式/返回式三种并行口径；Holdout A 已将 v2 降级为历史诊断并创建 v3 answerless 模板，工作区外另有 `OWNER_REVIEW_DRAFT` 题目/答案草案；Safety ID C 已建立并经产品负责人审核 `RAG_EVT_*` 确定性字典，未知标签保持人工复核。public 报告固定 Precision@3=`47.44%`、覆盖式/返回式=`100%`，project Gate 仍 `FAIL`。这些变更只扩展评测和保管可观测性，不改变 RAG advisory、Provider fail-closed 或图片执行权限。
+
+## 2026-09-01 当前状态覆盖
+
+产品负责人已审核 v3 Holdout 36 题，并按 Holdout A 完成一次工作区外私有聚合盲测。runtime 仅含 `case_id + query`，runner 未读答案键、照片、向量、LLM、Provider 或网络；聚合结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety=0/36（PASS），project quality Gate=`FAIL`。这份结果用于识别当前 baseline 的泛化问题，不得用于逐题调参。
+
+Streamlit Cloud Private 页面已经打开，等待产品负责人亲自完成第一位用户的真实照片流程。8C-1/8C-2 的控制逻辑和 fixture 仍已验证，但尚无新的 UI 真实多轮图片回执或视觉改善证据；详见 `FIRST_USER_E2E_TEST.md` 与 `MIDTERM_STATUS_2026-09-01.md`。

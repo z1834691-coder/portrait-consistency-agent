@@ -360,3 +360,9 @@ Streamlit Cloud 只是代码运行入口，不会改变 Prompt 的数据边界�
 生命周期审计不调用 LLM，也不让模型判断“这条资料是否过期”或“是否可以发布”。确定性服务只读取已审核知识卡的元数据、原子规则计数和派生 dense manifest，输出 `RagLifecycleAudit` 与脱敏 Trace。过期、撤回、冲突、未生效、候选未发布和缺失来源等状态必须按固定事件代码路由；审计只能提出 `review_required`、`hold_not_yet_effective` 或 `blocked_from_retrieval`，不能改状态、发布、删除、重建索引或授权工具调用。
 
 当 RAG 被 8A/8C 消费时，Prompt 只能接收通过生命周期审计和 metadata 硬过滤后的 direct/reference/conflict 证据摘要；检索 miss、过期或冲突仍须返回 `UNKNOWN`/`BASELINE`/`MANUAL_REVIEW_REQUIRED` 等受限结果。该治理约束与 RAG `execution_authorized=false` 一致，不会把审计报告或 LLM 建议变成 `ProviderRun`。
+
+## 12. 2026-09-01 当前状态覆盖
+
+产品负责人已完成 v3 Holdout 36 题逐题审核，并按 Holdout A 完成一次独立的 answerless 盲测。正式回执为 `36/36` 有预测、`hidden_answer_key_read=false`、未调用 LLM/网络/图片 Provider；hard-safety `0/36` 违规，质量 project Gate 仍为 `FAIL`。因此本次答案不得回流 Prompt，后续只能在 public/dev/challenge 上做可回归候选修正，并用新的独立 Holdout 重新验收。
+
+Private Streamlit 页面已打开，第一位用户的真实照片流程和 UI 8C 多轮图片回执仍待产品负责人亲自触发。8C-1/8C-2 的代码与 fixture 只能证明结构化观察、父子计划/回执血缘、同 scope 有界续跑和反馈硬停止；不能在 Prompt、简历或 Demo 中写成真实视觉改善。当前 RAG 仍是 advisory-only，任何 Prompt 都不能解除权限、生成 ProviderRun、读取答案键或把“模型建议”当作成功事实。

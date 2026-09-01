@@ -2,6 +2,8 @@
 
 当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created / Tencent Web License normal`
 
+> **最新状态（2026-09-01）：** 产品负责人已审核 v3 Holdout 36 题并完成一次私有聚合盲测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、hard-safety=PASS，但 project quality Gate=`FAIL`。Private Streamlit 页面已打开，等待产品负责人亲自完成第一位用户照片流程；8C-2 多轮控制目前只有代码/fixture 证据，不能写成真实 UI 多轮图片回执。
+
 目标：在 2026-09-04 前完成一个真实可运行、可录屏、可追溯的 Demo。它帮助用户以一张确认的母版建立五官与脸型标准，再对本人单张或同组照片进行诊断、受确认保护的编辑和复测；它不是身份搜索、审美评分或生产服务。
 
 ```text
@@ -23,11 +25,12 @@
 - LLM：DeepSeek V4 Flash 的文本 `IntentFrame` Adapter、显式文字授权、Pydantic Schema 校验和本地模板 fallback 已接入；固定无个人信息文本的真实 live smoke 已返回合法 Schema（2957 ms、1471 tokens），但这不代表图片编辑或多轮 Agent 已验证。
 - <span style="color:#C00000"><strong>8C-1/8C-2：已实现结果图本地观察、受限 `VERIFICATION_STRATEGY_SELECT` baseline、逐特征趋势、结构化目标证据、父子子计划/ProviderRun 血缘、三轮上限和点赞/点踩/文字 hash 反馈。首次确认范围仍有效且证据满足时，系统会自动执行并自动复测下一轮；每次触发前后都有脱敏 Trace，超出范围不会调用。</strong></span>
 - <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C：已实现独立本地 SQLite 权威知识库、metadata 硬过滤、FTS5、local dense、RRF、local reranker、来源依据卡、脱敏 Trace，以及对 8A/8C 的受限 evidence 回接。</strong>当前导入 3 张人工审核的 Tencent Provider Card、拆成 10 条原子规则；P0-B 只从本地缓存读取固定模型 revision，模型缺失时退回 P0-A。P0-C 把结果分为 direct/reference/conflict，`execution_authorized=false`；它不读取照片或用户原话，不调用 LLM/Tencent/API，不生成参数或新的工具权限。另有一个只读本机 RAG 治理 Dashboard，展示脱敏知识/路由/bad-case 聚合；它不是自动 worker、外部/混合复测或“RAG 自动修图”。</span>
-- <span style="color:#C00000"><strong>Gold Set v2：已实现独立离线评测器、无答案 public 集（34 dev + 18 challenge）、20 题 holdout 输入包、独立答案键、盲审输入合同和可视化 HTML 报告生成。当前 public deterministic baseline 与私有 holdout aggregate 均已运行且 `FAIL`：公开集的固定分母 Precision@3=47.44%，私有隐藏集 Route=25.00%。这说明当前基线还不具备可宣称的泛化效果。</strong></span>
+- <span style="color:#C00000"><strong>Gold Set v2/v3：v2 保留为历史诊断；v3 已由产品负责人审核 36 题，并按 Holdout A 完成一次私有聚合盲测。v3 结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、hard-safety=PASS、project Gate=`FAIL`。逐题答案不回流开发，不能据此宣称 RAG 泛化通过。</strong></span>
 - <span style="color:#C00000"><strong>Provider 扩展：火山美颜 API V2.0 与腾讯特效 SDK 已建立 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 smoke 入口；两者均未接入 SDK/API、未发送图片、未使用密钥，状态保持 `candidate`/fail-closed。产品决策是火山 V0 暂不购买/接入，当前执行链只用 Tencent。</strong></span>
 - <span style="color:#C00000"><strong>RAG failure-pattern：已生成脱敏的公开分层指标、隐藏集聚合错误类型、SOP 与 proposal-only 自校正候选；候选公开回归无指标回退但未推广，project Gate 仍为 `FAIL`。RAG 治理看板现可嵌入公开评测、隐藏聚合和失败分析 HTML，另有只读 RAG 优化看板。</strong></span>
 - <span style="color:#C00000"><strong>RAG 生命周期审计：已实现 metadata-only `RagLifecycleAudit`、显式审计脚本、SQLite 审计账本、dense manifest 一致性检查和治理看板入口。当前 3 张审核 Tencent Card/10 条有效规则审计为 `complete`、issue 数为 0、index=`in_sync`；审计不自动发布/改状态/删除/重建索引，RAG 仍只能提议。</strong></span>
-- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)；只读探针返回登录跳转。腾讯 Web License 已以纯主机名提交并在控制台显示“正常”（2026-08-30 至 2026-09-13）。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
+- <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)，页面已在浏览器打开待第一位用户操作；腾讯 Web License 已以纯主机名提交并在控制台显示“正常”（2026-08-30 至 2026-09-13）。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
+- <span style="color:#C00000"><strong>视觉交互方向已冻结、尚未实现：</strong>产品采用“中心舞台式首页／对齐工作台 + 母版档案 + 结果记录”的三空间结构；Agent 只在澄清、真实进度、边界与结果时用人话发声，参数/回执/脱敏 Trace 位于第二层。参考图的层次语法与雾紫、肉粉／奶油粉、墨黑、桃红四色体系已冻结；页面遵守奥卡姆剃刀，只突出当前任务、一个上传动作和一个自然语言入口。当前低实体页面样张仍待产品负责人审核，不等于已部署 UI，不改变照片权限、工具调用或数据边界。</span>
 
 ## 重要边界
 
@@ -40,11 +43,11 @@
 - 腾讯 IMS ImageModeration Adapter 已完成两条真实 live 证据：一张样本返回 `Block`（`RequestId=21bf408d-929a-46ec-83aa-78f071eff556`），本次明确授权照片返回 `Pass`（`RequestId=211483d5-4ee0-41e8-b5d5-156f81557a69`）。这只验证了服务、权限、签名、解析和两种路由样例，不代表所有照片都安全；`Block` 样本仍不得进入修图；
 - 当前默认仍只在本机运行。部署包可供 Community Cloud 受邀 Beta 使用，但平台容器位于美国且磁盘不保证持久化；没有完成数据出境确认、访问名单、Secrets、费用和删除策略前，不开放真实照片公网测试。
 
-当前产品和工程的共同真相源是 [执行版 PRD](docs/母版人像一致性Agent-执行版PRD.md)。规则见 [PRODUCT_RULES.md](docs/PRODUCT_RULES.md)，合同见 [CONTRACTS.md](docs/CONTRACTS.md)，LLM Prompt 边界见 [AGENT_PROMPTS.md](docs/AGENT_PROMPTS.md)，检查点 7 的输入/输出/案例/Trace 见 [DEEPSEEK_INTENT_GATE.md](docs/DEEPSEEK_INTENT_GATE.md)，RAG 决策与后续 Gate 见 [RAG_DECISION_GATE.md](docs/RAG_DECISION_GATE.md)，failure pattern SOP 见 [RAG_FAILURE_ANALYSIS_SOP.md](docs/RAG_FAILURE_ANALYSIS_SOP.md)，P0-A/P0-B/P0-C 实际实现/Trace 见 [RAG_P0A_RETRIEVAL_GATE.md](docs/RAG_P0A_RETRIEVAL_GATE.md)、[RAG_P0B_HYBRID_RETRIEVAL_GATE.md](docs/RAG_P0B_HYBRID_RETRIEVAL_GATE.md) 与 [RAG_P0C_ADVISORY_INTEGRATION_GATE.md](docs/RAG_P0C_ADVISORY_INTEGRATION_GATE.md)，Gold evaluator/盲审约束见 [RAG_GOLD_EVALUATOR.md](docs/RAG_GOLD_EVALUATOR.md)、逐题人工模板见 [RAG_GOLD_SET_V2_HUMAN_REVIEW.md](docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md)，待人工审阅的 [Gold Set v2](docs/RAG_GOLD_SET_V2_REVIEW.md) 与 [隐藏答案键保管回执](docs/RAG_GOLD_SET_V2_HOLDOUT_CUSTODY.md) 均不进入调参/训练，Provider 候选对比见 [PROVIDER_EXPANSION_RESEARCH.md](docs/PROVIDER_EXPANSION_RESEARCH.md)，决策过程见 [DECISION_LOG.md](docs/DECISION_LOG.md)，逐步证据见 [DEVELOPMENT_PROGRESS.md](docs/DEVELOPMENT_PROGRESS.md)。
+当前产品和工程的共同真相源是 [执行版 PRD](docs/母版人像一致性Agent-执行版PRD.md)。规则见 [PRODUCT_RULES.md](docs/PRODUCT_RULES.md)，合同见 [CONTRACTS.md](docs/CONTRACTS.md)，LLM Prompt 边界见 [AGENT_PROMPTS.md](docs/AGENT_PROMPTS.md)，检查点 7 的输入/输出/案例/Trace 见 [DEEPSEEK_INTENT_GATE.md](docs/DEEPSEEK_INTENT_GATE.md)，RAG 决策与后续 Gate 见 [RAG_DECISION_GATE.md](docs/RAG_DECISION_GATE.md)，failure pattern SOP 见 [RAG_FAILURE_ANALYSIS_SOP.md](docs/RAG_FAILURE_ANALYSIS_SOP.md)，P0-A/P0-B/P0-C 实际实现/Trace 见 [RAG_P0A_RETRIEVAL_GATE.md](docs/RAG_P0A_RETRIEVAL_GATE.md)、[RAG_P0B_HYBRID_RETRIEVAL_GATE.md](docs/RAG_P0B_HYBRID_RETRIEVAL_GATE.md) 与 [RAG_P0C_ADVISORY_INTEGRATION_GATE.md](docs/RAG_P0C_ADVISORY_INTEGRATION_GATE.md)，Gold evaluator/盲审约束见 [RAG_GOLD_EVALUATOR.md](docs/RAG_GOLD_EVALUATOR.md)、逐题人工模板见 [RAG_GOLD_SET_V2_HUMAN_REVIEW.md](docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md)，v3 保管与一次性运行边界见 [RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md](docs/RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md)，第一位用户操作见 [FIRST_USER_E2E_TEST.md](docs/FIRST_USER_E2E_TEST.md)，中期快照见 [MIDTERM_STATUS_2026-09-01.md](docs/MIDTERM_STATUS_2026-09-01.md)，Provider 候选对比见 [PROVIDER_EXPANSION_RESEARCH.md](docs/PROVIDER_EXPANSION_RESEARCH.md)，决策过程见 [DECISION_LOG.md](docs/DECISION_LOG.md)，逐步证据见 [DEVELOPMENT_PROGRESS.md](docs/DEVELOPMENT_PROGRESS.md)。
 
 ## 下一开发 Gate
 
-RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断；v3 已在工作区外生成 `OWNER_REVIEW_DRAFT`（正式 runtime 仍为空模板）；已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。下一步是产品负责人逐题审核 v3 草案，再决定正式 runtime 与一次性盲测；候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入仍独立推进。P0-C 只提议和留证，不能改变图片执行权限。
+RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Gold Set v2 的 public baseline、无答案 holdout 和私有 aggregate 比对也已完成，但当前基线没有通过。Precision C、Holdout A、Safety ID C 已冻结并落地：评测保留固定分母并并行展示覆盖式/返回式 Precision；v2 只作历史诊断；v3 已在工作区外完成产品负责人审核并完成一次正式 answerless 盲测，质量 project Gate=`FAIL`、hard-safety=`PASS`。已知安全事件映射为 `RAG_EVT_*`，未知事件保持 `MANUAL_REVIEW_REQUIRED`。下一步优先是第一位用户完成真实页面流程、必要时记录一次 UI 8C-2 子轮，并在 public/dev/challenge 上修复 RAG 失败模式；候选 Provider 的 License/隐私/价格/区域/真实 receipt/Gold 准入仍独立推进。P0-C 只提议和留证，不能改变图片执行权限。
 
 ## 2026-08-30 RAG 优化闭环（当前真实状态）
 
@@ -65,7 +68,7 @@ portrait-consistency-agent/
 ├── data/provider_cards/           # 版本化 Provider Card（含已审核 Tencent 与 candidate 扩展）
 ├── data/evaluation/               # Gold Set v2 + v3 Holdout 模板/安全事件目录（答案键与运行包分离）
 ├── reports/                        # 本次无答案评测的 JSON/Markdown/HTML 审计产物
-├── docs/                          # PRD、规则、合同、Prompt、进展、决策、RAG Gate 与 API Gate
+├── docs/                          # PRD、规则、合同、Prompt、进展、决策、RAG Gate、API Gate 与第一位用户测试说明
 ├── scripts/                       # 默认不联网；含 8C-2 计划族 fixture smoke
 ├── src/portrait_consistency_agent/
 │   ├── agent/                     # DeepSeek 文本解析 Adapter + 本地模板 fallback
@@ -106,11 +109,11 @@ uv run python scripts/smoke_rag_p0b.py --allow-model-download
 uv run python scripts/smoke_deepseek_intent.py --allow-live
 ```
 
-2026-08-30 当前收尾校验：全量 `pytest` 实际为 `150 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、public/holdout baseline、私有 aggregate scorer、RAG advisory、RAG lifecycle audit、两个 Provider shell smoke 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 已知弃用警告。private scorer 只输出聚合结果和错误类型；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project Gate 为 `FAIL`，不得写成通过。
+2026-09-01 当前收尾校验：全量 `pytest` 实际为 `150 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall`、8C-1/8C-2 smoke、RAG advisory、RAG lifecycle audit 和 `git diff --check` 均通过。四条 warning 均为既有 Pillow 已知弃用警告。v3 private scorer 只输出聚合结果和安全事实；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project quality Gate 为 `FAIL`，不得写成通过；真实 UI 照片流程尚未由 Codex 代跑。
 
 ## 2026-08-30 评测治理冻结
 
-Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅历史聚合，v3 正式 runtime 模板位于 `data/evaluation/rag_gold_v3_holdout_runtime.template.json`，题目/答案草案已在项目工作区外独立生成并待审核。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；当前 project Gate 仍 `FAIL`。
+Precision 采用 C：固定、覆盖式、返回式三种口径并行；固定口径继续作为历史 Gate，覆盖式/返回式只做诊断。Holdout 采用 A：v2 仅作历史 aggregate，v3 已在工作区外完成产品负责人审核并完成一次正式 answerless 盲测。安全事件采用 C：版本化确定性字典 + 产品负责人确认，已知标签映射为 `RAG_EVT_*`，未知标签必须人工复核。相关报告、看板和测试已同步；v3 quality Gate 仍 `FAIL`。
 
 不要将 `.env`、真实照片、下载后的结果图片、SQLite 文件或 JSONL 日志提交到 Git。DeepSeek Key 必须从密码管理器直接粘贴到本机 `.env`，不要发送到聊天。外部腾讯首轮调用只能在用户明确同意且使用已授权照片时，以 `--allow-live` 或页面的明确确认触发；8C-2 后继调用若仍在同一首次授权 scope 内，需先通过自动 preflight 并写入 Trace，scope 变化则重新确认。DeepSeek smoke 同样必须显式传 `--allow-live`。
 

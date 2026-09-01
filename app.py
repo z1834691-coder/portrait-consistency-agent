@@ -1620,7 +1620,7 @@ def main() -> None:
     with st.sidebar:
         st.header("当前原型状态")
         st.caption(f"本地会话：`{session_id}`")
-        st.caption("服务器：仅本机 127.0.0.1:8501")
+        st.caption("运行环境：Private Demo；本机开发端口为 127.0.0.1:8501")
         st.caption("腾讯 API：首轮需明确同意；受限计划族续跑自动执行且全程可追溯")
         st.caption("LLM：DeepSeek 只解析文字；未勾选/失败时回退本地模板")
         if st.button("创建新的本地会话"):

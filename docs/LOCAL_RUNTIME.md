@@ -113,3 +113,9 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 ```
 
 它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。本轮全量回归为 `150 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。
+
+## 2026-09-01｜v3 Holdout 与第一位用户入口
+
+v3 Holdout 已由产品负责人逐题审核，并在项目工作区外按 Holdout A 完成一次正式的 answerless 私有聚合盲测。运行器只读取 `case_id + query`，未读取答案键、照片、人脸向量，未调用 LLM、Provider 或网络；质量 project Gate=`FAIL`，hard-safety=PASS。聚合结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%。逐题答案不回流开发，不能用这份 hidden 继续调参。
+
+Streamlit Community Cloud Private 页面已打开，第一位用户应按 [第一位用户端到端测试说明](FIRST_USER_E2E_TEST.md) 亲自完成上传、授权、首次执行、8C 复测和反馈。Codex 不代上传照片、不代点击外部图片调用；当前没有新的 UI 真实多轮图片回执。8C-1/8C-2 的自动化 fixture 只证明控制逻辑和 Trace。

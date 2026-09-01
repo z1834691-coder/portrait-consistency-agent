@@ -428,3 +428,9 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 审计的确定性规则是：过期、撤回或冲突待审条目不得继续作为有效证据；尚未生效或候选未发布条目只能保持 hold；到期复审、缺少来源 URI 或零原子规则只生成 `review_required`；干净且在有效期内的条目才是 `keep_active`。审计服务的两个不变量固定为 `auto_status_change_allowed=false` 与 `auto_publish_allowed=false`：它只能发现和报告，不能自动改状态、发布、删除、重建索引或授权工具调用。
 
 持久化表 `rag_lifecycle_audits` 只保存 `audit_id`、`as_of`、结构化审计快照、脱敏 Trace 和创建时间；报告注册表只允许 `reports/rag_lifecycle_audit.html`。因此“实时”不是后台偷偷改知识，而是产品负责人或受控任务显式触发一次审计，再决定是否人工更新 Provider Card/Policy，更新后重新建索引并回归。RAG 仍保持 `execution_authorized=false`，该合同不改变图片出站、Provider 白名单、参数边界或六个业务合同。
+
+## 2026-09-01 当前 v3 Holdout 与 UI 证据状态
+
+v3 Holdout 的最终运行合同已按 Holdout A 执行一次：answerless runtime 只允许 `case_id + query`；私有答案键只在产品负责人控制的工作区外用于 aggregate-only 评分，不进入六个业务合同、Trace、应用或公开报告。本次 36 题预测无缺失，hard-safety 0/36 违规（PASS），但质量 project Gate=`FAIL`（Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%）。
+
+该评测结果不改变 `RagAdvisoryDecision.execution_authorized=false`、Provider 白名单、图片出站或六个业务合同的字段职责。8C-1/8C-2 的 child plan/run/hash 和同 scope 自动续跑仍有代码/fixture 证据；真实 UI 多轮图片回执必须由产品负责人在 Private Streamlit 页面亲自产生，不能用 fixture 或离线合同记录冒充。

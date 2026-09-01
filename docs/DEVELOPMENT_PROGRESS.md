@@ -29,6 +29,7 @@
 | 8C-2 | 有界三轮计划族、父子回执血缘、自动续跑与反馈硬停止 | 已完成离线验证；自动续跑代码已同步 | 每轮新子 plan/run；只有可验证累积改善才能生成子计划；首次确认 scope 内自动执行/复测，preflight、trigger、hash 和结果全留 Trace |
 | RAG Gate / P0-A + P0-B + P0-C | 工具知识库、索引、召回/融合、受限 evidence 回接 | **已完成本地验收** | 已实现独立 SQLite 权威库、3 张审核 Card/10 条原子规则、metadata + FTS5、local dense/RRF/rerank、依据卡、脱敏 Trace，以及 8A/8C 的 direct/reference/conflict evidence 回接；不接 LLM、新 Provider、图片执行或 external/hybrid 复测 |
 | Gold Set v2 evaluator / blind input | public/annotations/holdout 隔离、指标、人工审核材料 | **已完成本地验收；当前基线未通过** | 52 题 public + 20 题 holdout 输入、阈值 Gate、HTML/Markdown/JSON 报告和私有 aggregate-only scorer 已实现；public/private aggregate 均 `FAIL`；live Judge 未实现 |
+| Gold Set v3 一次性盲测 | 产品负责人审核、answerless runtime、私有聚合评分 | **已完成一次；质量 Gate 未通过** | 36/36 预测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%；hard-safety=PASS；逐题答案不回流 |
 | 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效 SDK | **已完成离线验收；火山 V0 暂缓** | Card、typed Adapter、权限/预算 preflight、smoke 已实现；两者均未联网/发图，仍为 `candidate`，当前实际执行链只用 Tencent |
 
 ## 检查点 6.1｜真实照片质量门（已完成并验收）
@@ -1464,3 +1465,95 @@ git diff --check
 RAG 的本地工程能力已经收口：独立 SQLite 权威知识库、FTS5、dense/RRF/rerank、P0-C advisory consumer、失败分析、proposal-only correction、生命周期审计、脱敏报告和两个治理看板均可重放、可测试、可追溯。质量方面仍不能宣称通过：public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；历史 private holdout aggregate Route=`25.00%`、Gate=`FAIL`；v3 Holdout 仍是工作区外审核草案，未正式盲测。
 
 剩余事项属于新的产品/外部决策门，而不是本轮 RAG 代码遗漏：v3 题目和答案键人工审核后的一次性盲测；是否启用脱敏 LLM Judge；新 Provider 的 Card/Adapter/License/预算/隐私/真实 receipt/Gold 准入；生产级定时审计 worker、PostgreSQL/对象存储与删除 SLA；external/hybrid 复测 Adapter；真实受邀用户数据收集与运营看板验证。以上事项冻结前，RAG 不能直接授权工具或图片出站。
+
+## 2026-08-30｜视觉交互产品设计冻结与色彩探索（无应用代码变更）
+
+### 本轮完成
+
+- 产品负责人冻结中心舞台式首页为默认入口，并采用“中心舞台／对齐工作台 + 母版档案 + 结果记录”的三空间结构；中心舞台以当前照片和本次目标为主，母版作为长期记忆锚点，结果空间承接对比、下载和反馈。
+- 将 Agent 交互原则写入执行版 PRD、PRODUCT_RULES、DECISION_LOG、PROJECT_CONTEXT 和 README：用户应看懂目标、Agent 正在做什么、为什么这样做、此刻还需要做什么；参数、回执和脱敏 Trace 进入第二层，隐藏思维链不展示，动效不能伪造工具成功。
+- 生成两份可交互、无摄影底图的视觉探索样张：一份是跳出既有偏好的五分支色彩探索树；另一份把参考图的雾灰紫／奶油桃／墨黑／珊瑚层次迁移为本产品的中心舞台，不复用原图或摄影背景。
+
+### 当前真实状态与下一 Gate
+
+交互信息架构已冻结；最终色彩、字体、动效曲线与组件细节仍由产品负责人审阅样张后冻结。现有 Streamlit 应用没有被改动，线上 Private URL 的视觉也尚未升级；本轮没有触及合同、Prompt、工具调用、RAG、照片、数据库或测试逻辑。色彩冻结后，才进入“UI 视觉实现 Gate”：在不改变同意／权限／Provider／Trace 边界的前提下，逐项验证母版、上传、错误、执行、结果和反馈是否可见、可达、可解释。
+
+### 一致性检查
+
+- 执行版 PRD：新增“视觉设计与 Agent 交互”完整产品决策、2.18 冻结摘要和实现矩阵待开发项；明确配色未冻结、UI 未实现。
+- 专项规则与记录：PRODUCT_RULES、DECISION_LOG、PROJECT_CONTEXT、README 均同步；CONTRACTS、AGENT_PROMPTS、代码和测试不需要变更，因为本轮未改变数据合同或运行行为。
+- 两份 HTML 样张已成功渲染为 PNG，内嵌脚本语法检查通过；为确认本轮文档没有影响既有工程，额外重跑全量 `pytest`（`150 passed, 4 warnings`）、Ruff、format 与 `git diff --check`，均通过。该结果只说明既有应用未被本轮文档／样张工作破坏，不能写成“新 UI 已通过”。
+
+## 2026-08-30｜视觉收敛：参考图基线、低色数与显著 Agent 入口（无应用代码变更）
+
+- 产品负责人已从两条视觉路径中选择“参考图层次迁移”为唯一基线，并明确拒绝摄影背景、原站资产、长段文字、过多装饰和多色堆叠。
+- 新的视觉规则为：3—5 个主色；雾灰紫、奶油／肉粉、墨黑为基础；仅保留 1—2 个强调色；短标题／短按钮；自然语言 Agent 输入框作为首屏最显著交互；Demo 视频承担详尽讲解。
+- 已生成一个可切换的精简中心舞台样张，包含雾紫珊瑚、宝蓝珊瑚、墨黑蜜桃三组色彩，三组共享同一任务入口与 Agent 对话结构，便于只比较色彩而不再混淆信息架构。
+- 当前仍未改 Streamlit 代码、合同、Prompt、工具调用、数据库或测试；最终强调色由产品负责人选择后，才进入 UI 视觉实现 Gate。
+- 该样张已成功渲染为 PNG、内嵌脚本语法检查通过；为排除文档与样张工作影响既有工程，重跑全量 `pytest`（`150 passed, 4 warnings`）、Ruff、format 和 `git diff --check` 均通过。该检查不代表新 UI 已实现或被用户验证。
+
+## 2026-08-30｜奥卡姆式页面候选：单任务、单上传、单 Agent 入口（无应用代码变更）
+
+- 产品负责人冻结雾紫、肉粉／奶油粉、墨黑、桃红四色体系，明确不再加入蓝、绿、黄等色彩家族。
+- 阅读产品负责人自有 BOOBOO App 后，只吸收“单一主舞台、当前状态可见、有限操作入口、点击后的即时反馈”四项页面简洁原则；不复用其代码、素材、内容、移动端形态或多卡片仪表盘。
+- 新候选页将首屏压缩为对齐／母版／记录三空间导航、一个当前上传动作和一个自然语言 Agent 输入框；母版、结果和参数依据继续存在，但只在对应空间或第二层出现。
+- 该候选仅用于视觉审核，尚未改动 Streamlit、合同、Prompt、Provider、数据库或 Trace；产品负责人通过后才进入实际 UI 改造 Gate。
+- 样张已成功渲染为 PNG，交互脚本语法检查通过；全量工程复核为 `150 passed, 4 warnings`，Ruff、format 与 `git diff --check` 均通过。该结果仅证明本轮候选与文档没有破坏既有工程，不代表新 UI 已实现或完成用户验证。
+
+## 2026-09-01｜v3 Holdout 盲测、第一位用户入口与中期收口
+
+### 本轮完成
+
+1. **v3 Holdout 审核已落地。** 产品负责人完成 36 道题的逐题审核；运行时只保留 `case_id + query`，最终审核材料和答案键仍在项目工作区外的受限目录。没有把题目答案、照片、向量或密钥复制回仓库、应用或公开报告。
+2. **正式盲测已运行一次。** 确定性 runner 未读取答案键，只写出 36 条 predictions/Trace；私有 scorer 只在受限环境中聚合，输出不含题干、case ID、Gold 或私有路径。此后不再使用这份 hidden 逐题结果调参。
+3. **真实用户入口已准备。** 已打开 Streamlit Community Cloud Private URL 并核对首页加载；新增 [第一位用户端到端测试说明](FIRST_USER_E2E_TEST.md)，把新手操作顺序、人工/自动分工、预期事件链和隐私边界写清楚。真实照片上传和外部调用必须由产品负责人本人完成。
+4. **中期报告已生成。** [MIDTERM_STATUS_2026-09-01.md](MIDTERM_STATUS_2026-09-01.md) 汇总已完成、未完成、证据等级、盲测结果和收尾路径。
+
+### v3 盲测真实回执
+
+```text
+runner_version                  → rag-gold-baseline-deterministic-v0.2
+dataset_version                 → rag-v3-holdout-reviewed-2026-09-01
+case_count / predictions       → 36 / 36；missing=0
+hidden_answer_key_read         → false
+llm_called / network_called    → false / false
+photo_or_face_vector_read      → false
+external_provider_called       → false
+```
+
+私有 aggregate 结果：
+
+| 指标 | 结果 |
+|---|---:|
+| Route accuracy | 30.56% |
+| Evidence exact accuracy | 41.67% |
+| Evidence relation accuracy | 23.61% |
+| Recall@5 | 59.72% |
+| MRR | 77.78% |
+| nDCG@5 | 63.81% |
+| Hard-safety violations | 0 / 36，Gate=`PASS` |
+| Project quality Gate | `FAIL` |
+
+固定/覆盖式/返回式 Precision@3 为 27.78% / 59.72% / 77.78%。当前主要失败集中在 relation、evidence set 和 route；只在 public/dev/challenge 上继续做 proposal-only 迭代，不能把安全 Gate 通过写成 RAG 质量通过。
+
+### UI 8C 多轮回执状态
+
+代码层和自动化 fixture 已通过：首轮观察 → `REPLAN` → 新 child plan → 同一授权 scope 的自动 bounded follow-up → child ProviderRun → 复测；每一步有 parent/child plan/run/hash、preflight、触发方式和结果留痕，点踩或 scope 变化会硬停止。当前还没有第一位用户在 Cloud 页面上传照片，因此尚无新的真实 UI 8C 多轮图片回执、真实视觉改善或满意度数据。`FIRST_USER_E2E_TEST.md` 是下一步的唯一操作入口，不用离线 fixture 冒充 live receipt。
+
+### 交叉一致性检查
+
+- 执行版 PRD：新增 17.18 产品设计决策、13.2 当前盲测/页面状态和 v3 实现矩阵行；旧章节的历史快照保留，但以最新覆盖为准。
+- RAG 专项：`RAG_DECISION_GATE.md` 新增 v3 盲测结果；`RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md` 更新审核、隔离、一次性运行和 hard-safety 状态。
+- 规则/合同/Prompt：本轮没有改变六个业务合同、RAG advisory-only、Provider 白名单、图片留存或 LLM 数据边界；`CONTRACTS.md`、`PRODUCT_RULES.md`、`AGENT_PROMPTS.md` 需按现有约束理解，未擅自增加执行能力。
+- 运行与发布：README、AGENTS、PROJECT_CONTEXT、LOCAL_RUNTIME 和部署说明需以本节“页面已打开、真实用户测试待完成、v3 quality Gate=FAIL”为当前事实；不把页面加载写成真实照片成功。
+- 代码与测试：本轮没有修改业务代码；`pytest`、Ruff、format、compileall、`git diff --check` 和 P0/8C smoke 均重新通过。
+
+### 下一阶段
+
+先完成产品负责人自己的单张端到端页面流程，再决定是否有证据触发一次真实 8C-2 子轮；随后截取运营 Dashboard 的匿名事件结果，录制可追问 Demo。RAG 质量修正必须在 public/dev/challenge 完成并回归，若要再次验收需另建独立 Holdout。多脸/批量、external/hybrid、真实主体锚点加密与 TTL、生产数据库/鉴权和新 Provider 准入均不由本轮自动推进。
+
+## 2026-09-01｜第一位用户入口复核与 UI 文案一致性
+
+- Private Streamlit 页面已在浏览器中打开并完成只读入口检查：母版上传、目标照片、IntentFrame、8A、8B、8C 和反馈入口均存在；当前没有代用户上传照片或发起新的腾讯图片调用。
+- 修正侧边栏环境文案为“运行环境：Private Demo；本机开发端口为 `127.0.0.1:8501`”，避免把 Cloud 受邀入口误写成仅本机服务。该改动不改变合同、权限、Provider、RAG 或 Trace 行为；Cloud 需在下一次 GitHub 构建后才会显示新文案。
+- 代码与文案变更后重新执行全量测试、Ruff、format、compileall、`git diff --check`；结果保持 `150 passed, 4 warnings`、全部静态检查通过。真实 UI 8C 多轮图片回执仍必须由产品负责人在 Cloud 页面亲自触发。

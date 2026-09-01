@@ -9,9 +9,9 @@
 | 包 | 用途 | 开发者是否可读答案 | 状态 |
 |---|---|---:|---|
 | v2 `H01–H20` runtime | 历史基线和趋势观察 | 否 | 仅诊断，不再逐题调参 |
-| v3 runtime template | 新独立集的格式模板 | 无答案 | 已创建；正式模板仍为空 |
-| v3 owner-review draft | 工作区外的 36 道题目与分离答案草案 | 否 | 已生成，待产品负责人逐题审核；不是正式 Holdout |
-| v3 answer key | 与 runtime 分离的产品负责人私有文件 | 否 | 草案已生成并与题目分离；最终答案键仍待产品负责人审核后独立保管 |
+| v3 runtime template | 新独立集的格式模板 | 无答案 | 仍保留为格式模板；不用于本次正式评分 |
+| v3 reviewed runtime | 工作区外的 36 道审核后无答案题目 | 无答案 | 已生成并完成一次正式盲测；只含 `case_id + query` |
+| v3 reviewed inline / answer key | 与 runtime 分离的产品负责人私有审核材料 | 否 | 已审核并继续受限保管；不被应用、检索器或公开报告读取 |
 
 模板位置：`data/evaluation/rag_gold_v3_holdout_runtime.template.json`。它故意是空题集，不能被误称为已完成的 Holdout，也不会产生通过分数。填充后的运行包只能包含 `case_id` 和 `query`；禁止加入 `gold_*`、`must_not`、答案、标签、实现版本或图片。
 
@@ -29,15 +29,23 @@
 - [ ] 题目覆盖工具能力、权限、隐私、过期、冲突、提示注入和未就绪 Adapter；
 - [ ] 预测文件只含脱敏 route/evidence/observed event/Trace 摘要；
 - [ ] 双口径 Precision、Recall@5、MRR、nDCG@5、route/relation 和 hard-safety 口径已固定；
-- [ ] 私有 `must_not` 已转换为产品负责人确认过的 canonical event ID，仍有未知标签则保持 `MANUAL_REVIEW_REQUIRED`；
-- [ ] 聚合报告不含题干、case ID、Gold、答案键路径、照片、向量或密钥。
+- [x] 私有 `must_not` 已转换为产品负责人确认过的 canonical event ID；未知标签仍保持 `MANUAL_REVIEW_REQUIRED`；
+- [x] 聚合报告不含题干、case ID、Gold、答案键路径、照片、向量或密钥。
 
 ## 2026-08-30 状态更新
 
 产品负责人已审核通过公开 `rag-safety-events-v0.1` 目录，因此 v3 草案的安全禁项使用 `RAG_EVT_*` canonical ID。v3 草案位于项目工作区之外的受限目录 `portrait-consistency-agent-v3-holdout-owner-review/`，包含题目、分离答案候选和逐题审核表；当前应用、evaluator 和 Dashboard 不读取该目录。它是供产品负责人审核的候选材料，不是已经冻结的 Gold，也没有产生正式分数。
 
-产品负责人完成审核后，保留一份只含 `case_id + query` 的 runtime 输入；答案键移到产品负责人独立控制的位置，并在正式验收最多运行一次。若答案键被开发者读取或题目被用于调参，应重新生成下一份独立 Holdout。此前 v2 的 aggregate 仍只作历史泛化诊断。
+产品负责人完成审核后，保留一份只含 `case_id + query` 的 runtime 输入；答案键继续由产品负责人独立控制，正式验收最多运行一次。若答案键被开发者读取或题目被用于调参，应重新生成下一份独立 Holdout。此前 v2 的 aggregate 仍只作历史泛化诊断。
+
+## 2026-09-01｜审核完成与一次性正式盲测回执
+
+产品负责人已审核 v3 的 36 道题、证据关系、路由和 canonical Safety Event。根据 Holdout A，运行器只读取工作区外导出的 answerless runtime；私有答案键只在产品负责人控制的环境中用于 aggregate-only 评分，未复制回项目工作区。
+
+本次盲测运行回执：`cases=36`、`predictions=36`、`missing_predictions=0`；`hidden_answer_key_read=false`、`llm_called=false`、`photo_or_face_vector_read=false`、`external_provider_called=false`、`network_called=false`。质量 `project_threshold_gate=FAIL`，但 hard-safety `0/36` 违规，安全 Gate=`PASS`。聚合报告已写入私有受限目录，未输出逐题答案、题干、case ID、Gold 或答案键路径。
+
+本次结果只作为一次独立质量证据：Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、Evidence relation=23.61%。不得根据这份 hidden 逐题结果直接补规则；后续只能在 public/dev/challenge 上做可回归改动，并在需要再次验收时建立另一份独立 Holdout。
 
 ## 不可夸写边界
 
-在 v3 题目和答案键完成、正式评分并达到冻结 Gate 前，README、简历和面试材料只能写“已建立独立 Holdout 保管与验收流程”，不能写“RAG 已通过”或“泛化达到上线标准”。
+即使 v3 已完成一次正式评分，只要质量 Gate 为 `FAIL`，README、简历和面试材料也只能写“完成独立 Holdout 隔离与一次盲测，发现当前 baseline 泛化不足；hard-safety 通过”，不能写“RAG 已通过”或“泛化达到上线标准”。

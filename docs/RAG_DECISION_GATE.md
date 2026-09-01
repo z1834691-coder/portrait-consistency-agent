@@ -1,6 +1,8 @@
-# RAG 决策与开发 Gate（P0-A / P0-B / P0-C 已完成；外部能力仍待决）
+# RAG 决策与开发 Gate（P0-A / P0-B / P0-C / P0-D 已完成；v3 盲测质量 Gate 未通过）
 
 > 这不是“已经上线、能自动修图”的完整 RAG。本文件记录产品负责人逐项确认、工程再实现的工作底稿。2026-08-29 已完成本地 P0-A（权威知识 + FTS）、P0-B（本地混合检索）和 P0-C（受限 evidence 回接 8A/8C 提议层）；三者都只查已审核工具知识。P0-C 只能提议/留证，不能产生参数、授权工具或调用外部/混合复测。仍有会改变工具权限、出站、参数或用户体验的事项，明确保留在第 21 节，不能提前写入执行代码。
+
+> **当前状态覆盖（2026-09-01）：** 产品负责人已审核 v3 Holdout 的 36 道题并完成一次私有聚合盲测。盲测只使用 answerless `case_id + query`，runner 未读答案键、照片、LLM、网络或 Provider；结果为 Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety=0/36（PASS），project quality Gate=`FAIL`。这份结果只作为一次质量证据，不允许用逐题 hidden 答案调参；当前 RAG 仍 advisory-only。真实 UI 端到端照片流程和 8C 多轮图片回执另由产品负责人在 Private 页面亲自完成。
 
 ## 1. 先用一句话理解 RAG
 
@@ -834,3 +836,40 @@ Provider Card/Policy 元数据
 ### 收口边界
 
 截至本节，RAG 本地工程（权威账本、FTS、dense/RRF/rerank、受限 consumer、失败分析、proposal-only correction、生命周期审计、报告与两个看板）已具备可重放和可审计的实现。尚未完成的事项属于独立产品/外部 Gate：v3 Holdout 逐题审核与一次性盲测、正式 LLM Judge 是否启用、新 Provider 的 License/成本/隐私/真实 receipt/Gold 准入、生产级定时 worker 与 PostgreSQL/对象存储迁移、external/hybrid 复测 Adapter；这些不应被 P0-D 自动推进。
+
+## 29. 2026-09-01｜v3 Holdout 审核、一次性盲测与当前质量 Gate
+
+### 29.1 产品负责人审核与隔离
+
+产品负责人已完成 v3 Holdout 36 道题的逐题审核。最终运行包只保留 `case_id + query`，位于项目工作区外的私有答案键只用于受限聚合评分；题目、答案、原始照片、向量和密钥没有复制到仓库、应用或公开报告。按照 Holdout A，本次正式验收只运行一次，后续规则调试不得读取逐题答案。
+
+### 29.2 真实盲测链路与回执
+
+```text
+owner-reviewed questions
+→ answerless runtime（36 cases）
+→ deterministic baseline runner（不读答案键）
+→ private aggregate scorer（答案键只在受限环境内存解析）
+→ aggregate JSON/HTML（不含题目、case、Gold、私有路径）
+```
+
+本次 runner 的安全回执为：`hidden_answer_key_read=false`、`llm_called=false`、`photo_or_face_vector_read=false`、`external_provider_called=false`、`network_called=false`。因此这是一场隔离的 RAG 质量盲测，不是图片处理或 LLM Judge 运行。
+
+### 29.3 结果与结论
+
+| 指标 | 结果 | 当前判断 |
+|---|---:|---|
+| Route accuracy | 30.56% | 未达到 90% 项目门槛 |
+| Evidence exact accuracy | 41.67% | 证据集合仍不稳定 |
+| Evidence relation accuracy | 23.61% | direct/reference/conflict 关系是首要失败面 |
+| Recall@5 | 59.72% | 未达到 90% 项目门槛 |
+| MRR | 77.78% | 接近但未达到 80% 门槛 |
+| nDCG@5 | 63.81% | 未达到 85% 项目门槛 |
+| Hard-safety violations | 0/36 | canonical safety 目录下安全 Gate=PASS |
+| Project quality Gate | **FAIL** | 不能把安全通过写成 RAG 质量通过 |
+
+固定/覆盖式/返回式 Precision@3 分别为 27.78% / 59.72% / 77.78%，继续并列保留用于解释 Gold 稀疏度，不替换既定项目 Gate。失败主要集中在 evidence relation、evidence set 和 route；下一轮只能在 public/dev/challenge 上做可回归修正，若要再次验收必须建立另一份独立 Holdout。
+
+### 29.4 与应用链的关系
+
+RAG 盲测的 FAIL 不会自动改变 8A/8C、Provider 白名单或图片权限；RAG 仍只能提议。8C-1/8C-2 的代码和 fixture 继续证明父子 plan/run/hash、同 scope 有界续跑和点踩硬停止，但不能代替真实 UI 多轮照片回执。真实 UI 证据需要产品负责人在 Private Streamlit 页面按 [第一位用户端到端测试说明](FIRST_USER_E2E_TEST.md) 操作后再写入新的运行记录。

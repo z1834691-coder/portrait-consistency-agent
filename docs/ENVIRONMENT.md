@@ -67,3 +67,9 @@ Gold Set v2 评测器和两个候选 Provider shell 已加入本地环境，但�
 ## 2026-08-30 评测治理环境同步
 
 评测器已升级为 `rag-gold-eval-v0.2`：可生成固定/覆盖式/返回式 Precision 与 Gold 条数分层；`rag-safety-events-v0.1` 提供确定性事件 ID 和未知标签人工复核；v3 Holdout 仅有 answerless 模板，答案不进入本工作区。public/failure report 已重跑，所有默认评测仍不联网、不读照片/向量/密钥、不调用 LLM/Provider。
+
+## 2026-09-01 当前环境状态覆盖
+
+v3 Holdout 已由产品负责人完成审核，并已在工作区外完成一次正式私有聚合盲测；工作区只保留代码和历史/公开评测材料，答案键、逐题审核材料和盲测聚合仍在所有者受限目录。盲测未读答案键、照片、向量、LLM、Provider 或网络；质量 Gate=`FAIL`、hard-safety=`PASS`。不要依据旧快照中“v3 待审核/模板为空”的描述判断当前状态。
+
+Streamlit Cloud Private 页面已打开作为第一位用户入口。当前尚未由 Codex 代上传真实照片或触发新的腾讯图片调用；Cloud 页面上的真实数据采集必须由产品负责人亲自操作并重新确认美国区域/受邀测试边界。8C 多轮仍是“代码/fixture 已验证、真实 UI 回执待触发”，本地命令和轻量 Cloud 包均不自动下载模型或联网。

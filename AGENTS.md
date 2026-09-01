@@ -138,3 +138,34 @@ chunks, no lifecycle issues and `index_status=in_sync`. Full regression after th
 is 150 passed with 4 existing Pillow deprecation warnings; the RAG project quality Gate is
 still FAIL. If a future task changes RAG code or policy, rerun the lifecycle audit and the
 full consistency checklist before describing the RAG work as closed.
+
+## 2026-08-30 visual design snapshot
+
+The visual interaction structure is frozen but is not implemented in Streamlit: the
+product will use a centre-stage alignment workspace, Reference Profile, and result
+history as three spaces. The selected visual baseline is the reference image's mist
+grey-purple field, cream/peach stage, and ink navigation hierarchy, without copying
+photography or page assets. The eventual UI must use 3–5 primary colors, short labels,
+low decoration density, and a prominent natural-language Agent input. The owner has
+frozen the color family to mist purple, powder pink/cream, ink black, and peach-red;
+do not add blue, green, or yellow. The new Occam-style page candidate uses only one
+current upload action and one natural-language input on the first screen, but remains
+unimplemented until owner approval. Any UI work must preserve real consent, errors,
+tool states, results, feedback, evidence visibility, and the prohibition on exposing
+hidden chain-of-thought.
+
+## 2026-09-01 current truth override
+
+The owner has completed the v3 Holdout review. A 36-case answerless runtime was run
+once through the deterministic baseline and privately aggregated outside the workspace.
+The run read no hidden answers, photos, vectors, LLMs, providers, or network. Current
+aggregate quality is Route=30.56%, Recall@5=59.72%, MRR=77.78%, nDCG@5=63.81%,
+evidence-relation accuracy=23.61%; hard-safety violations are 0/36 (PASS), while the
+project quality Gate is `FAIL`. Do not tune the hidden set or describe this as RAG
+quality passing.
+
+The Streamlit Community Cloud Private page is open and ready for the owner to perform
+the first real user flow. No agent has uploaded a real photo or created a new UI
+Tencent image receipt in this snapshot. 8C-1/8C-2 remain code/fixture-verified; a
+real multi-round UI receipt and visual improvement require the owner to operate the
+page. See `docs/FIRST_USER_E2E_TEST.md` and `docs/MIDTERM_STATUS_2026-09-01.md`.

@@ -179,3 +179,9 @@ v2 的 H01–H20 和私有 aggregate 保留为历史泛化诊断，不再用于�
 ## 2026-08-30 当前同步
 
 评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。当前全量回归为 `150 passed, 4 warnings`，public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 仍须工作区外独立审核后才能正式盲测。生命周期审计通过不等于 RAG 质量通过。
+
+## 2026-09-01 当前状态覆盖
+
+上面的 v3“待审核/模板为空”描述属于历史快照。产品负责人已经审核 v3 的 36 道题，并按 Holdout A 完成了一次正式 answerless 盲测；runtime 只含 `case_id + query`，预测与 Trace 均未暴露答案事实。私有聚合为 Route `30.56%`、Recall@5 `59.72%`、MRR `77.78%`、nDCG@5 `63.81%`、Evidence relation `23.61%`，hard-safety `0/36`、质量 project Gate=`FAIL`。按照“一次性 Holdout”规则，不再用这次逐题结果调参；后续改动只能先在 public/dev/challenge 回归，再建立新的独立 Holdout。
+
+本评测器仍不启用 live LLM Judge；确定性基线和私有聚合只提供质量证据，不会改变 RAG `execution_authorized=false`、工具白名单或图片出站权限。第一位用户的真实 UI 8C 多轮图片回执尚未产生，不能用 fixture 预测替代。
