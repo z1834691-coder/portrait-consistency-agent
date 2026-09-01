@@ -51,7 +51,7 @@ def test_payload_explicitly_overrides_all_tencent_defaults() -> None:
 def test_client_refuses_to_call_without_credentials() -> None:
     client = TencentBeautifyClient(AppSettings(_env_file=None))
 
-    with pytest.raises(TencentCredentialsMissingError, match="credentials are absent"):
+    with pytest.raises(TencentCredentialsMissingError, match="Streamlit Cloud"):
         client.beautify_base64("aGVsbG8=", TencentBeautifyParams())
 
 

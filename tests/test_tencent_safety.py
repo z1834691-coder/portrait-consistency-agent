@@ -68,5 +68,5 @@ def test_safety_suggestion_is_mapped_to_a_conservative_decision(
 def test_moderation_client_refuses_network_without_credentials() -> None:
     client = TencentImageModerationClient(AppSettings(_env_file=None))
 
-    with pytest.raises(ContentSafetyCredentialsMissingError, match="credentials are absent"):
+    with pytest.raises(ContentSafetyCredentialsMissingError, match="Streamlit Cloud"):
         client.moderate_base64(b"a")

@@ -61,5 +61,5 @@ def test_provider_score_stays_raw_and_never_becomes_probability() -> None:
 def test_subject_client_refuses_network_without_credentials() -> None:
     client = TencentCompareFaceClient(AppSettings(_env_file=None))
 
-    with pytest.raises(SubjectMatchCredentialsMissingError, match="credentials are absent"):
+    with pytest.raises(SubjectMatchCredentialsMissingError, match="Streamlit Cloud"):
         client.compare_base64(b"a", b"b")
