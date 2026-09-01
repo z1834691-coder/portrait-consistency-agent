@@ -87,7 +87,9 @@ not a tool-permission or image-editing system. Gold Set v2 的范围、指标门
 评分；当前基线未通过，不能把 public 的高分写成泛化或产品有效性。隐藏键、题干和逐题 Gold 不得
 回流开发工作区；若继续优化，只能在 public/dev/challenge 上进行，并先处理指标定义与独立新
 holdout 的产品决策门。两条新 Provider 候选（火山美颜 API V2.0、腾讯特效 SDK）必须分别完成
-真实 schema/License/隐私/成本、live receipt、Gold 回归和产品负责人冻结。
+真实 schema/License/隐私/成本、live receipt、Gold 回归和产品负责人冻结。腾讯特效 Web
+目前已经有独立的浏览器 Adapter、Streamlit page 6 和 Browser Receipt 合同，但 Card 仍是
+candidate，尚未取得新的 live receipt；移动/PC 细项 shell 仍不含 SDK 或图片出站。
 
 ## 2026-08-30 implementation snapshot
 
@@ -99,10 +101,13 @@ project Gate 亦为 `FAIL`。私有 Markdown key 的自然语言 `must_not` 尚�
 hard-safety 只能标 `MANUAL_REVIEW_REQUIRED`，不得写成安全 Gate 通过。
 
 `services/volc_beauty.py` and `services/tencent_effect.py` remain candidate-only
-shells with no SDK import, image egress or network path. Existing Tencent IMS and
+shells with no SDK import, image egress or network path. The separate
+`services/tencent_effect_web.py` is an implemented browser-side candidate adapter: its
+offline contract path is tested, but it remains fail-closed until the bound Cloud page
+returns a real Browser Receipt and the admission evidence is manually reviewed. Existing Tencent IMS and
 BeautifyPic each have one newly authorized internal smoke receipt; this verifies a
 single existing-provider route, not visual effectiveness or candidate-provider readiness.
-The latest cross-check is `160 passed, 4 warnings`; Ruff, compileall and `git diff --check`
+The latest cross-check is `173 passed, 4 warnings`; Ruff, compileall and `git diff --check`
 must be rerun after each change. The hidden answer key remains outside the developer-readable
 workspace and must never be copied into tests, reports, prompts, or source control.
 
@@ -169,3 +174,30 @@ the first real user flow. No agent has uploaded a real photo or created a new UI
 Tencent image receipt in this snapshot. 8C-1/8C-2 remain code/fixture-verified; a
 real multi-round UI receipt and visual improvement require the owner to operate the
 page. See `docs/FIRST_USER_E2E_TEST.md` and `docs/MIDTERM_STATUS_2026-09-01.md`.
+
+## 2026-09-01 failure-driven RAG current truth
+
+The first optimization loop was a no-op because its candidates changed only
+post-processed `Prediction` objects while the public baseline was already canonical.
+The current, separate `rag_failure_driven_dev_v1` set (28 owner-review cases: 16 dev +
+12 challenge) evaluates a candidate at the real natural-language → `RagQuery` boundary.
+Its redacted report is `reports/rag_failure_driven_loop_v1.json/.html` and its read-only
+visualization is page 5. V0 Composite is `0.355614`; V1 is `0.403233` (+0.047619,
+2 predictions changed); V2 query compilation is `0.947619` (+0.544386, 22 predictions
+changed); V3/V4 each changed 0 predictions and stopped after two gains below `0.01`.
+
+This is development-set engineering evidence, not a product-quality pass: annotations
+are `owner_review_required`, public regression/project Gate remains `FAIL`, and a new
+independent Holdout v4 is required before promotion. Every candidate trace proves no
+network/LLM/Provider/hidden-answer access and `active_baseline_changed=false`; RAG remains
+advisory-only with `execution_authorized=false`. Do not read or rerun the private v3
+per-case answer key. The previous `160 passed` line is a historical snapshot. The
+report also keeps V0-versus-terminal per-case diagnostics in
+`final_candidate_diagnostics`; the human-readable review is
+`docs/RAG_FAILURE_CASE_REVIEW_V2.md`.
+
+After the failure-driven Loop v2 change, the current full-suite verification is
+`173 passed, 4 warnings`; Ruff check/format, compileall, `git diff --check`, the
+failure-driven loop, P0-A/P0-B/advisory/lifecycle/8C/8C2 smokes all pass. The four
+warnings remain the existing Pillow deprecation warnings. This updates the historical
+160-test snapshot above; it does not change the RAG quality Gate (`FAIL`) or promote V2.

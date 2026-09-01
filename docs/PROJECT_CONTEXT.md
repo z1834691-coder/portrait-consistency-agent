@@ -56,9 +56,9 @@
 
 ## 2026-08-30 当前实现快照
 
-Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效 SDK 只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；没有导入 SDK、没有真实图片出站、没有密钥或 ProviderRun。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前执行链只用 Tencent。
+Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效移动/PC 细项仍只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；腾讯特效 Web 另有独立的浏览器 Adapter、Streamlit page 6 和 `ProviderRun` 联合合同，但 Card 仍为 candidate、尚无新的 Browser Receipt，不能写成已进入主执行链或细项能力已验证。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前主执行链仍只用已验证的 Tencent BeautifyPic/IMS。
 
-当前交叉校验：全量 `pytest 160 passed, 4 warnings`；Ruff、compileall、`git diff --check` 已在 RAG 优化 Loop 收口后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
+当前交叉校验：全量 `pytest 172 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 已在腾讯特效 Web 适配器切片后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。腾讯特效 Web 的 page 6 已能本机启动，但真实 Browser Receipt 仍待绑定域名的 Cloud 页面与 Secrets 运行；Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
 
 ## 2026-08-30 RAG 工程收口快照
 
@@ -91,6 +91,14 @@ Streamlit Cloud Private 页面已经打开，等待产品负责人亲自完成�
 当前代码已增加 `subject_match_uncertain_acknowledged`：确认写入有界 `ConfirmationScope`，规划器和执行器双重校验，确认事件和策略版本留痕；它不改变 `uncertain`、不更新主体锚点，`no_match` 仍硬拒绝。该字段是可选向后兼容策略扩展，并有 `contract_v0_4_subject_uncertain_ack` migration marker。Cloud 重建后用户可继续 8A→8B→8C；未产生真实 ProviderRun/VerificationResult 前，不称首轮完成。
 
 第一位用户反馈：上传慢、首屏展示脱敏 JSON、工程检查点和按钮过多、自然语言入口被 GUI 挤压、整体 UI 偏工程文档。它们已记录为下一 UI Gate 的事实输入；先完成一次真实闭环并增加阶段耗时证据，再冻结 UI 重构，不为减少点击删除必要的隐私或授权门。
+
+## 2026-09-01 失败驱动 RAG Loop v2 当前事实
+
+上一轮优化无增益的根因是候选只处理已生成 `Prediction`，未改变自然语言→`RagQuery` 的输入层。当前新建 `rag_failure_driven_dev_v1`（28 题：16 dev + 12 challenge，annotations=`owner_review_required`），并新增查询编译候选和失败驱动运行器。V0 Composite=`0.355614`；V1=`0.403233`（2 条预测改变）；V2=`0.947619`（22 条预测改变，route/relation/Recall@5=100%）；V3/V4 各 0 条改变，连续两代 `<0.01` 停止。该结果只属于开发集工程事实，public regression/project Gate 仍 `FAIL`，active baseline 未变。
+
+报告、SOP、Rubric、page 5 和合同均记录 `changed_prediction_count`、Trace 安全布尔值和停止原因；无网络、LLM、Provider、照片/向量或 hidden-answer 访问。V3 Holdout 仍不重跑、不读取逐题答案；审核 annotations 后必须新建独立 v4 才能评估泛化。
+
+本轮最终 QA 为全量 `pytest 173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示；这不改变 RAG quality Gate=`FAIL` 或候选未推广状态。
 
 ## 2026-09-01 当前 Cloud 运行异常与修复
 

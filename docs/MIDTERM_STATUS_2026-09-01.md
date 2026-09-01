@@ -98,3 +98,11 @@ RAG lifecycle audit               → 3 items / 10 active chunks / issue_counts=
 第一位用户在 Cloud 页面看到腾讯安全请求失败。日志交叉检查后发现，页面实际稳定中断点是 Streamlit 重跑重复插入同一 `photo_quality_result_id`，SQLite 抛出 `UNIQUE constraint failed`；本机明确授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），所以不能把泛化页面文案当成腾讯密钥失效。
 
 已修复为幂等合同落账：相同业务唯一键和相同脱敏事实复用原记录；内容变化则以可识别冲突 fail closed；重复重放不重复计入完成类产品事件。该修复保护可追溯性，不改变 IMS 安全门、RAG advisory-only 或图片出站权限。Cloud 拉取新提交并重建后，仍须由产品负责人刷新页面、重新执行一次 IMS，取得新的云端真实回执后才能继续首位用户端到端测试。
+
+## 2026-09-01｜RAG 失败驱动优化 Loop v2 的中期结论
+
+上文“V0/V1/V2 Composite=`0.947436`、增益为 0”属于第一轮错误层候选的历史快照。复核后确认候选只改 Prediction 后处理，没有改变自然语言→`RagQuery` 的输入事实。
+
+本轮将候选移到真实查询编译边界，建立 28 题（16 dev + 12 challenge）owner-review 开发集。V0 Composite=`0.355614`；V1=`0.403233`（+0.047619、改变 2 条预测）；V2=`0.947619`（+0.544386、改变 22 条预测）；V3/V4 各改变 0 条预测，连续两代 `<0.01` 停止。V0 failure code 为 route 24、relation 23、set 18、rank 10；稀疏 Gold 分母 28 条单独记录。候选无网络/LLM/Provider/hidden-answer 访问，active baseline 未改变，anti-overfit=`PASS`。
+
+这证明“修错层”是上一轮无增益的原因，并证明 V2 在开发集上有效；它不等于 RAG 质量通过。新 annotations 需产品负责人审核，之后必须建立与 v3 不重叠的 Holdout v4；public regression/project Gate 仍 `FAIL`。本轮最终 QA 为 `173 passed, 4 warnings`，4 条 warning 是既有 Pillow 弃用提示。

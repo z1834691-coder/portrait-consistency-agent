@@ -1,7 +1,7 @@
 # 腾讯特效 SDK 候选 Provider：官方证据核验版
 
 > 复核日期：2026-08-30
-> 当前状态：`candidate / shell-only / not live`
+> 当前状态：`candidate / Web adapter implemented / browser-smoke-pending`
 > 资料范围：仅腾讯官方一手文档；本轮没有使用账号、License、密钥、SDK 包、照片或网络调用。
 
 ## 1. 这次核验回答了什么
@@ -19,7 +19,7 @@
 
 | 问题 | 官方一手资料能证实什么 | 本项目仍不能声称什么 |
 |---|---|---|
-| Web 静态图 | 官方教程展示浏览器输入一张图、处理并下载输出图 | Python/Streamlit 后端可以直接调用；细项五官在该路径可用；已真实跑通 |
+| Web 静态图 | 官方教程展示浏览器输入一张图、处理并下载输出图 | 当前项目已建立浏览器桥接 Adapter；不能外推为 Python REST、细项五官或真实 live 已通过 |
 | 高级五官 | 移动端/PC S 系列列出眼距/眼宽高/眉毛/鼻部/嘴部/脸型细分 | 任意套餐、任意 SDK 版本、任意静态图场景都支持全部能力 |
 | 批量写真 | 未发现本次审核资料中的 batch API、最大张数或批量 SLA | 单图教程可以自然推广为 8—9 张批处理 |
 | License | 官方有 Web 测试 License、正式 License、域名/AppId 绑定等流程 | 当前项目已经持有可用 License 或被授权执行 |
@@ -88,10 +88,16 @@ Adapter：[tencent_effect.py](../src/portrait_consistency_agent/services/tencent
 
 ## 9. 当前不可用的定位与手动开通
 
-当前 `blocked` 的原因是 SDK 路线缺少与目标运行表面匹配的 License、平台集成、精确静态图能力、权限/预算和真实 receipt；不是已有 Tencent BeautifyPic/CAM 权限失效。Web 教程是浏览器 JavaScript/WebGL 路线，不能直接当作 Python + Streamlit 后端 REST API。手动登录腾讯云 Vcube/腾讯特效控制台，先选择 Web 静态图或 PC/移动 SDK 表面，申请对应测试 License、绑定域名/AppId、下载匹配版本，再用明确授权内部照片验证。测试 License 规则见[官方快速上手](https://cloud.tencent.com/document/product/616/80189)。开通后仍需回到 Card→Adapter→权限/预算→真实 receipt→Gold 回归→产品负责人冻结，不能仅凭 License 把 Candidate 升级为可执行。
+此前 `blocked` 的原因是缺少 Web 的运行集成和真实 receipt；这并非已有 Tencent BeautifyPic/CAM 权限失效。现在已新增独立的浏览器桥接 Adapter、Web Card、Streamlit page 6 和离线 smoke。Web 教程仍是浏览器 JavaScript/WebGL 路线，不能当作 Python + Streamlit 后端 REST API。测试 License 规则见[官方快速上手](https://cloud.tencent.com/document/product/616/80189)。即使浏览器 smoke 成功，仍需回到 Card→Adapter→权限/预算→隐私/区域→真实 receipt→Gold 回归→产品负责人冻结，不能仅凭 License 把 Candidate 自动升级为主流程可执行 Provider。
 
 ## 10. 2026-08-30 控制台现场证据（历史快照，已由下方状态更新）
 
 已在腾讯云视立方控制台打开 `Web 端 License` 管理页并进入“新建测试版 License”表单。以下保留提交前的历史状态：测试表单要求填写 `Project Name`，并至少绑定精确 `Domain` 或小程序 `AppId`，测试有效期 14 天、可续期 1 次、总计 28 天。产品负责人随后已提交精准域名 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，当前控制台显示测试 License“正常”（2026-08-30 至 2026-09-13）；但 SDK 细项能力、真实静态图 receipt 和可执行 Adapter 仍未通过准入。
 
 这条现场证据把后续工作缩小为：下载/接入对应 Web SDK，做单图 smoke，核验细项参数是否真的在 Web 表面可用，并补齐隐私/预算/Gold 回归；不能把“表单提交成功”当成图片能力通过。
+
+## 11. 2026-09-01｜Web Adapter 实施状态（当前快照）
+
+已实现 `src/portrait_consistency_agent/services/tencent_effect_web.py`：产品 0—100 参数映射为 Web 0—1 参数，服务端按官方公式生成短时签名，浏览器组件加载 UMD SDK，静态图按官方 `takePhoto()` 获取 `ImageData`，并只返回 hash/尺寸/耗时/安全错误码。`ProviderRun` 已增加 `tencent_effect_web/WebARImage` 的联合合同；`data/provider_cards/tencent_effect_web.json` 是单独的 Web Card，仍保持 `candidate`。`pages/6_腾讯特效Web试验.py` 提供官方示例图优先的实际入口，`scripts/smoke_tencent_effect_web.py` 只做离线合同 smoke。
+
+当前尚未取得新的浏览器成功回执，因此不能声称 Web 图片处理已经 live、细项五官已可用、批量已支持或隐私/区域已确认。正式准入由 `evaluate_effect_web_admission()` 按 License、精确域名、出站/区域、预算、Adapter、成功 receipt 和产品批准逐项返回；它不自动改 Card。三项运行配置名为 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，只放本机 `.env` 或 Streamlit Cloud Secrets，Token 不下发给浏览器。

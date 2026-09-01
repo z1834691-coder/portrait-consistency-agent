@@ -385,7 +385,7 @@ Gold Set evaluator/Judge 输入和新 Provider Adapter shell 是独立的工程�
 - `rag_gold_eval.py` 只接收 answerless public/holdout case 和脱敏预测；输出指标、逐题状态和阈值 Gate。它不读照片、向量、原始文本、密钥、hidden 答案键，也不调用任何 Provider。`PENDING` 只表示尚无 predictions；当前 deterministic public prediction 已评分为 `FAIL`，不能被误写为 `PENDING` 或通过。
 - `rag_gold_private_score.py` 是产品负责人私有目录中的 aggregate-only 辅助 scorer：私有 key 只在本机内存解析，输出不得包含题目、case ID、Gold、私有 key 路径、原始文本、图片、向量或逐题错误；不调用 LLM、Provider 或网络。若 key 的 `must_not` 是自然语言而非 canonical event ID，hard-safety 必须显示 `MANUAL_REVIEW_REQUIRED`，不得伪造 `PASS`。
 - Blind Judge 输入只允许题干、系统输出和从真实预测派生的安全机器摘要；Judge 不能补 Gold、授权工具或生成 ProviderRun。当前 fake Judge 仅作结构检查，live Judge 明确未实现。
-- 火山美颜 API V2.0 与腾讯特效 SDK 的 candidate request 只保存 hash/计数/参数名称等脱敏元数据；Card、License、权限、预算、真实 receipt、Gold 回归和产品冻结未齐前，Adapter 只能返回 blocked/not_run，绝不发送图片。
+- 火山美颜 API V2.0 与腾讯特效移动/PC 细项的 candidate request 只保存 hash/计数/参数名称等脱敏元数据；Card、License、权限、预算、真实 receipt、Gold 回归和产品冻结未齐前，它们的 Adapter 只能返回 blocked/not_run，绝不发送图片。腾讯特效 Web 另有独立 `EffectWebRequest`：图片只进入浏览器桥接，不进入 Python/SQLite/Trace；其 Card 仍是 candidate，必须经过 Browser Receipt 和人工准入，不能由这条合同自动获得主流程权限。
 
 2026-08-30 当前全量回归为 `144 passed, 4 warnings`；Ruff、compileall 和 `git diff --check` 已随本轮收口再次通过。当前 public/holdout 的 aggregate Gate 均为 `FAIL`，上述新增合同与六个业务合同并行，不把评测结果或候选 Card 误写为线上图片处理能力。
 
@@ -407,7 +407,7 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 ## 18. 2026-08-30 最新评测治理状态
 
-本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：全量回归为 `160 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `173 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
 
 本地合同落账还要求“相同合同唯一键 + 相同脱敏投影”才可幂等复用；如果质量结果 ID、计划 ID+revision 或验证 ID 已存在但投影发生变化，写入必须 fail-closed 并返回可识别的 `ValueError`，不得覆盖旧证据或暴露底层 SQLite 唯一键异常。`LocalTraceStore` 的回归测试覆盖了质量置信度和 `photo_id` 变化两种冲突路径。
 
@@ -454,3 +454,25 @@ v3 Holdout 的最终运行合同已按 Holdout A 执行一次：answerless runti
 第一位用户的 Cloud 页面出现 `ImageModeration request failed` 后，运行日志定位到 Streamlit 重跑时重复插入 `photo_quality_results.quality_result_id` 的底层唯一键异常。该异常属于运行账本写入问题，不是内容安全结果，也不能用“接口失败”一概替代。
 
 因此六类合同的落账实现新增一条共同规则：同一业务唯一键再次提交时，只有在脱敏投影完全一致的情况下才幂等复用；如果上下文或事实内容发生变化，必须返回可识别的合同冲突并保留旧记录。重复复用可写 `*_reused` 诊断事件，但不得重复完成类产品事件。该规则让 Streamlit 重放可安全恢复，同时保持“证据不可覆盖、ProviderRun 必须来自真实 Adapter、IMS 仍 fail closed”的边界。
+
+## 2026-09-01｜腾讯特效 Web Provider 合同扩展
+
+`TencentEffectWebParams` 与 `ProviderRun` 的联合校验已经加入合同 `v0.4`。它与 `TencentBeautifyParams` 分开：前者是浏览器 Web SDK 的 `0..1` 浮点字段（`lift/shave/eye/chin/whiten/dermabrasion`），后者是 Python `BeautifyPic` 的 `0..100` 整数刻度。`ProviderRun.provider=tencent_effect_web` 时，`operation` 必须是 `WebARImage`，`request_params` 必须是 Web 参数合同；反之仍拒绝。
+
+`EffectWebRequest` 只携带不透明输入引用、输入 hash、参数和 Card 版本；图片 data URL 仅作为一次性组件载荷，不进入持久化合同。`EffectWebBrowserReceipt` 只允许状态、request 引用、输入/输出 hash、尺寸、SDK 版本、耗时和安全错误；成功必须有输出 hash/尺寸，失败必须有 `error_code/safe_error`。它的 `receipt_id` 是本地浏览器桥接回执，不冒充 Tencent REST `RequestId`。`ProviderRun` 成功时结果生命周期为当前浏览器会话的短 TTL，数据库只存脱敏投影。
+
+`EffectWebAdmissionInput/Decision` 是无副作用的准入合同：它把 License、精确域名、出站/区域、预算、Adapter、真实 smoke 和产品批准分开检查。所有证据齐全只产生 `promote_after_review` 建议，不能自动改 Provider Card 或授予图片出站权限。详见 [TENCENT_EFFECT_WEB_ADAPTER.md](TENCENT_EFFECT_WEB_ADAPTER.md)。
+
+## 24. 2026-09-01｜失败驱动 RAG Loop v2 合同边界
+
+本轮新增的 `rag_query_compiler_candidate.py`、`rag_failure_driven_loop.py` 和 28 题开发/挑战集属于评测治理合同，不是六个图片业务合同的字段扩展。候选输入是开发集中的自然语言 query，输出是受限的 `Prediction`、结构化 failure code、指标、Trace 和 promotion decision；它不能输出 `ProviderRun`、编辑参数、权限或图片。
+
+Loop 的不变量是：每代只改一个可解释变量；必须记录 `changed_prediction_count`；`0` 条改变必须标记为 no-op；必须同时运行 dev/challenge 和既有 public regression；必须保留 hard-safety、project Gate、anti-overfit 和网络/LLM/Provider/hidden-answer 布尔回执。V2 的 22 条改变只证明 owner-review 开发集的工程改善，不能替换 active baseline。
+
+28 题及 annotations 的状态是 `owner_review_required`；v3 Holdout 仍按 Holdout A 只可使用 aggregate，不得读取或重复运行逐题答案。合同与 RAG advisory 边界一致：`execution_authorized=false`、Provider 白名单、权限、参数上限和六个业务合同均不受候选影响。只有产品负责人审核 annotations 并用全新独立 Holdout v4 通过质量/安全 Gate 后，才可讨论 promotion。
+
+### 24.1 当前一致性校验
+
+2026-09-01 全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果只证明合同实现与测试/报告一致，不代表 RAG project Gate 通过或改变六个业务合同的执行权限。
+
+失败驱动报告的 `final_candidate_diagnostics` 额外保存 28 道公开题的 V0/终态诊断；它只包含 case ID、标签、错误码、路由和安全布尔事实。逐题解释见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)，不含 v3 私有答案，也不扩展任何执行合同。

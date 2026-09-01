@@ -871,6 +871,26 @@ class TencentBeautifyParams(ContractModel):
     smoothing: ProviderStrength = 0
 
 
+class TencentEffectWebParams(ContractModel):
+    """Tencent Effect Web SDK beautify values (the SDK uses a 0..1 scale).
+
+    This is deliberately a separate parameter contract from
+    :class:`TencentBeautifyParams`: BeautifyPic is a Python REST call with
+    integer 0..100 fields, while the Web SDK receives browser-side floating
+    point strengths.  Keeping the scales separate prevents a value such as
+    ``15`` from silently becoming an over-strength Web SDK request.
+    """
+
+    lift: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    shave: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    eye: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    chin: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    # These two are accepted by the Web SDK but remain opt-in product
+    # features; the current portrait-consistency flow defaults them to zero.
+    whiten: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    dermabrasion: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+
+
 class FeatureDifference(ContractModel):
     feature_code: str = Field(min_length=1, max_length=96)
     reference_value: float | None = None
@@ -1039,8 +1059,8 @@ class ProviderRun(ContractModel):
     attempt_number: PositiveInt
     retry_group_id: SafeId | None = None
     parent_run_id: SafeId | None = None
-    provider: Literal["tencent_beautify_pic"] = "tencent_beautify_pic"
-    operation: Literal["BeautifyPic"] = "BeautifyPic"
+    provider: Literal["tencent_beautify_pic", "tencent_effect_web"] = "tencent_beautify_pic"
+    operation: Literal["BeautifyPic", "WebARImage"] = "BeautifyPic"
     provider_api_version: str = Field(min_length=1, max_length=64)
     region: str = Field(min_length=1, max_length=64)
     endpoint: str = Field(min_length=1, max_length=255)
@@ -1048,7 +1068,7 @@ class ProviderRun(ContractModel):
     provider_card_version: str = Field(min_length=1, max_length=64)
     idempotency_key: SafeId
     request_hash: Sha256
-    request_params: TencentBeautifyParams
+    request_params: TencentBeautifyParams | TencentEffectWebParams
     input_artifact_ref: SafeId
     input_artifact_sha256: Sha256
     confirmation_ref: SafeId
@@ -1072,6 +1092,16 @@ class ProviderRun(ContractModel):
 
     @model_validator(mode="after")
     def validate_run(self) -> ProviderRun:
+        if self.provider == "tencent_beautify_pic":
+            if self.operation != "BeautifyPic" or not isinstance(
+                self.request_params, TencentBeautifyParams
+            ):
+                raise ValueError("BeautifyPic runs require BeautifyPic operation parameters")
+        elif self.provider == "tencent_effect_web":
+            if self.operation != "WebARImage" or not isinstance(
+                self.request_params, TencentEffectWebParams
+            ):
+                raise ValueError("Effect Web runs require WebARImage operation parameters")
         if self.started_at and self.queued_at and self.started_at < self.queued_at:
             raise ValueError("started_at cannot be earlier than queued_at")
         if self.completed_at and self.started_at and self.completed_at < self.started_at:

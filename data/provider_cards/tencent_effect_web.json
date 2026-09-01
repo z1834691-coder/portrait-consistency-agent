@@ -1,0 +1,131 @@
+{
+  "card_id": "tencent-effect-web",
+  "provider": "tencent_cloud",
+  "operation": "WebARImage",
+  "api_version": "web_sdk_current",
+  "card_version": "web_candidate_2026-09-01",
+  "review_status": "candidate",
+  "reviewed_at": "2026-09-01",
+  "integration_kind": "browser_sdk",
+  "endpoint": null,
+  "sdk_url": "https://webar-static.tencent-cloud.com/ar-sdk/resources/latest/webar-sdk.umd.js",
+  "platform": "web",
+  "static_image": {
+    "status": "documented_not_live_verified",
+    "input": "one image element or data URL in the browser",
+    "output": "browser-side canvas/data URL",
+    "batch_status": "not_verified",
+    "result_retention": "browser_session_only"
+  },
+  "parameters": [
+    {
+      "feature_code": "face_lifting",
+      "provider_parameter": "lift",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Web generic face lifting field; exact effect on this project image is pending smoke."
+    },
+    {
+      "feature_code": "face_narrow",
+      "provider_parameter": "shave",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Web generic face narrowing field; do not infer fine-grained jaw controls."
+    },
+    {
+      "feature_code": "eye_enlarging",
+      "provider_parameter": "eye",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Web generic eye field; fine-grained eye width/height/spacing remains unverified."
+    },
+    {
+      "feature_code": "chin",
+      "provider_parameter": "chin",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Web generic chin field; exact product mapping remains pending smoke."
+    },
+    {
+      "feature_code": "whitening",
+      "provider_parameter": "whiten",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Supported by the Web surface but product-default 0; only explicit user consent may enable it."
+    },
+    {
+      "feature_code": "smoothing",
+      "provider_parameter": "dermabrasion",
+      "product_range": [0, 100],
+      "sdk_range": [0, 1],
+      "default": 0,
+      "status": "documented_candidate_not_live_verified",
+      "notes": "Supported by the Web surface but product-default 0; only explicit user consent may enable it."
+    }
+  ],
+  "auth": {
+    "required": true,
+    "license_binding": "exact domain",
+    "signature": "server_minted_sha256_timestamp_token_appid_timestamp",
+    "token_exposed_to_browser": false,
+    "app_id_required": true
+  },
+  "permission_budget_gate": {
+    "live_allowed_by_default": false,
+    "required_checks": [
+      "active_test_or_production_license",
+      "exact_domain_bound",
+      "user_image_consent_for_this_provider",
+      "outbound_data_policy_approved",
+      "region_approved",
+      "estimated_cost_known",
+      "adapter_ready",
+      "static_image_smoke_passed"
+    ],
+    "provider_permission_status": "pending",
+    "pricing_status": "pending_project_evidence",
+    "estimated_cost_cny_per_image": null,
+    "plan_budget_cny": null
+  },
+  "data_boundary": {
+    "python_receives_image": false,
+    "browser_receives_image": true,
+    "browser_receives_license_key": true,
+    "browser_receives_license_token": false,
+    "output_persisted_by_adapter": false,
+    "vendor_image_egress": "not_established_by_project_smoke",
+    "vendor_retention": "pending_vendor_terms",
+    "region": "pending_vendor_terms",
+    "telemetry": "pending_vendor_terms"
+  },
+  "safety_boundary": {
+    "one_authorized_adult_person": true,
+    "multi_face_full_image": false,
+    "identity_rewrite": false,
+    "body_or_private_parts": false,
+    "max_plan_rounds": 3,
+    "rag_can_only_propose": true
+  },
+  "evidence": {
+    "official_static_image_doc": "https://cloud.tencent.com/document/product/616/118039",
+    "official_web_quick_start": "https://intl.cloud.tencent.com/ind/document/product/1143/53939",
+    "live_smoke_status": "not_run",
+    "live_receipt_ref": null,
+    "last_review_note": "Official Web docs reviewed; this project has not yet produced a browser SDK receipt."
+  },
+  "source": {
+    "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",
+    "web_quick_start": "https://intl.cloud.tencent.com/ind/document/product/1143/53939",
+    "signature_doc": "https://cloud.tencent.com/document/product/616/71370"
+  }
+}

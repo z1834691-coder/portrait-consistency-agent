@@ -234,3 +234,25 @@
 |---|---|---|---|---|---|
 | D-TECH-070 | 2026-09-01 | Cloud 页面出现 `Tencent ImageModeration request failed` 后，检查运行日志发现可重复根因是 Streamlit 重跑时重复插入同一 `photo_quality_result_id`，SQLite 报 `UNIQUE constraint failed`；本机同类授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此不把页面泛化提示误判为密钥失效。 | 根因已定位；修复已实现并通过本地验证 | `LocalTraceStore` 对质量/计划/验证合同按唯一键和完整上下文做幂等复用；内容变化则 fail closed；不覆盖审计事实、不重复完成事件、不绕过 IMS、不自动重试。 | Cloud 拉取新提交后，产品负责人刷新并重新执行一次 IMS；若仍失败，只回传脱敏 `error_code` + `RequestId`。 |
 | D-PROD-076 | 2026-09-01 | 用户可见的安全错误继续只显示腾讯 `error_code`、`RequestId` 和简短错误类型；重复写入修复只改善页面稳定性，不能将任何 Cloud 请求自动视为安全通过。 | 已冻结并同步 | 保留 fail-closed、最小必要错误披露和可回放 Trace；本机 Pass 仅是单样本证据，Cloud 新版本仍需真实回执。 | 后续真实 UI 流程完成后，再记录 ProviderRun/VerificationResult；不以本次修复替代端到端验收。 |
+
+## 2026-09-01 追加记录｜腾讯特效 Web Provider 实施与正式准入 Gate
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-077 | 2026-09-01 | 将腾讯特效 Web SDK 定义为独立新 Provider Spike，不改 Tencent BeautifyPic 主链，不把移动/PC 的唇厚、鼻翼、眉毛、眼距等候选能力迁移成 Web API；产品刻度 0—100 由 Adapter 确定性映射到 Web 0—1，美白/磨皮默认 0。 | 已冻结并实现 | 能在绑定域名上验证 Web 静态图，同时保持 RAG advisory-only、Provider 白名单和主流程 fail-closed | 真实 Browser Receipt、Gold 回归和产品负责人批准后再评估 Card promotion |
+| D-TECH-078 | 2026-09-01 | 新增 `tencent-effect-web` Card、`TencentEffectWebAdapter`、`EffectWebRequest/BrowserReceipt/Admission` 合同、Streamlit page 6 和离线 smoke；浏览器只接收 License Key/APP ID/短时签名，Token 留在服务端，图片/结果只在浏览器会话。 | 已实现；离线验证通过 | `ProviderRun` 支持 `tencent_effect_web/WebARImage`；Trace 可保存 hash、尺寸、耗时、错误码和本地 receipt，不保存 Base64/原图 | Cloud Secrets 配齐后运行官方示例图，保存非敏感真实回执 |
+| D-PROD-079 | 2026-09-01 | Web Card 默认保持 `candidate`。正式准入必须同时具备有效 License、精确域名、Provider 权限、出站/区域批准、成本/预算、Adapter ready、真实成功 Browser Receipt 和产品负责人批准；准入函数只返回 `promote_after_review`，不自动改 Card 或授予图片出站权限。 | 已冻结 | 防止“License 正常”或一次 smoke 被夸写成正式能力；Web generic 与移动/PC 细项、单图与批量证据分开 | 取得真实 receipt 后人工审核 Card 与 RAG 是否接入 |
+| D-TECH-080 | 2026-09-01 | Web Adapter 离线 smoke 与 9 条测试通过；当前没有新的浏览器 live receipt，故不可宣称 Web 图片处理已上线、细项五官/批量已验证或供应商隐私/区域已确认。 | 已验证当前边界 | 所有文档、合同、代码和测试统一为 candidate/browser-smoke-pending | 配置三项 Effect Secrets 后再执行 page 6 live smoke；失败保留安全错误，不绕过准入 |
+
+## 2026-09-01 追加记录｜失败驱动 RAG Loop v2：修正层级并取得真实开发集增益
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-081 | 2026-09-01 | 复盘上一轮 V0/V1/V2 Composite 均为 `0.947436` 后，产品负责人确认优化必须遵守“冻结 V0 → 逐题失败归因 → 只改一个根因 → 回归/反过拟合 → 再决定 promotion”的链路；不能把 Trace 名称变化写成增益。 | 已冻结并实现 | 失败分析成为可证伪的产品质量机制；RAG 继续 proposal-only，不改变权限、Provider 或图片执行 | 审核新开发集 annotations 后，新建独立 Holdout v4 验收 |
+| D-TECH-082 | 2026-09-01 | 定位到上一轮候选只改 Prediction 后处理、未触达线上 `RagQuery` 输入边界；新增 `rag-query-compiler-candidate-v0.1`，在检索前抽取受审核 QuerySignals，并按安全/生命周期优先级编译。 | 已实现并验证 | 真实修复 route/evidence 上游缺口；候选不读照片、向量、hidden 答案，不联网、不调用 LLM/Provider | 仅在 owner-review dev/challenge 使用；未替换 active baseline |
+| D-TECH-083 | 2026-09-01 | 新增 `rag_failure_driven_dev_v1`（16 dev + 12 challenge）与结构化 annotations；V0 failure code 为 route 24、relation 23、set 18、rank 10，稀疏 Gold 分母 28 条单列记录。 | 已生成；待产品负责人审核 | 可针对性分析上游查询投影、动作/提问歧义、安全/生命周期、多意图 union 和评测口径；禁止按 v3 case ID 打补丁 | 产品负责人逐题审核题目和 Gold relation/evidence |
+| D-TECH-084 | 2026-09-01 | 失败驱动 Loop 实跑 V0→V4：V0=`0.355614`；V1=`0.403233`（+0.047619，改变 2 条预测）；V2=`0.947619`（+0.544386，改变 22 条预测）；V3/V4 改变 0 条预测，连续两代增益 `<0.01` 后停止。 | 已验证；候选未推广 | 证明上一轮无增益是修错层；V2 开发集 route/relation/Recall@5=100%，但 public regression/project Gate 仍 `FAIL`，anti-overfit=`PASS` | 审核 annotations、建立独立 v4，不能重跑/读取 v3 私有逐题答案 |
+| D-TECH-085 | 2026-09-01 | 失败驱动报告、SOP、Rubric、page 5 优化看板、合同/Prompt/PRODUCT_RULES/README/执行版 PRD 已同步；候选 Trace 统一记录无网络、无 LLM/Provider、无 hidden 答案、active baseline 未改变。 | 已同步；全量 QA 待本轮完成 | 形成唯一当前事实，避免把开发集改善误写成产品化通过 | 本轮全量 pytest、Ruff、compileall、diff check 完成后更新最终测试数 |
+| D-TECH-086 | 2026-09-01 | 完成本轮最终交叉校验：全量 `pytest 173 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 全部通过。 | 已验证 | 代码、合同、测试、报告、看板与文档在当前快照一致；4 条 warning 为既有 Pillow 弃用提示 | RAG project Gate 仍 `FAIL`；待产品负责人审核 28 题 annotations 和新建 Holdout v4 |
+
+| D-TECH-087 | 2026-09-01 | 为避免只看总分，失败驱动报告新增 `final_candidate_diagnostics`，对 28 道公开开发/挑战题保留 V0 与终态逐题状态、错误码、路由和是否发生 Prediction 变化；新增人工复盘文档 `RAG_FAILURE_CASE_REVIEW_V2.md`。 | 已实现并通过测试 | 逐题结论可回放且不泄漏 v3 私有答案；从 V0 到终态 24 条 Prediction 事实变化，V2 相对 V1 为 22 条；RAG 仍 proposal-only，active baseline 未改变 | 产品负责人审核开发集 annotations 后，再创建独立 Holdout v4；v3 不重跑 |

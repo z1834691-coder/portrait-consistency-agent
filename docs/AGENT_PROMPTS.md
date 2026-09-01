@@ -343,6 +343,12 @@ Gold evaluator 与未来盲审 Judge 必须继续遵守“模型不看答案、�
 
 火山美颜 API V2.0 与腾讯特效 SDK 当前只处于 `candidate`：RAG 或 LLM 可以提议“查验这项工具”，但不能创造 ProviderRun、参数授权或图片出站。只有 Card、Adapter、权限/预算、官方 License/隐私/地区/价格证据、真实 smoke receipt、Gold 回归和产品负责人冻结全部通过后，才允许编写可执行 Prompt；在此之前 Adapter shell 必须 fail-closed。
 
+### 6.1｜腾讯特效 Web 的 Agent 边界（2026-09-01）
+
+腾讯特效 Web Card 接入后，Agent 可以检索并解释 Web generic 能力，但不能把移动/PC 细项、官方宣传或一次浏览器成功回执拼成新的执行权限。Agent 只能提出“使用已准入的 `tencent_effect_web/WebARImage`”的候选方案；状态机验证当前 scope、同意、预算、精确域名和 Card 状态，Adapter 决定参数映射和签名，浏览器组件执行，Receipt 验证器决定是否可以入账。LLM 不接图片、不生成签名、不读取 Token、不制造 ProviderRun 或成功事实。
+
+如果 Web Card 仍为 `candidate`，RAG/LLM 必须把它标记为“待准入”；只有 `evaluate_effect_web_admission()` 的证据清单完整并经人工将 Card 更新为 `verified` 后，才允许在未来 Prompt 中引用为可执行 Provider。Web generic 的 `lift/shave/eye/chin` 与移动/PC 的唇厚、鼻翼、眉毛、眼距等能力必须分别表述，不能跨平台迁移。
+
 ## 7. 2026-08-30｜Failure Analysis 不是 Agent Prompt
 
 failure-pattern 分析器和 `rag-correction-candidate-v0.1` 不调用 LLM，也不把隐藏集错误改写成 Prompt。候选只做经审核的领域同义词/中英归一化，并在临时本地检索账本中运行；其输出是供产品负责人审核的 proposal、指标差值和脱敏 Trace，不是系统指令。任何后续 LLM 解释仍必须使用 P0-C 的 direct/reference/conflict 证据边界，不能由 Prompt 解除权限、补写未知工具能力、生成 ProviderRun 或让 RAG 直接授权图片出站。
@@ -380,3 +386,11 @@ Private Streamlit 页面已打开，第一位用户的真实照片流程和 UI 8
 本轮没有新增一个让 LLM 自由改规则的 Prompt。失败模式优化由确定性运行器执行：它读取 public dev/challenge、公开 annotations 和脱敏 predictions，生成结构化错误代码，再逐代运行一个受限候选。v3 Holdout 只可作为聚合上下文；逐题答案、题干、原始用户文本、照片、向量、密钥和完整隐藏 Trace 不得进入 Prompt 或候选代码。
 
 如果未来 LLM 参与解释候选，它只能看到脱敏指标和结构化 evidence 摘要；不能凭自评制造 route/evidence 正确事实，不能改变固定 project Gate、hard-safety、Provider 白名单、权限、参数上限或 `execution_authorized=false`。候选必须先通过 public dev/challenge 回归、anti-overfit 和停止规则，再由产品负责人批准或回滚。当前实际运行未调用 LLM、网络或 Provider，详情见 [RAG 优化进展](RAG_OPTIMIZATION_PROGRESS.md)。
+
+## 14. 2026-09-01 失败驱动查询编译候选的 Prompt/模型边界
+
+本轮没有新增“让 LLM 自由改规则”的 Prompt。`rag_query_compiler_candidate.py` 是确定性的、受审核的候选：它在自然语言进入 P0-B 前抽取 `QuerySignals`，处理动作与信息请求、已审核能力同义词、安全/出站、生命周期/冲突、主体确认、多脸/批量和反馈停止等信号，再生成受限 projection。它不读取图片、向量、密钥、hidden answer，不调用 LLM、网络或 Provider。
+
+V2 的开发集增益（Composite `0.355614→0.947619`）只说明上游层被真正触达；不能被 Prompt 当成“RAG 已通过”，不能覆盖固定 project Gate 或 hard-safety。候选必须记录 `changed_prediction_count`，0 条改变就是 no-op；必须通过 public regression、dev/challenge、anti-overfit 和产品负责人审核后，才可讨论 promotion。未审核前，在线 Agent 继续使用现役 baseline，RAG 仍 `execution_authorized=false`。
+
+当前最终工程校验（2026-09-01）为 `173 passed, 4 warnings`；RAG failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke、Ruff、format、compileall 和 diff check 均通过。Prompt 层只记录候选的安全布尔事实和版本，不把开发集增益写成产品 Gate。

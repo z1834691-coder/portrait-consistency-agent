@@ -100,7 +100,7 @@
 产品负责人已选择**两者并行**，并冻结“先候选、后准入”的路线。当前已落地：
 
 1. `data/provider_cards/volcengine_beauty_api_v2.json` + `services/volc_beauty.py`：候选 Card、typed request/preflight/blocked receipt、离线测试和 smoke；当前 `status=not_run`，未接真实 API。
-2. `data/provider_cards/tencent_effect_sdk.json` + `services/tencent_effect.py`：Web/PC/Mobile 候选能力、License/静态图/批量/权限边界、typed gate、离线测试和 smoke；当前 `status=blocked`，未导入 SDK。
+2. `data/provider_cards/tencent_effect_sdk.json` + `services/tencent_effect.py`：Web/PC/Mobile 候选能力、License/静态图/批量/权限边界、typed gate、离线测试和 smoke；移动/PC shell 当前 `status=blocked`，未导入 SDK。Web 静态图另由 `tencent_effect_web.json`、`services/tencent_effect_web.py` 和 page 6 独立承载，仍需 Browser Receipt 才能准入。
 3. 两条路线均必须完成官方能力/License/隐私/地区/价格/延迟证据、真实 receipt、RAG Gold/hidden 回归和产品负责人冻结，才可由 `candidate` 升级 `reviewed_active`；RAG/LLM 只能提出候选，不能直接上传照片。
 
 尚未冻结的实现参数仍包括：供应商书面报价与单计划预算、p50/p95 可接受时延、批量并发/排队、出站与留存文案、细项能力优先级和真实图片验收集。这些未完成前，不能把候选 Provider 写进用户可执行能力。
@@ -117,7 +117,7 @@
 
 ### 腾讯特效 SDK：阻断点是 License/运行表面，不是 CAM API 权限
 
-腾讯特效是 Web/PC/移动端 SDK 路线。官方 Web 教程证明浏览器可以处理一张静态图，但当前项目是 Python + Streamlit；没有 Web License、域名/AppId 绑定和前端 SDK 集成，就不能从后端直接 POST 出一条 REST 图片请求。移动/PC 资料列出的眼距、眼宽高、眉毛、鼻翼、唇厚等细项也不能外推为 Web 静态图或当前套餐可用。当前 shell 因 `card_candidate_not_admitted`、License/平台/权限/预算/静态图 smoke 等门未闭合而 `blocked`，并没有调用 SDK、读取照片或联网。
+腾讯特效是 Web/PC/移动端 SDK 路线。官方 Web 教程证明浏览器可以处理一张静态图，但当前项目是 Python + Streamlit；没有 Web License、域名/AppId 绑定和前端 SDK 集成，就不能从后端直接 POST 出一条 REST 图片请求。移动/PC 资料列出的眼距、眼宽高、眉毛、鼻翼、唇厚等细项也不能外推为 Web 静态图或当前套餐可用。移动/PC shell 仍因 `card_candidate_not_admitted` 等门未闭合而 `blocked`；Web 现已具备独立桥接 Adapter，但真实 Browser Receipt、隐私/地区/预算和人工 promotion 仍待完成，不能把其离线入口写成 live。
 
 手动处理顺序：登录腾讯云 → 打开 Vcube/腾讯特效控制台 → 选择目标表面（Demo 优先 Web 静态图；若追求细项则接受 PC/移动 SDK 重构）→ 申请 Web 测试 License（官方快速上手写明测试期 14 天、可续一次至最多 28 天）或确认对应 PC/移动 License → 绑定域名/AppId → 下载与表面匹配的 SDK/示例 → 先用内部授权图验证参数、输出和浏览器端处理 → 再补隐私/遥测/区域/价格证据。Web License 的申请和测试规则见 [腾讯 Web License 快速上手](https://cloud.tencent.com/document/product/616/80189)，Web 静态图教程见 [静态图片处理](https://cloud.tencent.com/document/product/616/118039)，细项能力见 [移动端/PC 能力资料](https://cloud.tencent.com/document/product/616/103616)。
 

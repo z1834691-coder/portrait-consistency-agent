@@ -39,6 +39,18 @@ class AppSettings(BaseSettings):
     tencent_moderation_endpoint: str = "ims.tencentcloudapi.com"
     tencent_moderation_biz_type: str = ""
 
+    # Tencent Effect Web SDK (browser-side static-image adapter).  The
+    # License key identifies the exact bound domain; the token is only used
+    # server-side to mint a short-lived signature and must never be sent to
+    # the browser.  APP ID is account metadata required by Tencent's signing
+    # formula, not a user-facing value.
+    tencent_effect_app_id: str | None = None
+    tencent_effect_license_key: SecretStr | None = None
+    tencent_effect_license_token: SecretStr | None = None
+    tencent_effect_sdk_url: str = (
+        "https://webar-static.tencent-cloud.com/ar-sdk/resources/latest/webar-sdk.umd.js"
+    )
+
     # Checkpoint 7 selection. The text-only adapter reads these values only
     # when the user explicitly opts in to one remote parse; keeping them here
     # makes the provider choice explicit and avoids hard-coding a key or model
@@ -54,6 +66,8 @@ class AppSettings(BaseSettings):
     @field_validator(
         "tencent_secret_id",
         "tencent_secret_key",
+        "tencent_effect_license_key",
+        "tencent_effect_license_token",
         "deepseek_api_key",
         mode="before",
     )
@@ -87,4 +101,17 @@ class AppSettings(BaseSettings):
     def has_deepseek_credentials(self) -> bool:
         return bool(
             self.deepseek_api_key is not None and self.deepseek_api_key.get_secret_value().strip()
+        )
+
+    @property
+    def has_tencent_effect_credentials(self) -> bool:
+        """Return whether the Web SDK can receive a server-side signature."""
+
+        return bool(
+            self.tencent_effect_app_id
+            and self.tencent_effect_app_id.strip()
+            and self.tencent_effect_license_key is not None
+            and self.tencent_effect_license_key.get_secret_value().strip()
+            and self.tencent_effect_license_token is not None
+            and self.tencent_effect_license_token.get_secret_value().strip()
         )

@@ -93,6 +93,16 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 
 当前报告新增 `precision_at_k_effective`、`precision_at_k_returned`、按 Gold 条数分层结果、`safety_event_catalog_version` 和未知事件计数；这些是可追溯证据，不是自动自校正授权。候选修正仍然 proposal-only，RAG 仍不能授予图片出站或 Provider 调用权限。
 
+## 2026-09-01 根因校验补充：先证明候选真的改变了哪一层
+
+上一轮 V1/V2 的失败不是“指标不够灵敏”，而是候选改在了错误位置：V1/V2 只变换已经生成的 `Prediction`，而当前 public baseline 的 route、evidence set、relation 本来就是 canonical，因而 0 条预测事实发生变化。今后的每一代候选必须在运行前后比较 `route/evidence_refs/evidence_relations`，并记录 `changed_prediction_count`；若为 0，必须标记为 no-op，不能把 Trace 名称变化写成质量提升。
+
+failure analysis 还必须先做一项架构诊断：在线 P0-A/P0-B 的输入是校验后的 `RagQuery`，不是原始用户句子；如果评测 runner 使用硬编码 phrase projector，则测到的是“自然语言→结构化查询”的上游能力，而不是检索器本身。应该把问题拆为：查询理解/策略编译、检索召回、证据关系、路由和安全五层，分别设计 Gold 和修正。
+
+本轮已用新建的 `rag_failure_driven_dev_v1`（16 dev + 12 challenge，状态 `owner_review_required`）验证这个方法：V0 旧短语投影 Composite=`0.355614`；V1 同义词归一化=`0.403233`；V2 在检索前做受审核 QuerySignals 和安全/生命周期优先级编译，Composite=`0.947619`，route/relation/Recall@5 均为 100%；V3 relation guard、V4 evidence packing 都是 0 条预测变化，连续两代增益 `<0.01` 后停止。该结果是开发集事实，不是 v3 Holdout 泛化结论。
+
+每个失败模式的 SOP 记录必须包含：观察到的输入层/检索层/策略层；失败代码；可验证的根因假设；一次只改的候选；改动前后实际变化条数；dev/challenge 回归；既有 public regression；安全/隐私/越权布尔证据；回滚方式。安全和生命周期优先级必须在能力词识别之前执行；多意图必须保留证据 union；不能用补充无关证据的方式抬高固定 Precision。
+
 ## 2026-08-30 生命周期审计接入
 
 在六步 failure SOP 之前增加一个只读前置检查：先运行 `scripts/audit_rag_lifecycle.py`，确认来源状态和派生索引快照。若条目过期、撤回、冲突、尚未生效、候选未发布、缺来源 URI 或没有原子规则，先把它记录为知识生命周期问题，禁止用同义词、rerank 或 Prompt 补丁掩盖；若 dense manifest 与 active chunk/vector 数量不一致，先记录索引 stale，再重建派生索引并回归。审计只报告，不自动改状态、发布、删除或重建。
@@ -105,3 +115,21 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
   uv run python scripts/audit_rag_lifecycle.py
 ```
+
+## 2026-09-01 失败驱动 Loop v2：从“写 SOP”到“按 SOP 真正修复”
+
+上一轮 Loop 的核心问题不是运行器坏了，而是修正位置错了：V1/V2 只改已经生成的 `Prediction` 后处理，当前公开 baseline 的 route、evidence 和 relation 又本来是 canonical，所以 `changed_prediction_count=0`，指标自然不动。新的 SOP 在运行候选前先回答“它是否改变了真实输入层”，把线上输入合同 `RagQuery` 与旧评测器的 raw-text phrase projector 明确分开。
+
+本轮建立 28 题、16 dev + 12 challenge 的 `rag_failure_driven_dev_v1` 开发集（题目和 annotations 均标记 `owner_review_required`），不读取 v3 私有逐题答案。V0 的逐题 failure code 计数为：`route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；另有 28 条 `metric_sparse_gold_denominator`，后者是固定 Precision 口径提示，不是检索器坏了。
+
+| 失败模式 | 证据定位 | 这轮修正 | 结果 |
+|---|---|---|---|
+| 上游查询投影漏召回 | 窄短语词表把“下颌线收窄/双眼偏小/jawline”等变成 `UNKNOWN` | 在检索前做受审核同义词归一化和 `QuerySignals` 抽取 | V1 有限改善；V2 继续覆盖领域表达 |
+| 动作与提问歧义 | “能不能把……”被误当纯信息查询 | 区分 `information_request` 与明确动作，动作+部位优先 | V2 路由/证据关系恢复 |
+| 安全/生命周期优先级 | 隐私、注入、冲突、过期被能力词覆盖 | 先处理 hard block、出站、生命周期、冲突，再处理能力 | V2 保持 hard-safety=PASS |
+| 多意图证据被压扁 | 同句要求同人确认+内容审核时只返回一类证据 | `QuerySignals` 保存多个意图，证据按 union 组织 | V2 evidence exact/relation=100%（开发集） |
+| 稀疏 Gold 分母 | 1—2 条 Gold 仍按固定 K=3 计分 | 并行保留 fixed/effective/returned Precision，不补无关证据 | 不再把评测问题伪装成算法增益 |
+
+真实代际回执：V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，改变 2 条预测）；V2=`0.947619`（+0.544386，改变 22 条预测）；V3 relation guard 和 V4 evidence packing 均改变 0 条预测，连续两代增益 `<0.01` 后停止。候选 Trace 全部为 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。
+
+这次“有增益”仍只代表 owner-review 开发集上的工程事实。public regression 的固定 Precision 和 project Gate 仍为 `FAIL`；RAG 仍是 advisory-only。只有产品负责人审核新 annotations、再用全新独立 Holdout v4 验收后，才可讨论把 query compiler 候选提升为 active。

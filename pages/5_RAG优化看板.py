@@ -45,6 +45,17 @@ def _load_optimization_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_failure_driven_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_failure_driven_loop_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -110,6 +121,7 @@ def main() -> None:
     st.set_page_config(page_title="RAG 优化看板｜母版人像一致性 Agent", page_icon="🧪")
     report = _load_json_report()
     optimization = _load_optimization_report()
+    failure_driven = _load_failure_driven_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -119,6 +131,78 @@ def main() -> None:
         "当前 RAG baseline 尚未通过项目 Gate。隐藏集只回流聚合统计；本页不读隐藏答案键、"
         "不展示隐藏题干/编号，也不把聚合结果当作逐题调参标签。"
     )
+    if failure_driven is not None:
+        st.subheader("失败驱动迭代（查询理解层）")
+        st.caption(
+            "上一轮候选只改了已经生成的 Prediction；这一轮把修正放到"
+            "‘自然语言→结构化 RAG 查询’之前。"
+            "开发集标记为 owner_review_required，未替代正式 baseline。"
+        )
+        generations = failure_driven.get("generations", [])
+        generations = generations if isinstance(generations, list) else []
+        table: list[dict[str, object]] = []
+        chart: list[dict[str, object]] = []
+        for generation in generations:
+            if not isinstance(generation, dict):
+                continue
+            metrics = generation.get("metrics", {})
+            metrics = metrics if isinstance(metrics, dict) else {}
+            table.append(
+                {
+                    "代次": generation.get("generation_id", "—"),
+                    "候选": generation.get("version", "—"),
+                    "实际改变预测数": generation.get("changed_prediction_count", "—"),
+                    "Composite": generation.get("composite_score", "—"),
+                    "增益": generation.get("composite_gain_vs_previous", "—"),
+                    "Route": _percent(metrics.get("route_accuracy")),
+                    "Relation": _percent(metrics.get("evidence_relation_accuracy")),
+                    "Recall@5": _percent(metrics.get("recall_at_5")),
+                    "公开回归 Gate": generation.get("regression_gate", "—"),
+                }
+            )
+            if isinstance(generation.get("composite_score"), (int, float)):
+                chart.append(
+                    {
+                        "代次": str(generation.get("generation_id", "—")),
+                        "Composite": float(generation["composite_score"]),
+                    }
+                )
+        st.dataframe(table, use_container_width=True, hide_index=True)
+        if chart:
+            st.line_chart(chart, x="代次", y="Composite")
+        pattern_block = failure_driven.get("failure_patterns", {})
+        pattern_block = pattern_block if isinstance(pattern_block, dict) else {}
+        st.write("V0 失败模式：", pattern_block.get("baseline_failure_code_counts", {}))
+        st.write("停止原因：", failure_driven.get("stop_reason", "—"))
+        baseline_block = failure_driven.get("baseline", {})
+        baseline_block = baseline_block if isinstance(baseline_block, dict) else {}
+        failure_case_rows = baseline_block.get("case_diagnostics", [])
+        failure_case_rows = failure_case_rows if isinstance(failure_case_rows, list) else []
+        with st.expander("查看失败驱动集逐题结论（不含 v3 私有答案）"):
+            st.caption("表格只显示本轮 owner-review 开发/挑战集的 case ID、标签和结构化错误码。")
+            st.dataframe(failure_case_rows, use_container_width=True, hide_index=True)
+        st.write(
+            "当前结论：",
+            "查询编译候选在新开发集有明显增益；仍需产品负责人审核该数据集，"
+            "并用独立 Holdout v4 验收。",
+        )
+        failure_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "failure_driven_loop"), None
+        )
+        if failure_artifact is not None:
+            failure_path = failure_artifact.path(PROJECT_ROOT)
+            if failure_path.is_file():
+                st.download_button(
+                    "下载失败驱动优化 HTML",
+                    data=failure_path.read_bytes(),
+                    file_name=failure_path.name,
+                    mime="text/html",
+                )
+                render_component(
+                    read_rag_report(failure_artifact, PROJECT_ROOT),
+                    height=680,
+                    scrolling=True,
+                )
     if optimization is not None:
         st.subheader("版本化自动优化迭代")
         st.caption(

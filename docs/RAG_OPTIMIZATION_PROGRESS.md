@@ -36,18 +36,15 @@ v3 只回流错误类型计数，因此下面的“观察”是聚合事实，�
 
 本表的作用是指导下一份数据怎么设计，而不是让本轮凭聚合数字写 case-specific 补丁。报告和 Dashboard 会同时展示 `aggregate_fact_plus_hypothesis` 标记。
 
-## 3. 每道公开题如何分析
+## 3. 每道题如何分析
 
-`reports/rag_optimization_loop_v1.json` 的 `baseline.case_diagnostics` 为 52 条逐题记录。每条只保存：`case_id`、`split`、标签、题干 SHA-256、预测证据数量、Gold 证据数量和结构化错误代码，不保存原始题干。
+旧 `reports/rag_optimization_loop_v1.json` 仍作为第一轮历史记录：它的 public 52 题逐题诊断显示 51 题只是稀疏 Gold 分母提示，不能驱动算法修正；v3 仍只有 aggregate，不能输出隐藏题 ID 或逐题诊断。
 
-本次逐题结果：
+本轮新建 `data/evaluation/rag_failure_driven_dev_v1.json`（16 dev + 12 challenge）及其待审核 annotations。`reports/rag_failure_driven_loop_v1.json` 的 `baseline.case_diagnostics` 为 28 条逐题记录。每条只保存 `case_id`、`split`、标签、题干 SHA-256、预测/Gold 证据数量和结构化错误代码，不保存 v3 私有题干或答案。
 
-- 51 题：`status=metric_sparsity_only`，唯一代码为 `metric_sparse_gold_denominator`；这不是检索器漏召回，也不是路由错误；
-- 1 题：`status=pass`，没有失败代码；
-- public 逐题没有 `route_mismatch`、`evidence_set_mismatch` 或 `evidence_relation_mismatch`，所以本轮没有按 case ID 写规则补丁；
-- v3 只能记录 aggregate pattern，不能输出隐藏题 ID 或逐题诊断。
+V0 逐题事实统计为：`route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；另有 28 条 `metric_sparse_gold_denominator`，它是评测口径提示而非检索器缺陷。错误码可以重叠，不能相加当作独立坏题。V2 之后 22 条预测事实发生改变，开发集的 route/relation/recall@5 达到 100%；这证明候选修复触达了正确层，但因数据集/annotations 尚待产品负责人审核，不能当正式发布 Gate。
 
-## 4. 自动化候选代次
+## 4. 自动化候选代次（首次 loop，历史快照）
 
 | 代次 | 做了什么 | 结果 | 是否推广 |
 |---|---|---|---|
@@ -57,35 +54,52 @@ v3 只回流错误类型计数，因此下面的“观察”是聚合事实，�
 | V3 | evidence 稳定去重/最多 5 条 | 未运行：连续两代增益 `<0.01` | 按停止规则跳过 |
 | V4 | 冲突/空证据 fail-closed 路由 | 未运行：连续两代增益 `<0.01` | 按停止规则跳过 |
 
-Composite 的权重和 project Gate 见 [RAG 优化 Rubric](RAG_OPTIMIZATION_RUBRIC.md)。V1/V2 的 Trace 均确认 `network_called=false`、`provider_api_called=false`、`llm_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`；反过拟合检查为 `PASS`。
+Composite 的权重和 project Gate 见 [RAG 优化 Rubric](RAG_OPTIMIZATION_RUBRIC.md)。上表保留的是第一次错误层候选的历史事实；它不能代表本轮失败驱动集的结果。
+
+## 4.1 失败驱动 Loop v2（当前实验）
+
+| 代次 | 候选与修正层 | 改变预测数 | Composite | 增益 | Route | Relation | Recall@5 | 回归/推广 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| V0 | 窄短语投影 baseline | — | 0.355614 | — | 14.29% | 28.57% | 50.00% | active 参照 |
+| V1 | 同义词归一化 | 2 | 0.403233 | +0.047619 | 21.43% | 35.71% | 53.57% | proposal-only |
+| V2 | 上游自然语言查询编译 | 22 | 0.947619 | +0.544386 | 100.00% | 100.00% | 100.00% | proposal-only |
+| V3 | relation guard | 0 | 0.947619 | 0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
+| V4 | evidence packing | 0 | 0.947619 | 0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
+
+停止原因：V3/V4 连续两代 Composite 增益 `<0.01`，且 public regression 的固定 Precision@3 仍导致 project Gate=`FAIL`，所以没有继续堆下游补丁。所有候选 Trace 的 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。V2 仍只是 owner-review development evidence，不改变现役 P0-A/P0-B/P0-C。
 
 ## 5. 完整可回放链路
 
 ```text
-public cases + public annotations + baseline predictions
-→ V0 baseline 评测
-→ 每道题生成结构化 failure code
-→ V1 同义词候选回归
-→ V2 relation 候选回归
-→ Composite / project Gate / hard-safety 对照
-→ anti-overfit 检查
-→ 连续两代低增益，停止 V3/V4
-→ JSON + HTML + page 5 看板
-→ 产品负责人批准 / 回滚（本轮未推广）
+owner-review development dev/challenge + annotations
+→ V0 窄短语 baseline
+→ 逐题 failure code + 根因归类
+→ V1 同义词候选
+→ V2 上游 query compiler 候选
+→ V3 relation guard / V4 evidence packing 验证是否还有增益
+→ Rubric + public regression + hard-safety + anti-overfit
+→ 两代增益 <0.01，停止候选
+→ JSON + HTML + page 5 可回放
+→ 产品负责人审核 / 新独立 Holdout v4 / 批准或回滚
 ```
 
 ## 6. 结论
 
-本轮已经把 SOP 从“文字流程”变成真实可运行的 proposal-only loop，并把 52 道公开题逐题归因。它成功证明：候选可以安全运行、过程可追溯、没有越权；但没有产生质量增益，project Gate 仍为 `FAIL`。这不是失败隐藏起来，而是说明当前公开集已经不能提供修正 v3 泛化问题所需的新监督信号。
+本轮已经把 SOP 从文字流程变成真正作用于上游查询边界的 proposal-only loop。V2 在 owner-review development set 上带来 `+0.544386` Composite 和 22 条预测改变，说明上一轮“0 增益”确实是修错层导致的；V3/V4 无增益又证明继续在下游打补丁没有价值。安全、active baseline 与权限均未改变，public regression/project Gate 仍为 `FAIL`。
 
-下一步要提升真实质量，必须先增加经过人工审核的独立表达/组合数据，并新建 Holdout v4；不得重复使用 v3 逐题答案。只有在新数据上候选稳定通过安全和质量门，产品负责人批准后，才可考虑把某一候选升级为 active。
+下一步要提升真实泛化，必须先由产品负责人审核这 28 题和 annotations，再按同一 rubric 建立独立 Holdout v4。不得用 v3 私有逐题答案调参；只有新的 v4 在安全硬门和质量门均通过，并经产品负责人批准，才可考虑把 query compiler 候选提升为 active。
 
 ## 7. 产物与命令
 
 - 代码：`src/portrait_consistency_agent/services/rag_optimization_loop.py`
+- 新查询编译候选：`src/portrait_consistency_agent/services/rag_query_compiler_candidate.py`
+- 失败驱动 Loop：`src/portrait_consistency_agent/services/rag_failure_driven_loop.py`
+- 开发/挑战集：`data/evaluation/rag_failure_driven_dev_v1.json`、`data/evaluation/rag_failure_driven_dev_v1_annotations.json`
+- 失败驱动运行器：`scripts/run_rag_failure_driven_loop.py`
 - 运行器：`scripts/run_rag_optimization_loop.py`
 - JSON：`reports/rag_optimization_loop_v1.json`
 - HTML：`reports/rag_optimization_loop_v1.html`
+- 当前 JSON/HTML：`reports/rag_failure_driven_loop_v1.json`、`reports/rag_failure_driven_loop_v1.html`
 - 看板：`pages/5_RAG优化看板.py`
 - SOP：[RAG_FAILURE_ANALYSIS_SOP.md](RAG_FAILURE_ANALYSIS_SOP.md)
 - Rubric：[RAG_OPTIMIZATION_RUBRIC.md](RAG_OPTIMIZATION_RUBRIC.md)

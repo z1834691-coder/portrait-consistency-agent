@@ -52,7 +52,7 @@ Route 20% + Evidence exact 15% + Evidence relation 20%
 
 当前 loop 使用一个可解释的停止规则：**连续两代 Composite 增益小于 0.01，且没有跨过项目质量门时，停止继续尝试剩余候选。** 这不是把项目宣布为通过，而是避免在没有新证据时继续堆补丁。
 
-本轮实际结果是：V0 baseline → V1 同义词归一化 → V2 relation canonical 化，两个候选的 Composite 增益都是 `0.0`；V3 evidence packing 与 V4 route safety guard 因边际效益递减没有运行。后续如果新增独立语料或新的 Gold/holdout，应重新打开一轮，而不是在当前公开集上反复试错。
+首次 proposal-only loop 的结果（保留作历史复盘）是：V0 baseline → V1 同义词归一化 → V2 relation canonical 化，两个候选的 Composite 增益都是 `0.0`；它们只改写了已经生成的结构化 Prediction，没有触达真实的自然语言查询编译边界，因此属于 no-op。后续如果新增独立语料或新的 Gold/holdout，应重新打开一轮，而不是在当前公开集上反复试错。
 
 ## 6. 当前结果的正确表述
 
@@ -60,3 +60,23 @@ Route 20% + Evidence exact 15% + Evidence relation 20%
 - v3 private holdout：只回流 aggregate，Route=`30.56%`、Recall@5=`59.72%`、MRR=`77.78%`、nDCG@5=`63.81%`、hard-safety=`PASS`，主要错误类型为 relation/set/route。不能从聚合结果推断每道题具体错因，也不能把 v3 逐题答案拿来调规则。
 - v3 的三类聚合错误会在看板中显示“事实/假设/下一份证据”三列：假设只用于设计新 Holdout，不用于 case-specific patch；三类计数允许重叠。
 - 因此当前结论是“优化闭环可运行、公开集没有回退、隐藏集暴露泛化不足”，不是“RAG 已产品化通过”。若要再次正式验收，必须新建独立 Holdout v4。
+
+## 7. 2026-09-01 失败驱动 Loop v2：真正改变上游输入后的评测
+
+上一轮指标不变的根因已被单独记录：候选只在结果后处理层运行，而线上 P0-B 的输入合同是经过校验的 `RagQuery`。因此本轮新建 28 题、`owner_review_required` 的开发/挑战集，把候选放到“自然语言 → 结构化查询”边界，仍然不触碰 active baseline、Provider、权限或图片。
+
+| 代次 | 实际改动 | changed_prediction_count | Composite | 相对上一代 | Route | Relation | Recall@5 | 状态 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| V0 | 旧窄短语投影 baseline | — | 0.355614 | — | 14.29% | 28.57% | 50.00% | 参照 |
+| V1 | 已审核中英/领域同义词归一化 | 2 | 0.403233 | +0.047619 | 21.43% | 35.71% | 53.57% | 候选 |
+| V2 | 上游查询编译：动作/能力/隐私/生命周期/冲突优先级 | 22 | 0.947619 | +0.544386 | 100.00% | 100.00% | 100.00% | 候选 |
+| V3 | relation guard | 0 | 0.947619 | +0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
+| V4 | evidence packing | 0 | 0.947619 | +0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
+
+V2 的增益是开发集事实，不是产品质量 Gate：该数据集和 annotations 尚待产品负责人审核，且 public regression 的历史固定 Precision@3=`47.44%` 仍使 regression/project Gate=`FAIL`。本轮安全回执为 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。停止原因是 V3、V4 连续两代增益小于 `0.01`；这表示当前候选的边际收益递减，不表示 RAG 已通过。
+
+### 7.1 失败代码的正确解释
+
+新开发集 V0 的主要失败代码是 `route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；`metric_sparse_gold_denominator=28` 是评测口径诊断，不是检索器缺陷。V2 通过修复上游查询投影、动作/提问歧义和安全/生命周期优先级，使 22 条预测事实发生改变；V3/V4 的 0 条改变证明继续在下游打补丁没有边际收益。
+
+该结果只允许进入开发集 SOP 和下一份独立 Holdout v4 的设计，不允许把 D/X case ID 写进规则，也不允许读取 v3 私有逐题答案来继续调参。

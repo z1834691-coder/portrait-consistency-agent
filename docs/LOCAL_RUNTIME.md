@@ -133,3 +133,27 @@ Cloud 重建后，产品负责人刷新页面，在同人不确定提示处确�
 Cloud 拉取新版本后无需重新配置本机 `.env`：只需刷新页面，重新执行一次当前照片的 IMS 检查。Cloud Secrets 仍必须保留在 Cloud App 的根级设置中；若新的真实腾讯错误仍出现，只回传错误码和 RequestId，不绕过安全门或重复上传无授权照片。
 
 第一位用户同时反馈上传等待过长、首屏显示 JSON、按钮/检查点过多、自然语言入口被工程选项挤压和视觉偏工程文档；这些先作为 UI Gate 输入。当前页面仍是工程验证壳，暂不把上述反馈冒险改成权限或路由变更。
+
+## 2026-09-01｜腾讯特效 Web Adapter 运行说明
+
+左侧页面新增“腾讯特效 Web 试验”。它使用官方示例图作为默认输入，避免第一次试验就发送个人照片；只有用户明确勾选后，才会将授权图片交给浏览器 SDK。首次运行前在本机 `.env` 或 Cloud App Settings → Secrets 配置 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`。Token 仅用于 Python 生成短时签名，页面和 Trace 不显示。
+
+离线合同检查：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/smoke_tencent_effect_web.py
+```
+
+该命令应输出 `status=not_run`、`network_called=false`，不读取照片、不加载浏览器 SDK。真实 smoke 必须打开已绑定精确域名的 page 6，点击组件内“开始腾讯特效处理”，然后观察页面是否收到 Browser Receipt；成功回执只能证明单次 Web 静态图处理，不代表 Card 已升级或主流程可用。当前 Web Card 仍为 `candidate`，移动/PC 细项和批量能力继续保持未验证。
+
+## 2026-09-01 RAG 失败驱动 Loop v2 运行态
+
+使用 `scripts/run_rag_failure_driven_loop.py` 可在本机重放 V0→V4 的开发/挑战回归与 public regression：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/run_rag_failure_driven_loop.py
+```
+
+本次真实报告为 `reports/rag_failure_driven_loop_v1.json/.html`。V0 Composite=`0.355614`，V1=`0.403233`（2 条预测改变），V2=`0.947619`（22 条预测改变），V3/V4 各 0 条改变并按两代低增益停止。运行器不联网、不调用 LLM/Provider、不读照片/向量/hidden 答案，且不修改 active baseline；报告和 page 5 看板是只读治理证据。开发 annotations 尚待产品负责人审核，public regression/project Gate 仍 `FAIL`，不得将 V2 写成 RAG 产品化通过。

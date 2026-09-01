@@ -73,3 +73,15 @@ Gold Set v2 评测器和两个候选 Provider shell 已加入本地环境，但�
 v3 Holdout 已由产品负责人完成审核，并已在工作区外完成一次正式私有聚合盲测；工作区只保留代码和历史/公开评测材料，答案键、逐题审核材料和盲测聚合仍在所有者受限目录。盲测未读答案键、照片、向量、LLM、Provider 或网络；质量 Gate=`FAIL`、hard-safety=`PASS`。不要依据旧快照中“v3 待审核/模板为空”的描述判断当前状态。
 
 Streamlit Cloud Private 页面已打开作为第一位用户入口。当前尚未由 Codex 代上传真实照片或触发新的腾讯图片调用；Cloud 页面上的真实数据采集必须由产品负责人亲自操作并重新确认美国区域/受邀测试边界。8C 多轮仍是“代码/fixture 已验证、真实 UI 回执待触发”，本地命令和轻量 Cloud 包均不自动下载模型或联网。
+
+## 2026-09-01｜腾讯特效 Web 试验环境
+
+新增 page 6 和 `TencentEffectWebAdapter` 使用 Streamlit Components v2 在浏览器中加载腾讯 Web SDK。它不是 Python REST 调用：图片/输出图只在浏览器会话，Python 仅接收脱敏 Browser Receipt。需要的三项根级配置为：
+
+```text
+TENCENT_EFFECT_APP_ID
+TENCENT_EFFECT_LICENSE_KEY
+TENCENT_EFFECT_LICENSE_TOKEN
+```
+
+本机放 `.env`，Cloud 放 App Settings → Secrets；Token 只在 Python 侧生成短时签名，不能出现在页面、Trace、仓库或聊天。`scripts/smoke_tencent_effect_web.py` 是离线 smoke，明确输出 `network_called=false`；真实 smoke 必须在绑定了腾讯测试 License 的 Cloud 域名 page 6 中点击组件按钮后取得浏览器回执。当前 Web Card 仍为 `candidate`，不能因环境变量齐全而自动放行。

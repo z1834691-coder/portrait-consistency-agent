@@ -1166,7 +1166,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | RAG Gold Set v2 离线评测器                     | **已实现并本地验证；当前基线未通过** | `services/rag_gold_eval.py`、public 52 题、annotations、holdout 20 题、盲审输入合同、JSON/Markdown/HTML 报告和阈值 Gate；public prediction 与私有 aggregate holdout score 已实际生成；Precision C 双口径、Safety ID C 字典已实现 | public 固定分母 Precision@3=47.44%、覆盖式/返回式=100%，私有 holdout Route=25.00%，两者 project Gate 均 `FAIL`；私有旧 Markdown 仍需 machine-normalized event ID；live Judge 未实现 |
 | RAG Gold Set v3 一次性盲测                     | **已审核并完成一次私有聚合盲测；质量 Gate 未通过** | 产品负责人审核 36 题；answerless runtime、私有答案键隔离、deterministic runner/scorer、aggregate-only JSON/HTML 已完成；runner 未读答案键/照片/网络 | Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、Evidence relation=23.61%；hard-safety 0/36；不能用逐题 hidden 答案调参；live LLM Judge 未启用 |
 | RAG failure-pattern / 自校正候选 / 优化 Dashboard | **已实现并本地验证；候选未推广** | `services/rag_failure_analysis.py`、`rag-correction-candidate-v0.1`、`services/rag_optimization_loop.py`、`scripts/run_rag_optimization_loop.py`、脱敏 JSON/HTML、page 4/5 看板；公开回归差值、逐题错误码、停止规则和六步 SOP 可回放 | 只读 public/隐藏 aggregate；不读 hidden 答案、照片、向量或原始文本；不改变 active baseline、权限、Provider 或 project Gate（当前仍 `FAIL`） |
-| 新 Provider candidate shells                 | **已实现并 fail-closed 验证；火山 V0 暂缓** | 火山美颜 API V2.0、腾讯特效 SDK 的 Card、typed Adapter、权限/预算 preflight、离线测试和 smoke；V0 实际执行仍 Tencent-only | 火山需购买创点且公开价格/试用未闭合，腾讯特效仍无 License/真实 receipt；均无 SDK/API、密钥、图片出站、Gold 回归或产品准入 |
+| 新 Provider candidate shells                 | **已实现并 fail-closed 验证；火山 V0 暂缓** | 火山美颜 API V2.0、腾讯特效移动/PC 细项 Card/typed Adapter 与腾讯特效 Web 独立 Card/浏览器 Adapter、权限/预算 preflight、离线测试和 smoke；V0 实际执行仍 Tencent-only | 火山需购买创点且公开价格/试用未闭合；腾讯特效 Web 尚无新的 Browser Receipt，移动/PC 细项仍无可执行 SDK/图片出站、Gold 回归或产品准入 |
 
 ### 13.1 当前测试证据
 
@@ -1191,7 +1191,7 @@ RAG P0-C local smoke                   → rag_advisory_v0.1；默认禁止下�
 RAG Dashboard 本机页面                  → 页面加载成功；展示 3 张审核来源卡/10 条规则的本机账本快照；控制台无页面错误；不构成 Gold 指标或用户研究结论
 RAG Gold evaluator                       → public 52 题 deterministic baseline：Precision@3=47.44%，其余当前公开指标=100%，project Gate=FAIL；holdout 20 题仅生成无答案 prediction/Trace，`hidden_answer_key_read=false`
 Private holdout aggregate scorer          → 本机私有 key 只在内存读取；Route=25.00%，Recall@5=38.24%，MRR=52.94%，nDCG@5=41.56%，project Gate=FAIL；不输出 case ID/题目/Gold/路径，hard-safety=MANUAL_REVIEW_REQUIRED
-Provider candidate smoke                 → Volc `status=not_run`、Tencent Effect `status=blocked`；`network_call=not_attempted`；未读取照片/密钥
+Provider candidate smoke                 → Volc `status=not_run`；Tencent Effect Web 离线 `status=not_run`、`network_called=false`；移动/PC shell `status=blocked`；未读取照片/密钥
 SQLite 初始化                            → 保留 v0.2 六表迁移、新增 v0.3 运营事件/匿名用户迁移和 v0.4 验证观察标记；合同 v0.4 的 8C 字段向后兼容写入 JSON 投影
 ```
 
@@ -1309,7 +1309,7 @@ Gold Set v2（开发/挑战/隐藏）
 - `services/rag_gold_eval.py` 与 `scripts/evaluate_rag_gold_v2.py`：加载 answerless public/holdout、独立 dev/challenge annotations，计算 Precision/Recall/Hit@K、MRR、nDCG、route/evidence/relation accuracy 和 hard-safety violation；缺预测显示 `pending`，不会把空集当 0 分。
 - `docs/RAG_GOLD_EVALUATOR.md`、`docs/RAG_GOLD_JUDGE_PROMPT.md`、`docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md`：分别记录一页说明、盲审输入/输出合同和人工逐题审核模板。
 - `data/evaluation/rag_gold_v2_public.json`：52 道无答案开发/挑战运行题；`rag_gold_v2_annotations.json`：仅 dev/challenge 答案键；`rag_gold_v2_holdout_runtime.json`：20 道只含 `case_id/query` 的隐藏运行包。
-- `data/provider_cards/volcengine_beauty_api_v2.json`、`data/provider_cards/tencent_effect_sdk.json` 与对应 Adapter shell：均明确 `candidate`、未接入真实 SDK/API、无图片出站、无密钥、无真实费用/License/地区确认；默认 fail-closed。
+- `data/provider_cards/volcengine_beauty_api_v2.json`、`data/provider_cards/tencent_effect_sdk.json` 与对应 Adapter shell：均明确 `candidate`、未接入真实 SDK/API、无图片出站、无密钥、无真实费用/License/地区确认；默认 fail-closed。腾讯 Web 另有 `tencent_effect_web.json`、浏览器 Adapter 和 page 6，但仍需真实 Browser Receipt 与准入证据，不得与移动/PC 细项混用。
 - 真实命令证据：最新全量 `pytest` 为 `160 passed, 4 warnings`；public 52 题 deterministic baseline、v3 无答案 runtime prediction 和 proposal-only 优化 Loop 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator、canonical event parser 和优化 Loop 均明确 `network_called=false`。
 
 ### 17.6 下一道产品决策门
@@ -1475,6 +1475,20 @@ RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来�
 
 因此，RAG 当前所有可在不改变产品权限的范围内完成的本地工程闭环（P0-A、P0-B、P0-C、失败分析、自校正候选、评测报告、双看板、生命周期审计）均已落地；v3 Holdout 的产品负责人逐题审核/正式盲测、LLM Judge 是否正式启用、新 Provider 准入和 external/hybrid 复测仍保持独立决策门。
 
+### 17.19 2026-09-01 产品设计：腾讯特效 Web Provider 的独立准入
+
+<span style="color:#C00000"><strong>背景与问题。</strong>现有 Tencent BeautifyPic 是 Python 后端可调用的 REST Provider，但它的参数范围不能代表腾讯特效产品的全部能力。为了验证更丰富的静态人像处理能力，本轮研究了腾讯 Web 静态图片教程与 Web SDK 认证方式。调研同时发现，Web SDK 是浏览器 JavaScript/WebGL 路线，移动/PC 的唇厚、鼻翼、眉毛、眼距等细项不能直接迁移成 Python API；“测试 License 正常”也不等于项目已经真实处理过一张图片。</span>
+
+<span style="color:#C00000"><strong>产品判断与决策。</strong>将腾讯特效 Web 单独定义为新的 Provider Spike，不改主流程默认的 BeautifyPic，也不让 RAG/LLM 因命中知识卡自动授权。产品参数统一保留 0—100 的用户刻度，由 Adapter 确定性转换成 Web `0..1`；美白/磨皮默认 0；License Token 只用于服务端生成短时签名，浏览器不得接收。图片和结果只在浏览器当前会话，Python/SQLite/Trace 只保存 hash、尺寸、耗时、状态和错误码。Web generic 的 `lift/shave/eye/chin` 与移动/PC 细项分开记录，单图不推导批量能力。</span>
+
+<span style="color:#C00000"><strong>实现与准入。</strong>已新增独立 Web Card、`TencentEffectWebAdapter`、Streamlit page 6、Browser Receipt 合同和离线 smoke；`ProviderRun` 已支持 `tencent_effect_web/WebARImage` 联合类型。准入函数逐项检查有效 License、精确域名、Provider 权限、出站/区域与预算证据、Adapter ready、真实成功 Browser Receipt 和产品负责人批准；即使全部满足，也只返回 `promote_after_review`，人工确认后才可把 Card 从 `candidate` 改为 `verified`。本轮不把代码入口或 License 表单视为真实成功，真实浏览器回执仍需在绑定域名和 Secrets 配齐后取得。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>产品现在拥有一条可以真实验证新 Provider 的、可回滚的浏览器链路，并且能展示“参数映射—SDK 执行—回执—准入”的完整产品决策过程；同时保留了主流程的隐私、RAG advisory-only、Provider 白名单和 fail-closed 约束。当前不宣称 Web 已上线、细项五官已可用、批量已支持、图片绝不出站或供应商留存为零。</span>
+
+### 17.20 2026-09-01 产品设计：Cloud ImageModeration 失败的分层定位
+
+<span style="color:#C00000"><strong>背景与判断。</strong>第一位用户在 Cloud 页面看到通用的 “Tencent ImageModeration request failed”。本轮将“凭据/权限错误”“腾讯返回的审核失败”和“Streamlit 重跑导致的账本异常”拆开记录；代码现在把腾讯 `error_code`、`RequestId` 作为脱敏回执展示，把 SQLite 合同唯一键冲突作为独立的可诊断事件，并继续对 `Pass/Review/Block` 使用 fail-closed 路由。这样不会因为页面的一句泛化文案就把本机已有 Pass 误写成 Cloud 通过，也不会为了让流程继续而跳过安全门。</span>
+
 ## 附录 C. 2026-09-01 产品设计：用失败模式驱动 RAG 自校正，但不让隐藏集污染开发
 
 <span style="color:#C00000"><strong>背景与问题。</strong> v3 Holdout 的一次性盲测显示，当前 RAG 的主要聚合失败类型是 `evidence_relation_mismatch`、`evidence_set_mismatch` 和 `route_mismatch`。如果直接按隐藏题逐题补关键词，Holdout 会被变成开发集；如果只写一份失败分析而不真正运行候选，又无法证明 SOP 能产生改进。因此本轮把“逐题诊断、候选修正、回归、反过拟合和停止”作为一个独立产品/工程闭环。</span>
@@ -1517,3 +1531,29 @@ RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来�
 | Cloud 重跑下合同幂等落账 | **已实现并本地验证** | 质量/计划/验证合同相同投影复用；变化投影 fail closed；重复完成事件不计数 |
 | 腾讯失败可定位 | **已实现** | 页面/脱敏 Trace 显示 `error_code`、`RequestId`；不显示原始错误全文、密钥或图片 |
 | Cloud 新版本真实 IMS 回执 | **待产品负责人重跑** | 本机 `Pass` 不能替代 Cloud 证据；仍须保持安全门 fail closed |
+
+## 附录 E. 2026-09-01 产品设计：把 RAG 优化从“无增益”改成失败驱动的真实迭代
+
+<span style="color:#C00000"><strong>背景与问题。</strong>上一轮 RAG 优化连续三代的 Composite 都是 `0.947436`，看起来像工作很久却没有效果。回看代码、数据和 Trace 后发现：候选只在已经生成的 `Prediction` 后处理层做同义词/关系重写，而 public baseline 的 route、evidence 和 relation 本来已是 canonical，实际没有一条预测事实改变；同时 public 52 题过于容易，51 题只有 Gold 稀疏分母提示，不能解释 v3 的泛化失败。问题不在“没有继续多跑几轮”，而在“修正层级与监督数据选错”。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>我先对照线上 P0-A/P0-B 的输入合同（校验后的 `RagQuery`）和旧评测器的 raw-text phrase projector，再核对公开 annotations、failure report 与 v3 仅聚合结果。由此把失败拆为查询理解/策略编译、检索召回、证据关系、路由、安全五层；v3 的 `relation/set/route` 只能作为聚合事实和可验证假设，不能读取逐题答案写规则。评测还必须显式记录 `changed_prediction_count`，否则无法证明候选真正改变了被测系统。</span>
+
+<span style="color:#C00000"><strong>产品决策。</strong>RAG 仍只能提议，且自校正每代只改变一个可解释变量。新增 28 题（16 dev + 12 challenge）的 owner-review 开发/挑战集，将候选放在自然语言→`RagQuery` 的真实边界；V0 保留旧窄短语 baseline，V1 做已审核同义词归一化，V2 做 `QuerySignals` 查询编译并先处理动作/信息请求、安全/出站、生命周期/冲突和多意图 evidence union，V3/V4 仅验证下游 relation guard/evidence packing 是否还有边际收益。每代同时看 hard-safety、project Gate、route、证据集合/关系、Recall@5、MRR、nDCG、三种 Precision、public regression、anti-overfit 和回滚条件；连续两代增益 `<0.01` 且未过质量门就停止。</span>
+
+<span style="color:#C00000"><strong>工程处理与结果。</strong>新增 `rag_query_compiler_candidate.py`、`rag_failure_driven_loop.py`、失败驱动数据集/annotations、运行脚本、4 条回归测试、page 5 代际看板和 JSON/HTML 报告。V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，2 条预测改变）；V2=`0.947619`（+0.544386，22 条预测改变，开发集 route/relation/Recall@5=100%）；V3/V4 各改变 0 条预测，连续两代低增益后停止。所有候选均 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>这次迭代证明上一轮无增益是“候选修错层”，并证明查询编译候选在受审核开发集上确实改善了 route/evidence；V3/V4 的 0 条改变又说明不应继续堆同类后处理。它仍不是产品质量通过：开发 annotations 待产品负责人审核，public regression 的固定 Precision@3=`47.44%`、project Gate 仍 `FAIL`，v3 Holdout 不得重跑或读取逐题答案。下一次正式泛化验收必须新建独立 Holdout v4，审核通过后才能讨论 promotion。</span>
+
+### E.1 当前实现矩阵覆盖
+
+| 能力 | 当前状态 | 真实证据与边界 |
+|---|---|---|
+| 失败驱动开发集 | **已生成，待人工审核** | 28 题（16 dev/12 challenge），annotations=`owner_review_required` |
+| V0→V4 真实候选回归 | **已运行** | `reports/rag_failure_driven_loop_v1.json/.html`；V2 改变 22 条预测，V3/V4 no-op |
+| 逐题失败诊断 | **已实现** | 只保存 public/DX case ID、标签、题干 SHA、预测/Gold 数量和 failure code，不含 v3 私有答案 |
+| 失败优化看板 | **已实现** | page 5 + allow-listed HTML；只读，不自动发布候选 |
+| RAG 质量 Gate | **未通过** | public regression/project Gate=`FAIL`；需独立 Holdout v4 |
+
+### E.2 本轮最终交叉校验
+
+<span style="color:#C00000"><strong>当前真实 QA。</strong>全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff check、`ruff format --check`（132 files）、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果证明本轮代码、合同、测试和报告可以一起运行，不代表 RAG project Gate 通过，也不改变 active baseline。</span>

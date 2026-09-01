@@ -39,6 +39,12 @@
 
 这证明了凭据、`fmu` 服务级权限、服务开通、SDK 签名和单次图片处理链路可以工作；不代表批量能力、稳定性、成本、相似度判断或用户可接受性已经验证。
 
+## 腾讯特效 Web Provider（独立准入，不替代上述链路）
+
+腾讯特效 Web 是浏览器 JavaScript/WebGL SDK，不是 Python REST API。项目已建立独立 Web Card、Adapter、Streamlit page 6 和离线 smoke；其参数使用 Web 的 0—1 刻度，Python 产品刻度 0—100 会在 Adapter 内确定性转换。浏览器输出只在当前页面内存中展示/下载，Python 只接收脱敏 Browser Receipt；该 Receipt 的 `receipt_id` 不是腾讯 REST `RequestId`。
+
+当前 Web Card 仍为 `candidate`，不能被 RAG、LLM 或主流程自动选中。只有精确域名 License、出站/区域/预算证据、Adapter ready、真实成功 Browser Receipt、Gold 回归和产品负责人批准全部存在时，`evaluate_effect_web_admission()` 才返回 `promote_after_review`；仍需人工更新 Card，函数不自动赋予图片出站权限。配置名为 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，Token 永不发送给浏览器。
+
 ### CompareFace live Gate（2026-08-27，历史记录｜权限补齐前）
 
 - 使用用户先前明确提供的单人本地照片做同图对同图 smoke；本地 OpenCV 质量门检测到 1 张脸后才发起请求。

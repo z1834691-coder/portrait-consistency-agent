@@ -549,7 +549,7 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 
 Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审输入合同和答案不泄漏 HTML/Markdown/JSON 报告已落地；public deterministic baseline 已生成并评分，固定分母 Precision@3=47.44%，project Gate=`FAIL`；answerless holdout 20 题也已运行，产品负责人在工作区外私有目录完成一次仅聚合比对，Route=25.00%、Recall@5=38.24%、MRR=52.94%、nDCG@5=41.56%，project Gate=`FAIL`。私有 Markdown 的自然语言 `must_not` 尚未规范成 canonical event ID，因此 hard-safety 明确为 `MANUAL_REVIEW_REQUIRED`，不伪报通过；隐藏逐题答案不回流规则、Prompt 或调参。
 
-火山美颜 API V2.0 与腾讯特效 SDK 已落地为 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；两者均未接 SDK/API、未发图片、未使用密钥，必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`。本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。最新全量同步校验为 `pytest 160 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 均通过。
+火山美颜 API V2.0 与腾讯特效移动/PC 细项仍是 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；腾讯特效 Web 已另建浏览器 Adapter、page 6 和 `ProviderRun` 联合合同，但 Card 仍为 candidate，尚未取得新的 Browser Receipt。所有新 Provider 都必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`；本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。该处的历史快照为 `pytest 172 passed, 4 warnings`；当前全量同步校验为 `173 passed, 4 warnings`，Ruff、format、compileall、`git diff --check` 均通过。
 
 ## 2026-08-30 评测治理冻结（Precision C / Holdout A / Safety ID C）
 
@@ -600,3 +600,29 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 <span style="color:#C00000"><strong>冻结规则。</strong> 自校正 loop 只读取 public dev/challenge 和公开 annotations；v3 只允许 aggregate context；同一 v3 不得再次正式评分。每一代只改一个可解释变量，先跑安全硬门和质量 Rubric，再由产品负责人决定推广或回滚。Composite（Route 20%、Evidence exact 15%、Evidence relation 20%、Recall@5 15%、MRR 10%、nDCG@5 10%、固定 Precision@3 10%）只用于 Dashboard 趋势，不替代固定 project Gate。连续两代增益 `<0.01` 且未跨过质量门，停止剩余候选；候选不能自动改权限、Provider 白名单、参数上限或 `execution_authorized=false`。</span>
 
 <span style="color:#C00000"><strong>实际状态。</strong> `rag_optimization_loop-v0.1` 已运行 V0 baseline、V1 同义词归一化和 V2 relation canonical 化；Composite 均为 `0.947436`、增益均为 `0.0`，anti-overfit=`PASS`，V3/V4 按停止规则跳过。报告只保留 public case ID、split、标签、题干 SHA-256 和错误代码；page 5 增加逐题表、代际曲线、v3 aggregate pattern、停止原因和 HTML 下载。该规则形成可回放的优化机制，但不把当前 RAG 写成已通过。</span>
+
+## 2026-09-01｜腾讯特效 Web Provider：实际准入实现边界
+
+<span style="color:#C00000"><strong>背景与判断。</strong>现有 Tencent BeautifyPic 是后端 REST 执行路径。为了验证另一个更接近腾讯特效产品能力的静态图片路线，本轮新增 Web SDK Adapter，但官方接口运行在浏览器 JavaScript/WebGL 中，不能把移动/PC 细项宣传直接当成 Python API。产品因此把它做成独立的 Web Card、浏览器桥接、Browser Receipt 和人工准入清单，先验证真实运行面，再决定是否进入主流程。</span>
+
+<span style="color:#C00000"><strong>规则已落地。</strong>产品参数 0—100 由确定性 Adapter 映射为 Web 0—1；美白/磨皮默认 0；浏览器只接收 License Key、APP ID 与短时签名，License Token 只在服务端用于签名；输入/输出图片只在浏览器当前会话，Python/SQLite/Trace 只保存 hash、尺寸、耗时、状态和安全错误码。RAG 和 LLM 不能因为命中该 Card 自动授权。</span>
+
+<span style="color:#C00000"><strong>准入规则。</strong>`data/provider_cards/tencent_effect_web.json` 当前为 `candidate`。`evaluate_effect_web_admission()` 会逐项检查有效 License、精确域名、Provider 权限、出站/区域批准、成本、Adapter、真实成功 Browser Receipt 和产品负责人批准；所有证据齐全时只返回 `promote_after_review`，不自动修改 Card。Web generic 的 `lift/shave/eye/chin` 不等于唇厚、鼻翼、眉毛、眼距等移动/PC 细项，单图成功也不代表批量能力。</span>
+
+<span style="color:#C00000"><strong>当前状态。</strong>已新增 page 6 的官方示例图入口、离线 smoke、`ProviderRun` 的 `tencent_effect_web/WebARImage` 联合合同与 8 条 Adapter 测试；本地尚无新的浏览器成功 receipt，因此不得写成 Web Provider 已正式接入或主流程可用。真实 smoke 需要在绑定域名和 Cloud Secrets 配齐后由浏览器运行，完成后再把非敏感回执补入 Card 和准入记录。</span>
+
+## 2026-09-01｜失败驱动优化：为什么上一轮没有增益，以及本轮如何修正
+
+<span style="color:#C00000"><strong>背景与问题。</strong>上一轮连续三代的 Composite 都是 `0.947436`，表面上像“优化无效”。复核代码、输入合同和 Trace 后发现，V1/V2 只对已经生成的 `Prediction` 做同义词/关系后处理；而 public baseline 的 route、evidence 和 relation 本来就已是规范值，实际 `changed_prediction_count=0`。真正未覆盖的是用户自然语言进入 P0-B 前的查询编译层。另一个问题是 public 52 题过于容易，51 题只有 Gold 稀疏分母提示，不能作为 v3 泛化失败的监督。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>我将线上 P0-A/P0-B 的 `RagQuery` 合同与旧 Gold runner 的 raw-text phrase projector 对照，并读取公开 annotations、failure reports 和 v3 aggregate（不读 v3 逐题答案）。由此把 failure 分成五层：查询理解/策略编译、检索召回、证据关系、路由、安全；只有能证明候选改变了对应层，才把指标变化归因给它。v3 的 relation/set/route 计数只作为聚合假设，不能写 case-specific 规则。</span>
+
+<span style="color:#C00000"><strong>产品决策与处理。</strong>RAG 自校正仍是 proposal-only；新建 28 题（16 dev + 12 challenge）开发集和待审核 annotations。V0 保留旧窄短语 baseline，V1 只做已审核同义词归一化，V2 把 `QuerySignals` 放到真实查询边界，先处理动作、能力、隐私、生命周期、冲突和多意图 union，再交给检索；V3 relation guard、V4 evidence packing 用来验证下游是否还有边际收益。每代都必须记录实际改变的预测数、dev/challenge、public regression、hard-safety、anti-overfit 和回滚方式；连续两代增益 `<0.01` 且未过质量门便停止。</span>
+
+<span style="color:#C00000"><strong>真实结果与效果。</strong>V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，改变 2 条预测）；V2=`0.947619`（+0.544386，改变 22 条预测，开发集 route/relation/Recall@5=100%）；V3/V4 各改变 0 条预测并停止。候选没有联网、没有调用 LLM/Provider、没有读 hidden 答案，active baseline 未改变，anti-overfit=`PASS`。这证明“修错层”是上一轮无增益的原因，也证明当前开发集上的上游修正有效；但 public regression/project Gate 仍 `FAIL`，RAG 不能写成产品化通过，必须由产品负责人审核 annotations 并新建独立 Holdout v4。</span>
+
+## 2026-09-01｜失败驱动 Loop v2 后的工程一致性校验
+
+本轮全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 以及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。代码、合同、测试、报告和看板使用同一版 `rag-failure-driven-loop-v0.1` 事实；该校验不改变 RAG advisory-only、project Gate=`FAIL` 或候选未推广边界。
+
+<span style="color:#C00000"><strong>2026-09-01 逐题复盘补充。</strong> 失败驱动报告新增 `final_candidate_diagnostics`，将 28 道公开开发/挑战题的 V0 与终态逐题状态、错误码、路由变化放在同一份脱敏报告中；人工复盘见 `docs/RAG_FAILURE_CASE_REVIEW_V2.md`。这解决了“只看到总分、不知道哪道题变好”的可观测性缺口，但不读取 v3 私有答案、不改变 active baseline，也不把开发集增益写成产品化通过。</span>

@@ -68,6 +68,13 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description="公开集逐题诊断、候选代际回归、Rubric 和反过拟合状态。",
         scope="public_iteration_plus_private_aggregate_context",
     ),
+    RagReportArtifact(
+        key="failure_driven_loop",
+        title="RAG｜失败驱动优化 Dashboard",
+        filename="rag_failure_driven_loop_v1.html",
+        description="新失败驱动开发集上的查询编译候选、根因和版本化回归。",
+        scope="owner_review_required_development_set_only",
+    ),
 )
 
 

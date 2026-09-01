@@ -803,6 +803,12 @@ answerless public run
 
 <span style="color:#C00000"><strong>下一道门。</strong> 现在不是继续修改当前 baseline，而是请产品负责人逐题审核 v3 草案；审核通过后再由受限 runner 导出 answerless runtime，并仅做一次正式验收。候选 Provider 的 License/预算/隐私/真实 receipt/Gold 回归仍独立 fail-closed；RAG 继续只能提议，不能授权图片出站。</span>
 
+## 2026-09-01｜腾讯特效 Web Card 的 RAG 使用边界
+
+腾讯特效 Web 已有独立 `tencent-effect-web` Card 和浏览器 Adapter，但在真实 Browser Receipt、隐私/区域、预算和产品批准完成前，Card 保持 `candidate`。RAG 可以检索这张 Card 来解释“Web generic 的 `lift/shave/eye/chin` 可能是什么”，也可以在 8A/8C 提出“进入 Web Provider 准入试验”的建议；它不能把 candidate 当成可执行工具、不能把移动/PC 的唇厚/鼻翼等能力迁移到 Web、不能生成 ProviderRun 或绕过用户/出站授权。
+
+本轮工程增加 `EffectWebAdmissionInput/Decision`，把 License、精确域名、Provider 权限、出站/区域、预算、Adapter、真实成功回执和产品批准作为独立证据。即使全部满足，函数也只返回 `promote_after_review`，仍需产品负责人人工更新 Card 后才可能进入未来的正式 RAG 工具白名单；这与现有 `execution_authorized=false` 边界一致。
+
 ## 27. 2026-08-30 当前 Provider 与部署收口
 
 火山美颜 API V2 的官方准入/计费资料已补齐到 [Provider Spike](PROVIDER_VOLCENGINE_SPIKE.md)：需要购买支持后付费 API 的创点套餐，公开资料没有个人免费额度或按次 API 价格；公开 SDK 年包起价也不是 V2 API 报价。产品负责人因此冻结 V0 不购买、不填 Key、不发图片，火山只保留 `candidate`/fail-closed 壳；RAG 命中它的知识不能改变这一权限。当前图片执行只走已验证的腾讯 BeautifyPic。
@@ -897,3 +903,15 @@ RAG 盲测的 FAIL 不会自动改变 8A/8C、Provider 白名单或图片权限�
 | 反过拟合检查 | **已实现并通过** | dev+challenge 均评分、无 hidden 逐题读取、无网络/Provider、active baseline 不变 |
 | RAG 优化 Dashboard | **已实现并可视化** | page 5 + allow-listed HTML；只读，无“应用候选”按钮 |
 | v3 再次正式验收 | **未执行且不应执行** | Holdout A 一次性规则；需新建独立 v4 |
+
+## 31. 2026-09-01｜失败驱动优化 v2 的真实结果与 Gate 边界
+
+上一轮 V0/V1/V2 Composite 都是 `0.947436` 的原因已经定位：候选只在已经生成的 Prediction 后处理，未改变自然语言到 `RagQuery` 的输入层。新 loop 使用 28 道 owner-review 开发/挑战题，在真实查询编译边界逐代运行：V0=`0.355614`，V1=`0.403233`（+0.047619、改变 2 条预测），V2=`0.947619`（+0.544386、改变 22 条预测），V3/V4 各改变 0 条预测并按两代 `<0.01` 停止。V2 的开发集增益不能替代正式质量 Gate。
+
+每代必须同时检查：安全硬门、route、evidence exact/relation、Recall@5、MRR、nDCG@5、三种 Precision、public regression、`changed_prediction_count`、anti-overfit 和 active baseline 是否改变。当前回执为 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`、anti-overfit=`PASS`；RAG 仍 `execution_authorized=false`。
+
+这次开发只修复已观察到的上游查询投影漏召回、动作/提问歧义、安全/生命周期优先级和多意图证据压扁；稀疏 Gold 分母继续作为评测诊断，不能用补无关证据抬分。28 题及 annotations 仍待产品负责人审核；审核后须另建与 v3 不重叠的 Holdout v4 才能判断泛化，不得读取或重跑 v3 私有逐题答案。
+
+### 31.1 当前一致性校验
+
+全量 pytest=`173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该门只确认工程证据链完整；RAG quality Gate 仍为 `FAIL`，V2 不得自动 promotion。

@@ -178,7 +178,7 @@ v2 的 H01–H20 和私有 aggregate 保留为历史泛化诊断，不再用于�
 
 ## 2026-08-30 当前同步
 
-评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。最新全量回归为 `160 passed, 4 warnings`，public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 已完成一次性 answerless 盲测且质量 Gate=`FAIL`。生命周期审计通过不等于 RAG 质量通过。
+评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `173 passed, 4 warnings`；public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 已完成一次性 answerless 盲测且质量 Gate=`FAIL`。生命周期审计通过不等于 RAG 质量通过。
 
 ## 2026-09-01 当前状态覆盖
 
@@ -193,3 +193,13 @@ v2 的 H01–H20 和私有 aggregate 保留为历史泛化诊断，不再用于�
 v3 的 `evidence_relation_mismatch`、`evidence_set_mismatch`、`route_mismatch` 只以 aggregate 形式进入优化报告；报告另存“观察事实 / 可验证假设 / 下一份 Holdout 证据”，三类计数不互斥，不能据此生成隐藏题逐题规则。正式泛化验收仍需新建独立 Holdout v4。
 
 Composite 不是新的 Gate；project threshold 和 hard-safety 的原有判定保持不变。当前 V0/V1/V2 Composite 均为 `0.947436`，连续两代增益 `<0.01`，所以剩余候选按停止规则跳过。该 loop 不能重复正式运行 v3，也不能从 v3 aggregate 反推出逐题答案；要再次证明泛化，必须建立独立 Holdout v4。
+
+## 2026-09-01 失败驱动评测接口 v2（当前）
+
+上面的自动优化 Loop 章节记录的是第一轮“后处理候选”的历史快照，上一轮 V0/V1/V2 的预测事实没有变化。当前运行器 `scripts/run_rag_failure_driven_loop.py` 改在自然语言→`RagQuery` 的上游边界评测，使用独立的 28 题 owner-review 开发/挑战集，并仍对 public v2 做回归。
+
+当前真实结果：V0 Composite=`0.355614`；V1=`0.403233`（改变 2 条预测）；V2=`0.947619`（改变 22 条预测，route/relation/Recall@5=100%）；V3/V4 各改变 0 条预测，连续两代增益 `<0.01` 后停止。28 题的 failure code、候选版本、指标 delta、Trace 布尔事实和停止原因写入 `reports/rag_failure_driven_loop_v1.json/.html`，page 5 只读展示。
+
+V2 的分数是开发集工程证据，不是正式 Gate；annotations 尚待产品负责人审核，public regression 的固定 Precision@3=`47.44%` 和 project Gate 仍为 `FAIL`。候选没有读取 v3 逐题答案、没有联网、没有调用 LLM/Provider、没有读照片/向量，active baseline 未改变。Holdout A 仍有效；需新独立 Holdout v4 才能验证泛化和讨论 promotion。
+
+本轮最终 QA：全量 pytest=`173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop 和 P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该 QA 不改变质量 Gate 或 Holdout A 隔离。

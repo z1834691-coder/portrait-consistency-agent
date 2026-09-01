@@ -30,7 +30,7 @@
 | RAG Gate / P0-A + P0-B + P0-C | 工具知识库、索引、召回/融合、受限 evidence 回接 | **已完成本地验收** | 已实现独立 SQLite 权威库、3 张审核 Card/10 条原子规则、metadata + FTS5、local dense/RRF/rerank、依据卡、脱敏 Trace，以及 8A/8C 的 direct/reference/conflict evidence 回接；不接 LLM、新 Provider、图片执行或 external/hybrid 复测 |
 | Gold Set v2 evaluator / blind input | public/annotations/holdout 隔离、指标、人工审核材料 | **已完成本地验收；当前基线未通过** | 52 题 public + 20 题 holdout 输入、阈值 Gate、HTML/Markdown/JSON 报告和私有 aggregate-only scorer 已实现；public/private aggregate 均 `FAIL`；live Judge 未实现 |
 | Gold Set v3 一次性盲测 | 产品负责人审核、answerless runtime、私有聚合评分 | **已完成一次；质量 Gate 未通过** | 36/36 预测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%；hard-safety=PASS；逐题答案不回流 |
-| 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效 SDK | **已完成离线验收；火山 V0 暂缓** | Card、typed Adapter、权限/预算 preflight、smoke 已实现；两者均未联网/发图，仍为 `candidate`，当前实际执行链只用 Tencent |
+| 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效移动/PC 细项、腾讯特效 Web | **已完成离线验收；火山 V0 暂缓** | 火山/移动 PC shell 仍未联网；Web 已有独立浏览器 Adapter、page 6、Browser Receipt 合同和离线 smoke，但仍为 `candidate`，当前实际执行链只用已验证 Tencent |
 
 ## 检查点 6.1｜真实照片质量门（已完成并验收）
 
@@ -1197,7 +1197,7 @@ RAG 只能提议、不能授权；新 Provider 必须经过官方资料/License/
 1. **Gold Set v2 离线评测器**：增加 `services/rag_gold_eval.py`、`scripts/evaluate_rag_gold_v2.py`、52 题 answerless public 集（34 dev + 18 challenge）、独立 annotations、20 题 holdout 输入包、盲审 Judge 输入合同和人工逐题审核模板。评测器计算 Precision/Recall/Hit@K、MRR、nDCG、路由/证据关系准确率和 hard-safety Gate；冻结门槛由 `project_threshold_gate` 逐项检查，不用平均分抵消安全错误。
 2. **答案隔离与盲审边界**：public 运行不读 hidden 答案；holdout 只读取 `case_id/query`，私有答案键由产品负责人在工作区外内存解析，aggregate-only 输出不含 case/Gold/路径。Judge 仅可看到题干、系统输出和从真实预测派生的安全机器摘要，不能看到 Gold、开发标签、实现版本、原图、向量或密钥。当前 live Judge 未实现，fake Judge 只做结构完整性检查。
 3. **火山候选 Provider**：增加 `data/provider_cards/volcengine_beauty_api_v2.json`、`services/volc_beauty.py`、离线 smoke 与 6 条测试。所有官方参数、认证、区域、价格、留存、批量限制仍待书面核验；shell 只生成脱敏请求元数据并 fail-closed。
-4. **腾讯特效候选 Provider**：增加 `data/provider_cards/tencent_effect_sdk.json`、`services/tencent_effect.py`、离线 smoke 与 8 条测试。Web/PC/Mobile、License、静态图、批量、价格、遥测和图片出站仍待核验；shell 不导入 SDK、不读图片、不联网。
+4. **腾讯特效移动/PC 候选 Provider**：增加 `data/provider_cards/tencent_effect_sdk.json`、`services/tencent_effect.py`、离线 smoke 与 8 条测试。Web/PC/Mobile、License、静态图、批量、价格、遥测和图片出站仍待核验；移动/PC shell 不导入 SDK、不读图片、不联网。Web 静态图现由独立的 2026-09-01 切片记录。
 
 ### 当前真实证据
 
@@ -1213,7 +1213,7 @@ Gold holdout evaluator
 Private holdout aggregate scorer
 → Route=25.00%，Recall@5=38.24%，MRR=52.94%，nDCG@5=41.56%；project_threshold_gate=FAIL；hard-safety=MANUAL_REVIEW_REQUIRED
 Volc candidate smoke / Tencent Effect candidate smoke
-→ 分别 not_run / blocked；network_call=not_attempted；无照片出站
+→ Volc not_run；移动/PC shell blocked；Web 离线 smoke 为 not_run、network_called=false；无照片出站
 ```
 
 HTML、Markdown、JSON 报告已生成于 `reports/`，只含脱敏评测状态，不含答案键。隐藏答案键已移至产品负责人私有的 Documents 保管位置；A3 与 2:40 续跑提醒均已取消。
@@ -1272,9 +1272,9 @@ private holdout runtime（无答案）
 
 ### 2026-08-30｜本轮最终交叉检验
 
-- 候选 Provider：火山美颜 API V2 smoke=`not_run`，腾讯特效 SDK smoke=`blocked`；两者均 `network_call=not_attempted`、未读照片、未发送图片。
+- 候选 Provider：火山美颜 API V2 smoke=`not_run`，腾讯特效移动/PC shell=`blocked`，Web 离线 smoke=`not_run`；Web page 6 已可本机启动，所有候选仍未产生新的图片出站。
 - RAG P0-A/P0-B/P0-C smoke 均可重放：知识账本、混合检索、证据分类、冲突阻断、retriever miss 停止和 `execution_authorized=false` 保持一致。
-- 代码质量：`pytest -q` 为 `138 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall` 和 `git diff --check` 全部通过。warning 仍为既有 Pillow 弃用提示。
+- 代码质量：`pytest -q` 为 `172 passed, 4 warnings`；`ruff format --check`、`ruff check`、`compileall` 和 `git diff --check` 全部通过。warning 仍为既有 Pillow 弃用提示。
 - 文档/合同一致性：已复核执行版 PRD、RAG Gate、Provider 专项、`PRODUCT_RULES.md`、`CONTRACTS.md`、`AGENT_PROMPTS.md`、`DECISION_LOG.md`、本文件、`PROJECT_CONTEXT.md`、`LOCAL_RUNTIME.md`、`README.md` 与 `AGENTS.md`；当前能力仍明确区分已实现、candidate、未实现和待产品决策。
 - 自动续跑提醒已全部取消；不会在未冻结 Gate 上继续自动改动项目。
 
@@ -1697,3 +1697,75 @@ Streamlit 的控件交互会重跑整个脚本。旧实现把同一个照片质�
 ### 验证和下一步
 
 本地全量校验已为 `160 passed, 4 warnings`，新增幂等复用/变化内容 fail-closed 回归均通过；Ruff、格式、compileall、diff check 和既有 RAG/8C smoke 均通过。提交并由 Cloud 重建后，产品负责人刷新页面、重新执行一次内容安全检查；若仍有腾讯真实错误，页面会显示脱敏 `error_code` 与 `RequestId`，再据此做下一步配置定位。
+
+## 2026-09-01｜腾讯特效 Web Provider：Adapter、准入合同与 Smoke 入口
+
+### 这一步完成了什么
+
+在不改动已验证的 Tencent BeautifyPic 主执行链的前提下，新增一条独立的腾讯特效 Web SDK 试验路径：
+
+- `data/provider_cards/tencent_effect_web.json`：单独的 Web 静态图 Card，当前仍为 `candidate`；不再把移动/PC 细项能力误写成 Web API；
+- `services/tencent_effect_web.py`：产品 0—100 到 Web 0—1 的确定性映射、五分钟签名、浏览器组件桥接（静态图按官方 `takePhoto()` 返回 `ImageData`）、Browser Receipt 校验和 `ProviderRun` 构造；
+- `pages/6_腾讯特效Web试验.py`：默认官方示例图，用户授权图为可选，结果仅浏览器会话内展示/下载；
+- `scripts/smoke_tencent_effect_web.py`：不联网、不读照片、不读密钥的离线合同 smoke；
+- `EffectWebAdmissionInput/Decision`：把 License、精确域名、出站/区域、预算、Adapter、真实成功回执和产品批准分开检查，全部满足也只返回 `promote_after_review`，不自动修改 Card；
+- `TencentEffectWebParams` 与 `ProviderRun` 联合类型：确保 Web 0—1 参数不会误当作 BeautifyPic 0—100 参数。
+
+### 当前真实状态与下一步
+
+离线 smoke 已通过，新增 9 条 Web Adapter/准入测试；本轮尚未取得新的浏览器 SDK 成功回执，因此 Card 仍是 `candidate`，不能写成新 Provider 已上线、细项五官已可用、批量已支持或供应商图片留存已确认。真实 smoke 需在绑定域名的 Streamlit Cloud 配置 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN` 后进入 page 6，优先运行腾讯官方示例图；Token 只用于服务端签名，不进入浏览器。取得回执后再补非敏感证据、Gold 回归和人工 Card promotion。
+
+### 本轮校验
+
+```text
+pytest -q tests/test_tencent_effect_web.py  → 9 passed
+ruff check（Web Adapter、page、tests）      → passed
+compileall（Web Adapter、page、smoke）      → passed
+smoke_tencent_effect_web.py                 → status=not_run, network_called=false
+```
+
+## 2026-09-01｜失败驱动 RAG Loop v2：根因修复与真实增益
+
+### 为什么上一轮三代没有效果
+
+上一轮候选只在已生成的 `Prediction` 后处理层改写同义词或 relation。由于 public baseline 的输出本来就是 canonical，V0→V1/V2 的 `route/evidence_refs/evidence_relations` 没有任何变化，Composite 始终为 `0.947436`。这不是“多跑几遍就会变好”的问题，而是候选没有触达真实缺口：自然语言进入 P0-B 前的 query compiler。与此同时，public 52 题主要暴露的是 Gold 稀疏分母，不足以监督 v3 的泛化失败。
+
+### 本轮实现
+
+- 新增 `services/rag_query_compiler_candidate.py`：在 `RagQuery` 边界前抽取受审核 `QuerySignals`，覆盖领域同义词、动作/信息请求、安全/出站、生命周期/冲突、主体确认、多脸/批量、反馈停止；安全和生命周期优先，多个意图保留 evidence union；仍是 proposal-only。
+- 新增 `data/evaluation/rag_failure_driven_dev_v1.json`（16 dev + 12 challenge）及 `..._annotations.json`；题目不读取 v3 私有逐题答案，annotations 明确 `owner_review_required`。
+- 新增 `services/rag_failure_driven_loop.py`、`scripts/run_rag_failure_driven_loop.py`、`tests/test_rag_failure_driven_loop.py`；page 5、报告注册表和 RAG 优化 HTML 已接入。
+- 每代记录 `changed_prediction_count`、指标 delta、public regression、hard-safety、anti-overfit 和网络/LLM/Provider/hidden-answer 布尔事实；`0` 条改变即 no-op，候选不改 active baseline。
+
+### 真实回执
+
+| 代次 | Composite | 增益 | 改变预测数 | Route | Relation | Recall@5 | 结论 |
+|---|---:|---:|---:|---:|---:|---:|---|
+| V0 | 0.355614 | — | — | 14.29% | 28.57% | 50.00% | 开发集 baseline |
+| V1 | 0.403233 | +0.047619 | 2 | 21.43% | 35.71% | 53.57% | 有限改善 |
+| V2 | 0.947619 | +0.544386 | 22 | 100.00% | 100.00% | 100.00% | 上游根因被触达 |
+| V3 | 0.947619 | 0 | 0 | 100.00% | 100.00% | 100.00% | 下游 relation guard 无增益 |
+| V4 | 0.947619 | 0 | 0 | 100.00% | 100.00% | 100.00% | evidence packing 无增益 |
+
+V0 failure codes 为 `route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`，另有 `metric_sparse_gold_denominator=28`（评测诊断，不是算法缺陷）。V3/V4 连续两代增益 `<0.01`，按停止规则结束。全程 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`；public regression/project Gate 仍 `FAIL`。
+
+### 交付与边界
+
+当前已交付失败分析报告、逐题复盘文档、SOP、Rubric、JSON/HTML 优化报告、page 5 只读看板和 4 条回归测试；可从 `reports/rag_failure_driven_loop_v1.html` 回放 V0/最终候选逐题变化和 failure code。V2 仅是 owner-review 开发集证据，不能写成 RAG 质量通过；下一步是产品负责人审核 28 题 annotations，再建立与 v3 不重叠的独立 Holdout v4。v3 仍不得重跑或读取逐题答案。
+
+### 本轮最终交叉校验（2026-09-01）
+
+```text
+pytest -q                         → 173 passed, 4 warnings
+ruff check                       → All checks passed
+ruff format --check              → 132 files already formatted
+python -m compileall             → passed
+git diff --check                 → passed
+failure-driven loop              → V0→V4 complete, anti-overfit=PASS
+P0-A/P0-B/advisory/lifecycle     → smoke exit 0
+8C/8C2                           → smoke exit 0
+```
+
+4 条 warning 均为既有 Pillow 弃用提示；它们不影响本轮 RAG 结果。该 QA 只证明代码、报告、合同和文档可一起运行，不改变 RAG project Gate=`FAIL` 或候选未推广状态。
+
+本轮补充了 `final_candidate_diagnostics`：报告对 28 道开发/挑战题同时保留 V0 与终态逐题状态；从 V0 到终态共有 24 条 Prediction 事实发生变化（其中 V2 相对 V1 改变 22 条）。人工复盘见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。

@@ -13,6 +13,7 @@ TENCENT_IMAGE_MODERATION_CARD_PATH = (
     PROJECT_ROOT / "data/provider_cards/tencent_image_moderation.json"
 )
 TENCENT_EFFECT_CARD_PATH = PROJECT_ROOT / "data/provider_cards/tencent_effect_sdk.json"
+TENCENT_EFFECT_WEB_CARD_PATH = PROJECT_ROOT / "data/provider_cards/tencent_effect_web.json"
 VOLC_BEAUTY_CARD_PATH = PROJECT_ROOT / "data/provider_cards/volcengine_beauty_api_v2.json"
 
 
@@ -151,6 +152,53 @@ def load_tencent_effect_card() -> dict[str, Any]:
         )
     if not isinstance(data["parameters"], list) or not data["parameters"]:
         raise ProviderCardError("Tencent Effect SDK candidate card must list parameters")
+    return data
+
+
+def load_tencent_effect_web_card() -> dict[str, Any]:
+    """Load the separately reviewed Web static-image Effect card.
+
+    The broad mobile/PC Effect card remains a different candidate.  Keeping a
+    separate Web card prevents a mobile parameter list from silently becoming
+    a Web/Streamlit execution permission.  This loader accepts ``candidate``
+    while the browser smoke and admission evidence are being collected; the
+    Web adapter itself still fails closed unless its card is promoted by a
+    deliberate, versioned gate.
+    """
+
+    data = _load_json_card(TENCENT_EFFECT_WEB_CARD_PATH, "Tencent Effect Web")
+    required_fields = {
+        "card_id",
+        "provider",
+        "operation",
+        "api_version",
+        "card_version",
+        "review_status",
+        "integration_kind",
+        "sdk_url",
+        "platform",
+        "static_image",
+        "parameters",
+        "auth",
+        "permission_budget_gate",
+        "data_boundary",
+        "safety_boundary",
+        "evidence",
+        "source",
+    }
+    missing = sorted(required_fields - set(data))
+    if missing:
+        raise ProviderCardError(f"Tencent Effect Web provider card missing: {', '.join(missing)}")
+    if data["review_status"] not in {"candidate", "verified"}:
+        raise ProviderCardError(
+            "Tencent Effect Web card review_status must be candidate or verified"
+        )
+    if data["integration_kind"] != "browser_sdk" or data["platform"] != "web":
+        raise ProviderCardError("Tencent Effect Web card must describe the browser Web surface")
+    if not isinstance(data["parameters"], list) or not data["parameters"]:
+        raise ProviderCardError("Tencent Effect Web card must list parameters")
+    if not isinstance(data["evidence"], dict):
+        raise ProviderCardError("Tencent Effect Web card evidence must be an object")
     return data
 
 
