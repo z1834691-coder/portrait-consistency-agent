@@ -1546,7 +1546,7 @@ external_provider_called       → false
 - RAG 专项：`RAG_DECISION_GATE.md` 新增 v3 盲测结果；`RAG_GOLD_SET_V3_HOLDOUT_CUSTODY.md` 更新审核、隔离、一次性运行和 hard-safety 状态。
 - 规则/合同/Prompt：本轮没有改变六个业务合同、RAG advisory-only、Provider 白名单、图片留存或 LLM 数据边界；`CONTRACTS.md`、`PRODUCT_RULES.md`、`AGENT_PROMPTS.md` 需按现有约束理解，未擅自增加执行能力。
 - 运行与发布：README、AGENTS、PROJECT_CONTEXT、LOCAL_RUNTIME 和部署说明需以本节“页面已打开、真实用户测试待完成、v3 quality Gate=FAIL”为当前事实；不把页面加载写成真实照片成功。
-- 代码与测试：本轮没有修改业务代码；`pytest`、Ruff、format、compileall、`git diff --check` 和 P0/8C smoke 均重新通过。
+- 代码与测试：本轮业务行为代码未改变；随后仅修正了侧边栏运行环境文案并重新验证，`pytest`、Ruff、format、compileall、`git diff --check` 和 P0/8C smoke 均通过。
 
 ### 下一阶段
 
