@@ -151,3 +151,11 @@ smoke 均通过。新版 V3 `36/36`、V4 `48/48` 的无答案过程重放均完�
 E1 已由 `accept_effect_web_browser_result()` 与共同 `verify_result()` 的 fixture 链路验证；E2 已由 8 个成功、失败、请求/输入/输出哈希错位、MIME/尺寸/大小异常和批量隔离样本验证，坏样本不阻塞后续样本，结果 payload 不持久化。新增的纵向 smoke/test 还验证 Meta-Agent 的 Web proposal 与 Web EditPlan provider/Card 绑定。E3 仍等待真实多样本视觉、供应商数据/费用证据和负责人批准；在 E3 前 BeautifyPic 继续是唯一正式主流程 Provider。
 
 本轮最新全量工程 QA 为 `216 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。该回执只证明代码/合同/fixture 一致，不改变 Web Card `candidate`、RAG `proposal-only` 或 E3 准入要求。
+
+## 2026-09-02 当前事实覆盖｜RAG 深度优化与 V5
+
+当前 RAG 深度优化已从“只看总分”改为“真实检索层候选 + 过程监督 + 独立 Holdout”。operation coverage candidate 在开发集 28 题、公开回归 52 题上留下了完整候选 Trace，分别改变 26、49 条 Prediction 事实；公开检索 Evidence relation/Recall@5 为 100%，MRR 93.27%、nDCG@5 95.30%，hard-safety PASS。候选仍是 proposal-only，active baseline 未改变。
+
+新建的 V5 独立 Holdout 有 60 题，运行时只读取 answerless 题目。当前过程审计为输入/Trace/Prediction/retrieval 均 60/60、`process_gate=PASS`、`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`；没有读取答案/标注、照片/向量或密钥，也没有调用 LLM、网络或 Provider。工作区外 owner package 由负责人审核后才能进行一次质量 Gold join；在授权前没有 V5 质量分数，也不能称 RAG 产品化。
+
+本轮真实代码/报告入口：`reports/rag_policy_coverage_candidate_v2.json/.html`、`reports/rag_candidate_diagnostics_v1.json/.html`、`reports/rag_v5_holdout_process_audit.json/.html`；Dashboard 为 `pages/5_RAG优化看板.py`。当前项目状态是“候选检索修正已验证，独立 V5 过程已验证，质量泛化待负责人 Gold 审核”，不是“RAG 已通过”。

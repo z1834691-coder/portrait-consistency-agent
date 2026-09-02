@@ -212,3 +212,32 @@ V4 的 G0→G5 结果为：baseline → 既有查询编译 → 通用同义词/�
 - **统计分数**：Gold 是否稀疏、固定 K 是否数学可达、多意图和额外关系是否按合同评分。
 
 只有每一层有独立证据，才能把失败转成下一条 SOP。反思期间不读取新的隐藏答案，不把解冻验证的高分写成泛化通过；候选继续保持 `proposal-only`。
+
+## 9. 2026-09-02｜Operation coverage 候选与 V5 过程监督 SOP
+
+### 9.1 适用问题
+
+当一条用户请求同时包含多个操作（例如既要比较瘦脸能力，又要判断大眼或隐私限制），单纯取排序前几条可能让一个操作挤掉另一个操作。此时不能直接增加无关证据，也不能凭题目标签补证据；先检查结构化查询是否真的包含多个 operation，再在已审核、有效的知识池中为每个请求 operation/provider 选一条代表候选。
+
+### 9.2 单变量修正步骤
+
+```text
+冻结 V0/当前候选快照
+→ 记录请求 operation/provider
+→ 扩大真实 sparse/dense 候选池
+→ 只从 reviewed_active 且未过期条目选代表证据
+→ 原有 RRF/rerank/关系分类继续执行
+→ 比较 before/after 的逐题证据与 Trace
+→ 跑 public regression + hard-safety
+→ 只有无退化才进入独立 Holdout
+```
+
+候选 Trace 必须记录 `operation_coverage_pool`、覆盖到的 operation/provider、是否发生重复、是否因为冲突/权限/生命周期而排除；它不能把操作名转换成新的能力事实。若没有有效 direct evidence，仍返回“不知道/降级”，不能由 LLM 或规则猜测。
+
+### 9.3 V5 公平过程门
+
+V5 运行前答案键必须封存；运行器只接收题目，过程监督器逐题检查：输入计数、Trace 计数、Prediction 计数、合法查询、实际检索、`route_source=evidence`、`finalized=true`、无答案/标签/题干泄露、无网络/LLM/Provider/照片/向量副作用。过程门通过后才可做一次 Gold join；评分失败或负责人未授权时，结果保持 `READY_AFTER_SEPARATE_GOLD_JOIN`。
+
+### 9.4 回滚与停止
+
+如果公开回归退化、hard-safety 出现未知或错误放行、候选 Trace 不能证明真实检索改变，立即删除候选 profile，恢复上一版 baseline。若连续两代没有新的真实预测变化，停止在该层补丁，转向知识覆盖或输入理解审计。当前 operation coverage 候选公开检索指标无退化，故保留为 proposal-only 诊断分支，尚未 promotion。

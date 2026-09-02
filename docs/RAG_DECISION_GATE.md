@@ -1102,3 +1102,15 @@ P0-C 的 direct/reference/conflict 语义继续适用：直接证据可以辅助
 产品负责人已选择 B 结果交接后，RAG 的工具知识可以被 8A 计划前、8C 复测策略前、工具失败降级和新增 Provider 评估节点消费；但它的角色不变：只检索已审核 Card 并提出工具/策略建议。`tencent_effect_web` 被检索到不等于获得执行权限，Meta-Agent 的 `ToolProposal.execution_authorized` 固定为 `false`，状态机/Policy/Adapter 仍是唯一放行点。
 
 Web 的纵向链路现已由合同和 fixture 回放覆盖：RAG advisory → Meta-Agent Web proposal → Web `EditPlan` → candidate trial → Browser Receipt/result handoff → 共同 `VerificationResult`。E1/E2 通过只证明模块耦合、回执校验和批量失败隔离；RAG 质量 Gate、真实视觉泛化和 Web Card promotion 仍未通过，不能因为链路变长就改写 RAG 的 `proposal-only` 边界。
+
+## 40. 2026-09-02｜候选检索修正与 V5 独立过程门（当前交接状态）
+
+<span style="color:#C00000"><strong>本轮目标。</strong>上一轮低分反思已经确认，不能继续只改最终 Prediction 的写法；本轮把候选改动放回真实的“查询→候选池→排序→证据关系”层，并严格保留 V0 active baseline。新增的 operation coverage 只在审核过且仍有效的知识条目中，为多操作请求保留每个操作的代表证据；它不创造新知识、不跳过生命周期/权限检查、不产生图片副作用。</span>
+
+<span style="color:#C00000"><strong>真实结果。</strong>开发集 28 题的候选 Evidence relation=`100%`、Recall@5=`100%`、MRR=`100%`、nDCG@5=`99.43%`；公开回归 52 题的候选 Evidence relation=`100%`、Recall@5=`100%`、MRR=`93.27%`、nDCG@5=`95.30%`。相对同一轮 multi-operation 候选，公开 Evidence relation 从 `99.36%` 提升到 `100%`，Recall@5 从 `99.36%` 提升到 `100%`，MRR 从 `92.31%` 提升到 `93.27%`，nDCG@5 从 `94.51%` 提升到 `95.30%`；hard-safety 仍为 `PASS`。这些是开发/公开检索轨的候选证据，不是独立泛化或产品化通过。</span>
+
+<span style="color:#C00000"><strong>过程监督和新 Holdout。</strong>当前生成了 60 题的 V5 独立 Holdout。候选在不读答案、不读标注、不读照片/向量、不调用 LLM/网络/Provider 的条件下完成 `60/60` 检索，输入、Trace、Prediction 均为 60，过程门为 `PASS`；质量状态仅为 `READY_AFTER_SEPARATE_GOLD_JOIN`。答案键位于工作区外受限目录，负责人审核前不得评分，评分前不得把 V5 题目用于规则修正。</span>
+
+<span style="color:#C00000"><strong>当前结论。</strong>本轮候选是“有真实改变、公开回归无退化”的 proposal-only 候选，`active_baseline_changed=false`，没有 promotion。下一道唯一交接门是负责人审核 V5 逐题答案（每题紧跟答案的审阅表）并明确授权一次 Gold join；在这之前，不得报告 V5 质量分数或宣称 RAG 产品化。</span>
+
+可复核入口：[候选检索报告](../reports/rag_policy_coverage_candidate_v2.html)、[逐题候选诊断](../reports/rag_candidate_diagnostics_v1.html)、[V5 过程监督报告](../reports/rag_v5_holdout_process_audit.html)。

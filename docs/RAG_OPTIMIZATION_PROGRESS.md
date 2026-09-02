@@ -162,3 +162,30 @@ G2–G5 的 100% 只属于 owner-unlocked validation；fixed Precision 的低值
 这是一份反思与工程证据，不是质量通过。RAG 仍为 proposal-only，active baseline 未改变，V4 project Gate 仍为 `FAIL`。可复核材料见 [RAG 低成功率反思审计](RAG_LOW_SUCCESS_REFLECTION_AUDIT.md)、`reports/rag_low_success_reflection_audit.json` 和 `reports/rag_low_success_reflection_audit.html`。
 
 本轮最终交叉校验：`.venv/bin/pytest -q`=`193 passed, 4 warnings`；Ruff check、format（188 files）、compileall、`git diff --check` 和 `audit_rag_low_success.py` 均通过。4 条 warning 为既有 Pillow 弃用提示；该工程回执不改变 V4 project Gate=`FAIL`、RAG `proposal-only` 或 active baseline 未改变。
+
+## 10. 2026-09-02｜Operation coverage 候选与 V5 独立 Holdout（当前）
+
+### 10.1 为什么这一轮真正改变了系统
+
+之前的无增益迭代主要发生在结果整理层，很多题目的真实检索候选没有变化。本轮只新增一个受限变量：对多操作请求扩大已审核知识的候选池，并按请求的 `(operation, provider)` 保留一条代表证据；后续排序、关系分类和安全策略仍使用原有确定性代码。Trace 会明确写出候选池大小、覆盖到的操作、采用/未采用原因和 `active_baseline_changed=false`，因此可以看出改动是否触达真实检索。
+
+### 10.2 候选与公开回归结果
+
+| 轨道 | 题数 | Evidence relation | Recall@5 | MRR | nDCG@5 | Hard safety | changed Prediction |
+|---|---:|---:|---:|---:|---:|---|---:|
+| 开发集 baseline | 28 | 25.00% | 46.43% | 55.95% | 45.80% | PASS | — |
+| 开发集 operation coverage candidate | 28 | 100.00% | 100.00% | 100.00% | 99.43% | PASS | 26（候选总变化） |
+| 公开回归 baseline | 52 | 15.38% | 39.10% | 41.99% | 35.24% | PASS | — |
+| 公开回归 operation coverage candidate | 52 | 100.00% | 100.00% | 93.27% | 95.30% | PASS | 49（候选总变化） |
+
+固定 Precision、effective Precision 和 returned Precision 继续并列展示，不能因 Gold 稀疏而替换 project Gate。候选的公开 fixed Precision@3 为 `46.79%`，effective 为 `99.36%`，returned 为 `61.86%`；它们分别回答历史可比性、Gold 覆盖程度和返回证据纯度，不能单独称作“通过”。候选仍 `not_promoted_proposal_only`。
+
+### 10.3 V5 过程结果（质量尚未评分）
+
+V5 共 60 题，题型覆盖 V3/V4 没有充分覆盖的隐含目标、组合操作、否定范围、隐私/出站、生命周期/冲突、提示注入、未知 Provider/Adapter、多脸/批量、复测失败、RAG miss、跨语言和参数边界。候选只读取 answerless runtime，完成 `60/60` 输入、`60/60` Trace、`60/60` Prediction 和 `60/60` retrieval；过程监督为 `PASS`，无答案/标注/照片/向量/密钥泄露，无 LLM/网络/Provider 调用。
+
+这只证明“新考试完整且没有作弊/泄露”，不证明答案正确。负责人审核 `v5_holdout_review_form.md` 后，才能将独立答案键连接到已经封存的 predictions；在明确授权前，评分脚本会拒绝读取答案键。
+
+### 10.4 本轮停止与下一门
+
+候选已通过开发集与公开回归的安全/不退化检查，继续在同一检索层堆同义词的边际收益较低；因此先停止代码叠加，不把候选改成 active baseline。下一步是负责人审核 V5 答案键并授权一次聚合 Gold join；之后根据 V5 逐题失败模式决定是否需要下一代规则或回到端到端产品测试。

@@ -128,3 +128,25 @@ V4 的答案在盲测封存后才被负责人授权用于诊断；因此 validat
 固定 Precision@3 继续保留，保证历史可比性；另外增加一个不受 Gold 条数过少影响的诊断带，便于产品负责人看“这轮是否真的有一定效果”：低于三分之一为弱，达到三分之一为已有一定效果，达到三分之二为较强。诊断带不是新的发布门槛，也不能覆盖 Recall、Route、Relation 或 hard-safety 的冻结 Gate。
 
 过程监督回执的关键字段是：`structured/unknown_fallback`、`query_contract`、实际 retrieval Trace、`route_source=retrieval_result`、`evidence_source=retrieval_result`、证据引用血缘、答案键/外部调用布尔事实和 `finalized=true`。过程门失败时，所有质量指标只显示“锁定”，不能继续调参或连接 Gold。
+
+## 10. 2026-09-02｜候选分层解释与 V5 评分边界
+
+### 10.1 当前候选结果
+
+本轮 operation coverage 候选与同一轮 multi-operation 候选相比，公开 Evidence relation `99.36%→100%`、Recall@5 `99.36%→100%`、MRR `92.31%→93.27%`、nDCG@5 `94.51%→95.30%`；hard-safety 继续 `PASS`。开发集候选为 Evidence relation/Recall@5/MRR `100%`、nDCG@5 `99.43%`。候选总共改变开发集 26 条、公开回归 49 条 Prediction 事实，说明它确实作用于真实候选池，而非只修改展示文本。
+
+### 10.2 三种 Precision 的角色
+
+公开候选 fixed Precision@3=`46.79%`、effective Precision@3=`99.36%`、returned Precision@3=`61.86%`。fixed 继续保留以保证历史可比；effective 用于排除 Gold 少于 K 时的数学压低；returned 用于观察返回列表中无关证据比例。三者都不能替代 Recall、关系准确率、安全硬门或独立 Holdout，也不能通过改变分母或塞入证据把项目门槛改成通过。
+
+### 10.3 V5 过程门不是质量门
+
+V5 过程审计 `60/60` 输入、`60/60` Trace、`60/60` Prediction、`60/60` retrieval，过程门 `PASS`；答案键未读，质量状态为 `READY_AFTER_SEPARATE_GOLD_JOIN`。只有负责人审核并显式授权，才可计算 V5 聚合质量。评分后仍要同时看开发/公开回归、hard-safety、成本/延迟、Trace 完整率和逐题失败模式；平均分不能抵消任何安全越权或关键任务失败。
+
+### 10.4 Goodhart 反例检查
+
+- 不因为 fixed Precision 低就添加无关证据；
+- 不因为验证集变好就把候选写进 active baseline；
+- 不因为过程门 PASS 就称答案正确；
+- 不因为某一代分数上升就删除失败题、重复跑 Holdout 或按 case ID 写规则；
+- 不把“候选改变了 Prediction”误写成“线上用户任务已完成”。

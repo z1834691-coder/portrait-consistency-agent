@@ -2216,3 +2216,29 @@ E2 regression: 8/8 passed, hard_safety_passed=true, batch_failure_isolation_pass
 ## 2026-09-02｜E2 回归覆盖补齐
 
 复跑时发现原 6 个样例没有覆盖“输入哈希错位”和“结果大小上限”，且批量隔离字段容易被样例顺序误读。本轮一次只补这两个异常样例，并把一个有效失败回执放在拒绝样例之后，确保套件实际验证“坏样例不阻塞后续样例”。最终 8/8 通过：1 个成功、1 个供应商失败、6 个拒绝（请求/输入/输出哈希、尺寸、MIME、大小），`hard_safety_passed=true`、`batch_failure_isolation_passed=true`，结果 payload 不落盘。该修复只加强测试覆盖和指标口径，不放宽 Web Card 的 candidate 边界。
+
+## 2026-09-02｜RAG 深度优化候选与 V5 过程门（当前）
+
+### 本轮完成
+
+1. 将 `RAG_DEEP_OPTIMIZATION_PROMPT.md` 补成可直接执行的 v0.2 任务指令，明确冻结 baseline、独立过程监督、单变量候选、Goodhart 防护、V5 答案隔离和产品化边界。
+2. 完成 operation coverage candidate：修改 `rag_p0b.py` 的候选池与 Trace、`rag_process_supervisor.py` 的运行参数、`rag_policy_coverage_candidate.py` 的开发/回归轨道和 `rag_candidate_diagnostics.py` 的默认轨道；不改变 active baseline。
+3. 重新生成候选报告、逐题诊断和 page 5 可视化数据；开发集候选 28/28，公开回归 52/52，hard-safety 均 PASS，候选 promotion 状态为 `not_promoted_proposal_only`。
+4. 创建并执行 V5 answerless Holdout：60 题、60 条完整检索 Trace、60 条 Prediction，过程门 PASS；私有答案键在工作区外，质量评分脚本在未获授权时会拒绝读取。
+
+### 实际回执
+
+```text
+pytest -q: 216 passed, 4 warnings
+ruff check: PASS
+ruff format --check: PASS (235 files)
+compileall: PASS
+git diff --check: PASS
+policy coverage candidate: changed=26, regression_changed=49, promotion=not_promoted_proposal_only
+candidate diagnostics: candidate_improved=16, candidate_neutral_or_regressed=1, no_candidate_change=63
+V5 process audit: 60/60, process_gate=PASS, quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN
+```
+
+### 尚未完成
+
+V5 质量 Gold join 尚未运行，因为负责人还需要审核工作区外的 `v5_holdout_review_form.md` 并明确授权；候选不能因过程门通过而 promotion。新增 Provider、真实用户效果、RAG 线上自动发布和产品化结论仍不在本轮范围内。
