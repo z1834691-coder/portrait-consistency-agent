@@ -2118,7 +2118,7 @@ fixed Precision@3 的理论上限在 V4 Gold 分布下约为 `0.513889`（公开
 
 - 新增 `services/tool_registry.py`：从 `tencent_beautify_pic.json` 和 `tencent_effect_web.json` 生成只读 `ToolDescriptor`；verified baseline 与 candidate Web 的 `execution_allowed` 明确分离。
 - 新增 `services/meta_agent.py`：输出结构化 `ToolProposal`，记录阶段、功能、工具/Card 版本、RAG 证据、所需检查、阻断原因和 baseline fallback；`execution_authorized=false` 固定不可变。
-- 8A 在现有 RAG advisory 后记录 Meta-Agent proposal；page 6 也展示候选工具选择 Trace，并把 proposal 引用写入脱敏事件账本。两处都不会因 proposal 直接调用新工具。
+- 8A 在现有 RAG advisory 后记录 Meta-Agent proposal；page 6 也展示候选工具选择 Trace，并把完整的非敏感 proposal Trace 写入脱敏事件账本。两处都不会因 proposal 直接调用新工具。
 - 新增 `tests/test_meta_agent.py`（6 条）和 `scripts/smoke_meta_agent_tool_routing.py`；覆盖 baseline、Web candidate、RAG conflict、未知能力、无网络/无图片/无 ProviderRun 副作用。
 - 新增执行 Prompt `docs/TENCENT_EFFECT_META_AGENT_INTEGRATION_PROMPT.md` 的当前执行增量，保持 A/B/C 结果交接为下一道产品 Gate。
 

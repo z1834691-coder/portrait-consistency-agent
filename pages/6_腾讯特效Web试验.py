@@ -133,6 +133,7 @@ def main() -> None:
                 "reason_codes": meta_proposal.reason_codes,
                 "execution_authorized": False,
                 "provider_run_created": False,
+                "trace": meta_proposal.trace,
             },
         )
         st.session_state.effect_web_meta_proposal_recorded = True

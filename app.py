@@ -687,6 +687,7 @@ def render_checkpoint8a(
                     "reason_codes": meta_proposal.reason_codes,
                     "execution_authorized": False,
                     "provider_run_created": False,
+                    "trace": meta_proposal.trace,
                 },
             )
             result = diagnose_and_plan(
