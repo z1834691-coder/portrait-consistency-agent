@@ -24,6 +24,7 @@ if SOURCE_ROOT.is_dir() and str(SOURCE_ROOT) not in sys.path:
 
 # ruff: noqa: E402 - the page bootstraps the src-layout for direct Streamlit Cloud execution.
 from portrait_consistency_agent.core.settings import AppSettings
+from portrait_consistency_agent.services.meta_agent import MetaAgentStage, MetaAgentToolSelector
 from portrait_consistency_agent.services.provider_cards import load_tencent_effect_web_card
 from portrait_consistency_agent.services.tencent_effect_web import (
     MAX_DATA_URL_BYTES,
@@ -113,6 +114,28 @@ def main() -> None:
     store = get_store(PROJECT_ROOT / settings.database_path, PROJECT_ROOT / settings.trace_path)
     session_id, anonymous_user_id = _session_context(store)
     card = load_tencent_effect_web_card()
+    meta_proposal = MetaAgentToolSelector().propose(
+        stage=MetaAgentStage.EXECUTE,
+        requested_features=["face_lifting", "eye_enlarging"],
+        preferred_tool_id="tencent_effect_web",
+        proposal_id="tool_proposal_effect_web_page6",
+    )
+    if not st.session_state.get("effect_web_meta_proposal_recorded"):
+        store.record_event(
+            session_id,
+            "meta_agent_tool_proposal_completed",
+            {
+                "proposal_id": meta_proposal.proposal_id,
+                "stage": meta_proposal.stage.value,
+                "route": meta_proposal.route.value,
+                "selected_tool_id": meta_proposal.selected_tool_id,
+                "fallback_tool_id": meta_proposal.fallback_tool_id,
+                "reason_codes": meta_proposal.reason_codes,
+                "execution_authorized": False,
+                "provider_run_created": False,
+            },
+        )
+        st.session_state.effect_web_meta_proposal_recorded = True
 
     st.title("腾讯特效 Web SDK：静态图准入试验")
     st.caption(
@@ -124,6 +147,21 @@ def main() -> None:
         "当前 Card 仍是 candidate。即使浏览器处理成功，也只证明这一次 Web 静态图回执；"
         "不会自动放行主流程，也不会把移动/PC 的唇厚、鼻翼等候选能力写成已支持。"
     )
+    st.info(
+        "受限 Meta-Agent 已识别到 Web 工具与本次功能匹配，但当前 Card 仍是 candidate；"
+        "本页可以做独立浏览器试验，不能把候选工具当成主流程执行权限。"
+    )
+    with st.expander("查看本次工具选择 Trace（脱敏）"):
+        st.json(
+            {
+                "route": meta_proposal.route.value,
+                "selected_tool_id": meta_proposal.selected_tool_id,
+                "fallback_tool_id": meta_proposal.fallback_tool_id,
+                "reason_codes": meta_proposal.reason_codes,
+                "execution_authorized": False,
+                "trace": meta_proposal.trace,
+            }
+        )
 
     st.subheader("1. 选择测试输入")
     input_mode = st.radio(
@@ -251,6 +289,8 @@ def main() -> None:
                     "input_sha256": input_hash,
                     "receipt_has_output": run.result_artifact_sha256 is not None,
                     "anonymous_user_id": anonymous_user_id,
+                    "meta_agent_proposal_id": meta_proposal.proposal_id,
+                    "meta_agent_route": meta_proposal.route.value,
                 },
             )
             st.session_state.effect_web_saved_receipt = run.run_id

@@ -395,6 +395,14 @@ V2 的开发集增益（Composite `0.355614→0.947619`）只说明上游层被�
 
 当前最终工程校验（2026-09-01）为 `178 passed, 4 warnings`；RAG failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke、Ruff、format、compileall 和 diff check 均通过。Prompt 层只记录候选的安全布尔事实和版本，不把开发集增益写成产品 Gate。
 
+## 15. 2026-09-02｜公平评测过程监督 Prompt 边界
+
+公平评测不再用一个混合 Prompt 同时判断自然语言、检索和证据关系。编译器可以输出暂时的 `structured` 或 `unknown_fallback`，但不得把路由/证据标签直接写进最终 Prediction；未知也必须生成中性 `RagQuery` 并继续进入 RAG，避免漏跑题目。
+
+独立过程监督考官只检查：题目清单是否完整、答案/标注/照片/向量/密钥是否没有被读取、原题是否只保留哈希、每题是否有 query contract→检索→route→finalized Trace、Prediction 是否明确来自 `retrieval_result`、证据是否能在实际检索结果中找到，以及是否没有网络/LLM/Provider 副作用。它不判断答案正确与否，也不读取 Gold。
+
+只有 `process_gate=PASS` 才能进入后续的 Gold 连接；历史快照的过程 FAIL 不得通过重新命名或补字段修复。LLM Judge 仍只能接收脱敏题干、系统输出和机器事实摘要，不能接收 Gold route/evidence、题目标签、实现 projection 或任何答案键。RAG 继续 `proposal-only`，Prompt 不能授权工具、生成参数或改变 active baseline。
+
 ## 2026-09-01｜Tencent Effect Web Prompt 运行边界补充
 
 Cloud page 6 的旧导入错误已在重建后消失，但三项 Effect Web Secrets 缺失导致本轮未进入浏览器
@@ -423,3 +431,43 @@ Token 不出站和图片不落库边界。
 浏览器组件。失败后重新启用按钮，重试仍须产生新的真实回执并按合同校验；原始 SDK 对象、Token、
 图片和密钥不进入 Prompt 或 Trace。修正 Cloud Secret 为腾讯账号数字 APPID 后，只运行一次官方
 示例图，Card 在成功回执和人工准入完成前保持 `candidate`。
+## 2026-09-02｜V4 Holdout / validation Prompt 边界
+
+V4 正式盲测只把 answerless 的 `case_id + query` 交给离线 baseline；答案键、V3 逐题 Gold 和 V4 诊断材料不得进入在线 Prompt。盲测快照封存并得到负责人授权后，validation 诊断器才可以在离线环境读取 Gold，用来解释“系统理解了什么、召回了什么、证据关系为何错、哪条 SOP 应修正”。这不是再次正式盲测，validation 高分不能被 Prompt 或产品文案称为泛化通过。
+
+V4 候选 Prompt/查询编译只负责把自然语言整理成结构化任务信号、证据类型和受限路由建议。它不能看照片、人脸向量或密钥，不能自由新增 Provider、参数、权限或图片出站；`execution_authorized=false` 必须由确定性合同和权限层保持。检索不到、资料过期、发生冲突或出现提示注入时，Prompt 只能返回“不确定/停止/人工复核”建议，不能用语言流畅度补事实。
+
+V4 G0–G5 的完整安全 Trace 必须记录 `hidden_answer_key_read`、`network_called`、`llm_called`、`provider_api_called`、`photo_or_face_vector_read`、`active_baseline_changed` 和 `proposal_only`。G2–G5 的验证成绩只进入诊断报告，不进入在线 Prompt、测试答案或 active baseline；promotion 必须由新的未参与诊断 Holdout 重新证明。
+
+## 2026-09-02｜Tencent Effect Web 最新失败回执边界
+
+Cloud page 6 在同一请求代次的第二次明确点击仍到达腾讯 Web SDK，但返回 SDK 错误码 `100`、页面规范化错误码 `20001001`，耗时 628ms，未生成图片。Prompt/LLM 不得把稳定 `request_ref` 误解为成功、自动重试或重复调用，也不得凭错误码猜出唯一根因。当前 Card 仍 `candidate`；只有核对 License/Token 配对、数字 APPID/签名、精确域名和 Secret 重载后，才允许再进行一次官方示例图 smoke。
+
+## 2026-09-02｜Tencent Effect Web 完整重试 Prompt 边界更新
+
+最新完整流程仍返回 SDK `100`、规范化码 `20001001`，耗时 `10360ms`，没有输出图。Prompt/LLM
+只能解释“鉴权失败”和记录受限回执，不得把 SDK 等待后的失败变成成功，也不得猜测唯一根因或修改
+Secret。稳定 `request_ref` 只用于同代次关联；本次明确点击是新的失败事实。Card 继续 `candidate`，
+直到配置核对和成功 Browser Receipt 完成。
+
+## 2026-09-02｜RAG 低成功率反思 Prompt 的使用边界
+
+当多轮迭代仍低分时，先使用 [RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md](RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md) 做公开事实审计。Prompt 要求把“自然语言理解、结构化查询、真实召回、证据关系、路由和评分”分别核对，不能把人工规则编写称作模型训练，也不能把 fixture 检索后端或解冻验证的高分当成线上泛化证据。
+
+本轮审计只产生脱敏 JSON/HTML 事实和待决策 Gate，不改变 active baseline、Provider、权限或 `execution_authorized=false`。在两条评测轨道和公开 smoke 未通过前，禁止继续读取新的 Holdout 答案、用 case ID 打补丁、只调 Top-K/重排模型抬分，或把 `proposal-only` 建议直接变成工具执行。
+
+本轮 Prompt/治理变更后的全量工程回执为 `.venv/bin/pytest -q`=`193 passed, 4 warnings`；Ruff、format（188 files）、compileall、`git diff --check` 均通过。该回执只说明 Prompt 边界与代码测试一致，不改变 RAG quality Gate=`FAIL` 或 `execution_authorized=false`。
+
+Web 结果捕获规则：SDK 初始化后不得再次调整其输出 Canvas 的宽高；`takePhoto()` 的 `ImageData` 必须写入独立结果 Canvas。该实现修复浏览器 Canvas transfer 错误，但不改变 Agent 的鉴权、权限、Provider Card 或 RAG 放行边界。
+
+最新运行证据：修复部署后 Web page 6 已收到成功回执 `web_receipt_effect_web_4d58ea15a0794370`（2601ms、输出哈希已保存）。Agent/LLM 不得把这条回执扩写为“所有五官参数均已验证”或“Provider 已正式准入”；它只能解释本次工具运行事实，并遵守 Card 仍为 `candidate` 的边界。
+
+## 2026-09-02｜公平过程监督 Prompt 的当前回执
+
+公平评测 Prompt 已实际驱动无答案 V3/V4 过程重放和独立确定性考官：V3 `36/36`、V4 `48/48` 均完成合法查询、检索和 finalized Trace；其中 V3 `5`、V4 `8` 题为 structured，其余明确为 `unknown_fallback`。过程考官不读取答案、标注、照片、向量或密钥，也不调用网络/LLM/Provider；Prediction 的 route/evidence 只能来自 `retrieval_result`。新版过程门通过后，可以把脱敏运行包交给单独 Gold 验证；旧正式 V4 快照的失败不能补写为通过，历史质量状态继续锁定。当前全量工程回执为 `196 passed, 4 warnings`；这不改变 RAG `proposal-only`、active baseline 或 V4 quality Gate=`FAIL`。
+
+## 2026-09-02｜Tencent Effect Web 纳入 Meta-Agent 的 Prompt 边界
+
+Meta-Agent 的当前 Prompt/合同只允许它在 Registry 的工具白名单内提出结构化 `ToolProposal`。上下文可以包含请求功能、当前阶段、已审核 RAG evidence refs、Provider Card 版本和安全错误码；禁止包含图片、脸向量、License Token、完整用户原话或隐藏思维链。输出可以说明“Web candidate 相关、需要哪些准入检查、是否有 BeautifyPic baseline fallback”，但不得生成腾讯绝对参数、签名、RequestId、ProviderRun 或 `execution_authorized=true`。
+
+当前真实演示路径为：`Provider Card → Tool Registry → Meta-Agent proposal → 状态机/Policy →（若获准）Adapter`。Registry/Meta-Agent 本身无网络和图片副作用；Web Card 仍 `candidate`，因此 proposal 只能是 `candidate_proposal_only` 或 fail-closed，不能替代真实 page 6 Smoke，也不能把一次浏览器回执解释为效果通过。结果图要接入 8A/8B/8C，必须先完成独立的 A/B/C 结果交接决策。

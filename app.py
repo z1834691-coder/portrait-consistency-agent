@@ -60,6 +60,7 @@ from portrait_consistency_agent.services.local_rag_models import (
     BgeEmbeddingBackend,
     BgeRerankerBackend,
 )
+from portrait_consistency_agent.services.meta_agent import MetaAgentStage, MetaAgentToolSelector
 from portrait_consistency_agent.services.photo_quality import analyze_photo_bytes
 from portrait_consistency_agent.services.plan_family import (
     capture_explicit_feedback,
@@ -666,6 +667,28 @@ def render_checkpoint8a(
                     "bad_case_ref": rag_run.decision.bad_case_ref,
                 },
             )
+            meta_proposal = MetaAgentToolSelector().propose(
+                stage=MetaAgentStage.PLAN_EDIT,
+                requested_features=[
+                    item.value for item in (intent.allowed_features or profile.allowed_features)
+                ],
+                rag_advice=rag_run.decision,
+                proposal_id=f"tool_proposal_{uuid.uuid4().hex[:16]}",
+            )
+            store.record_event(
+                session_id,
+                "meta_agent_tool_proposal_completed",
+                {
+                    "proposal_id": meta_proposal.proposal_id,
+                    "stage": meta_proposal.stage.value,
+                    "route": meta_proposal.route.value,
+                    "selected_tool_id": meta_proposal.selected_tool_id,
+                    "fallback_tool_id": meta_proposal.fallback_tool_id,
+                    "reason_codes": meta_proposal.reason_codes,
+                    "execution_authorized": False,
+                    "provider_run_created": False,
+                },
+            )
             result = diagnose_and_plan(
                 profile=profile,
                 target_observation=target_observation,
@@ -689,6 +712,7 @@ def render_checkpoint8a(
                     "decision": rag_run.decision.model_dump(mode="json"),
                     "trace": list(rag_run.trace),
                 },
+                "meta_agent_proposal": meta_proposal.model_dump(mode="json"),
             }
         except (ValueError, RuntimeError) as exc:
             store.record_event(
@@ -718,6 +742,20 @@ def render_checkpoint8a(
                         "bad_case_ref": decision.get("bad_case_ref"),
                     }
                 )
+    meta_agent_proposal = payload.get("meta_agent_proposal")
+    if isinstance(meta_agent_proposal, dict):
+        with st.expander("查看 Meta-Agent 工具选择依据（只提议，不授权执行）"):
+            st.json(
+                {
+                    "route": meta_agent_proposal.get("route"),
+                    "selected_tool_id": meta_agent_proposal.get("selected_tool_id"),
+                    "fallback_tool_id": meta_agent_proposal.get("fallback_tool_id"),
+                    "reason_codes": meta_agent_proposal.get("reason_codes"),
+                    "required_checks": meta_agent_proposal.get("required_checks"),
+                    "execution_authorized": meta_agent_proposal.get("execution_authorized"),
+                    "trace": meta_agent_proposal.get("trace"),
+                }
+            )
     differences = payload.get("differences")
     if isinstance(differences, list) and differences:
         display_rows = []

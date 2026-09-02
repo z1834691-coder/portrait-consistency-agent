@@ -1,7 +1,7 @@
 # 母版人像一致性 Agent｜执行版 PRD
 
-> 文档版本：`v0.9-current`
-> 最近同步：2026-09-01
+> 文档版本：`v0.9-current+v4-holdout`
+> 最近同步：2026-09-02
 > 文档性质：**当前产品与工程的共同真相源，持续更新**
 > 当前阶段：合同 `v0.4-frozen` 已落地；检查点 6 的质量门、主体 Adapter、Profile v0、脱敏运营账本和 Streamlit 按钮入口已实现；CompareFace 已真实通过，IMS 服务开通后已分别验证真实 `Block` 拒绝路径和一张新授权照片的 `Pass` 允许路径；检查点 7 的 DeepSeek 文本 IntentFrame Adapter、Schema 校验、显式文字授权与本地 fallback 已实现，并完成一次真实云端 Schema receipt；检查点 8A 的严格双眼测量、局部差异诊断、确定性 EditPlan 草案、Streamlit 展示和脱敏 Trace 已实现；检查点 8B 的显式初次确认、单次 BeautifyPic 执行 Gate、ProviderRun 真实回执合同、会话内结果展示和离线回归已实现。<span style="color:#C00000"><strong>检查点 8C-1/8C-2 已实现本地结果观察、受限策略提议、VerificationResult 趋势路由、最多三轮的计划族续跑、父子计划/回执血缘、结果页反馈与硬停止；在首次外部处理同意和有界计划族仍有效时，后续轮次不再逐轮要求参数点击，改为 Agent 受限自动续跑并保留完整 Trace。RAG P0-C 已把本地审核证据受限回接 8A 规划前和 8C 策略提议层；P0-D 已补齐 metadata-only 生命周期审计、索引 manifest 一致性检查、审计账本和 page 4 入口：这些模块只能提议/留证，不能新增执行权限、外部/混合复测或 Provider。Gold Set v2 现已完成 public deterministic predictions、无答案 holdout prediction 与一次私有仅聚合评分；当前基线没有通过，不能宣称 RAG 有泛化效果。部署包已推送至私有 GitHub 仓库，Streamlit Cloud App 已创建为 Private 应用，当前 URL 为 `https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`，只读探针返回登录跳转；腾讯 Web License 测试 License 已提交并在控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13。canonical Safety Event 目录已获产品负责人审核通过；v3 Holdout 已在工作区外生成题目/答案键审核草案，但仍不是正式 Holdout，也未回到仓库。火山美颜 V2 因需购买创点套餐且公开价格/试用额度不明，V0 暂不接入、不发照片；live Judge、外部/混合复测 Adapter、生产级定时 lifecycle worker、候选 Provider 正式准入和真实 UI 三轮照片回执仍按后续 Gate 推进。</strong></span>
 > 提交目标：2026-09-04 前完成真实可演示闭环和录屏备份
@@ -11,6 +11,8 @@
 > <span style="color:#C00000"><strong>2026-09-01 实时补充：</strong>第一位用户在 Cloud 配置 Secrets 后，ImageModeration 已进入真实请求但返回失败；原页面仅显示通用错误，无法定位具体原因。现已补齐安全错误回执投影：页面和脱敏 Trace 仅显示腾讯 `error_code`、`RequestId` 与异常类型，不显示原始错误全文、图片或密钥；失败仍 fail closed，不自动重试、不放行照片。刷新 Cloud 应用后再次执行安全检查，即可得到下一条真实腾讯诊断回执。本次不把“请求失败”写成 IMS 通过，也不改变现有 Pass/Review/Block 路由。</span>
 
 > <span style="color:#C00000"><strong>2026-09-01 根因覆盖：</strong>Cloud 日志进一步显示页面稳定中断点为 Streamlit 重跑时重复写入同一 `photo_quality_result_id`，SQLite 抛出 `UNIQUE constraint failed`；本机明确授权照片的真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此不能把此前通用页面提示直接归因为腾讯密钥失效。现已将质量/计划/验证合同写入改为“唯一键 + 脱敏投影”幂等复用；变化内容 fail closed，不覆盖历史证据，也不重复完成事件。Cloud 拉取新版本后仍须重跑一次 IMS 获取云端新回执。</span>
+
+> <span style="color:#C00000"><strong>2026-09-02 当前 RAG 状态覆盖：</strong>V4 已建立为与 V3 不重叠的 48 题独立 Holdout，并完成一次 answerless baseline 盲测；blind Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%，hard-safety=0/48（PASS），project quality Gate=`FAIL`。负责人授权后才生成 V4 validation 逐题诊断和候选修正；候选语义诊断指标达到 100% 不能替代独立泛化成绩，active baseline 未改变，RAG 仍 proposal-only。以下较早的 V3 validation 记录仍是历史/验证用途，以本覆盖条目和文末 V4 产品设计记录为当前准则。</span>
 
 ## 0. 这份文档和原启动蓝图是什么关系
 
@@ -384,7 +386,7 @@
 
 <span style="color:#C00000"><strong>带来的效果。</strong> 评测结果可以区分“资料找没找对”“路由是否安全”“解释是否忠实”；Provider 选择可以用同一套真实回执和 Gold 回归比较，而不是凭演示效果或供应商宣传做决定。这样保留了 Agent 的可扩展性，同时不牺牲图片隐私、权限和可回滚边界。</span>
 
-### 26. 2026-08-30 产品设计：中心舞台式首页与 Agent 交互原则（交互已冻结；配色仍在探索）
+### 26. 2026-08-30 产品设计：中心舞台式首页与 Agent 交互原则（历史记录；当前视觉见 29）
 
 <span style="color:#C00000"><strong>背景与问题。</strong> 当前 Streamlit 原型首先满足的是“能跑通合同、Gate 和 Trace”，因此界面仍接近工程工作台。它不足以让第一次到访的写真用户、小红书创作者或朋友圈图组用户在几秒内理解：这不是一个让她学习滑杆的修图工具，而是一个会记住母版、替她把这一次任务向目标推进的 Agent。若把聊天、参数、RAG 或技术日志摆在第一屏，既会增加教育成本，也会削弱 Demo 的视觉张力；反过来，如果只做一张漂亮的落地页，又会隐藏真实任务、权限和结果反馈。</span>
 
@@ -394,29 +396,29 @@
 
 <span style="color:#C00000"><strong>执行与结果体验边界。</strong> 执行中只显示可证实的任务状态，例如“正在检查是否可调整”“正在比较可调整差异”“正在验证这次变化”；动画不等于成功，不能伪造工具完成。结果进入独立的“揭晓时刻”：大幅前后对比、简短的人话总结、下载、点赞／点踩和继续说明；用户不必逐轮理解参数，也不必逐轮点击确认。用户仍可随时停止、表达不满意或发起新意图；“为什么／执行记录”第二层保留参数依据、Provider 回执摘要和脱敏 Trace，但不显示密钥、照片之外的敏感信息或模型隐藏思维链。视觉动效采用<strong>高级、清晰、适中的电影感</strong>，以场景转场、进度线和形状层次服务任务，不以强烈实验动效掩盖等待或错误。</span>
 
-<span style="color:#C00000"><strong>尚未冻结与实现状态。</strong> 已冻结的是交互结构和 Agent 可解释性原则，不是某一套颜色或已上线 UI。配色保留两条探索路径：一条在银灰、宝蓝、奶油白／灰紫、桃红、墨绿和鹅黄色的偏好基础上扩展新组合；另一条把参考图的雾灰紫／奶油桃／墨黑／珊瑚层次迁移为无摄影底图的产品舞台。产品负责人查看可交互样张后再冻结色彩系统；在此之前不改线上 Streamlit 视觉，也不把样张写成用户体验结果。颜色冻结后才进入 UI 视觉实现 Gate，并逐项验证母版、上传、同意、错误、执行、结果和反馈仍然可见、可达、可解释，且不改变现有权限、工具调用与 Trace 边界。</span>
+<span style="color:#C00000"><strong>历史状态覆盖。</strong> 本段记录的两条配色探索路径已由第 29 节的 Party Rock 冻结覆盖，不再是实现候选。轻量四区桌面工作台、右侧 Agent 对话、短文案和无摄影底图的结构已在 2026-09-02 的 UI/UX Spec v2.0 中冻结；Streamlit 仍未完成视觉迁移，E01 入口与 E02 Agent 对话两张关键帧和可编辑原型按冻结 Spec 制作，UI Gate 只验证实现还原与可访问性。</span>
 
 <span style="color:#C00000"><strong>带来的效果。</strong> 首页用一个明确主动作降低首次使用门槛，三空间又为重复使用保留完整性；Agent 的“智能”体现在母版记忆、本次任务、用户偏好、执行边界和结果反馈的连续旅程，而不是界面上有一个聊天框。该决策目前是产品设计和后续 Demo 叙事资产，不构成已验证的留存、满意度或审美效果声明。</span>
 
-### 27. 2026-08-30 产品设计：选定参考图层次语法，收束为低色数、强 Agent 入口的工作台
+### 27. 2026-08-30 产品设计：选定参考图层次语法，收束为低色数、强 Agent 入口的工作台（历史记录；当前规范见 29）
 
 <span style="color:#C00000"><strong>背景与问题。</strong> 产品负责人确认上一轮“雾灰紫情绪场 + 奶油桃中央舞台 + 墨黑胶囊导航 + 珊瑚高光”的参考图迁移方向最接近目标气质，但指出原探索版仍有三类问题：按钮和文字偏多、蓝绿黄红等色彩同时出现导致接近通用互联网视觉、装饰形状压过了 Agent 的自然语言入口。Demo 视频会承担完整讲解，UI 的职责应是让用户迅速开始，而不是在第一屏读完产品说明。</span>
 
-<span style="color:#C00000"><strong>冻结决策。</strong> 选择参考图的层次语法作为唯一视觉基线，不使用参考图摄影或页面资产；首页进一步收束为“一个中心任务、一个自然语言 Agent 入口、一个明确下一步”。视觉色数限制为<strong>3—5 个主色</strong>：雾灰紫、奶油／肉粉、墨黑为固定基底，只允许再加入 1—2 个强调色。标题、按钮、导航和 Agent 回复均采用短句；完整操作解释转由 Demo 讲解和第二层“为什么／执行记录”承担。主界面保留必要的轻量几何层次，但不再堆叠多余线稿、彩色装饰或信息卡片。自然语言输入框必须成为视觉重心，用户可以直接输入目标，也可一键选“保留妆面／先看差异／直接对齐”。</span>
+<span style="color:#C00000"><strong>冻结决策。</strong> 选择参考图的层次语法作为唯一视觉基线，不使用参考图摄影或页面资产；首页进一步收束为“一个中心任务、一个自然语言 Agent 入口、一个明确下一步”。视觉色数限制为<strong>3—5 个主色</strong>，正式视觉 token 与字体以第 29 节的 Party Rock + 苹方冻结为准：米白与紫色承担最大面积，黑色承担结构，其他颜色只作少量点缀。标题、按钮、导航和 Agent 回复均采用短句；完整操作解释转由 Demo 讲解和第二层“为什么／执行记录”承担。主界面保留必要的轻量几何层次，但不再堆叠多余线稿、彩色装饰或信息卡片。自然语言输入框必须成为视觉重心，用户可以直接输入目标，也可一键选“保留妆面／先看差异／直接对齐”。</span>
 
-<span style="color:#C00000"><strong>色彩冻结。</strong> 产品负责人确认主色只保留雾紫、肉粉／奶油粉与墨黑，并以高饱和桃红作为唯一强调色；不再采用宝蓝、绿色、黄色或额外彩色装饰。实现 token 可在视觉 QA 中微调深浅，但不得新增颜色家族。页面具体布局仍以可交互样张为候选，只有用户审核通过后才改 Streamlit；实施时仍须保证上传、同意、错误、执行、结果与反馈的真实状态可见，并不改变外部调用权限或 Trace。</span>
+<span style="color:#C00000"><strong>色彩与布局当前覆盖。</strong> 上述早期雾紫/肉粉/墨黑/桃红表述仅保留为历史探索记录；当前正式界面只采用第 29 节的 Party Rock 原始 Light/Dark token，不调整主题原值。紫色与米白共同承担最大面积，紫色略强，黑色为结构色，其他颜色仅少量语义点缀。轻量四区布局、右侧对话和两条主路由已冻结，E01/E02 关键帧只验证比例与层级，UI Gate 通过后再改 Streamlit；实施时仍须保证上传、同意、错误、执行、结果与反馈的真实状态可见，并不改变外部调用权限或 Trace。</span>
 
 <span style="color:#C00000"><strong>带来的效果。</strong> 视觉语言从“艺术网站的丰富感”转为“有艺术感但能立即开始的 Agent 工作台”：高级感由尺度、留白、材质对比和少数高质量强调色产生，而不是由更多颜色或更多说明文字产生。该结论是设计方向，不代表 UI 已上线或证明用户偏好。</span>
 
-### 28. 2026-08-30 产品设计：以奥卡姆剃刀收束为“一项任务 + 一个 Agent 入口”
+### 28. 2026-08-30 产品设计：以奥卡姆剃刀收束为“一项任务 + 一个 Agent 入口”（历史记录；当前规范见 29）
 
 <span style="color:#C00000"><strong>背景与问题。</strong> 产品负责人提供自有 BOOBOO App 的页面作为交互参考，要求借鉴其“单一主舞台、清楚的当前状态、有限操作入口和即时反馈”，但不复制绿色配色、素材、页面内容或多卡片仪表盘。前一版中心舞台虽已有 Agent 输入框，但仍存在装饰多、状态多、视觉重心分散的问题；对于第一次使用人像一致性 Agent 的用户，它会增加“我到底先做什么”的学习成本。</span>
 
 <span style="color:#C00000"><strong>调研与判断。</strong> 奥卡姆剃刀在此不是把功能删掉，而是只让当前步骤必要的实体出现在第一层：已有母版时，用户只需要上传一张待对齐照片或直接用自然语言交代偏好；没有母版时，首页只需要上传母版。母版、结果记录和参数依据都仍然存在，但进入对应空间或第二层，不能与主任务并列争抢注意力。Agent 产品的最低可理解闭环是“看见当前任务 → 输入目标／上传照片 → 看见真实下一步”，不是让用户先理解档案、参数、RAG 或工作流。</span>
 
-<span style="color:#C00000"><strong>候选页面规则。</strong> 新样张采用单一中心舞台：导航只保留“对齐／母版／记录”；中心只保留一个大标题、一个当前照片上传动作和一个显著的 Agent 自然语言输入框；输入框内可用极短快捷表达，发送后只显示“正在理解”等真实状态。它保留三空间信息架构，但每个页面只突出一个动作；不使用背景摄影、不使用仪表盘、长段解释、重复卡片或多条同时竞争的 CTA。色彩执行固定为雾紫 `#9893AA`、肉粉 `#F5DCD8`、墨黑 `#211F25` 与桃红 `#EE6276` 四色体系。</span>
+<span style="color:#C00000"><strong>当前页面规则。</strong> 该历史段落已落为冻结规范：导航只保留“对齐／母版／记录”，桌面采用“全局导航 + 项目/母版上下文 + 中央对齐工作区 + 右侧 Agent 对话”四区；中心每次只突出一个主任务，Agent 输入使用短中文文案；不使用背景摄影、仪表盘、长段解释、重复卡片或多条竞争 CTA。活跃视觉只制作入口与 Agent 对话两张主关键帧；色彩执行固定引用第 29 节的 Party Rock 原始米白/紫/黑 token，紫色与米白共同大面积、紫色略强，黑色结构、其他颜色少量点缀。</span>
 
-<span style="color:#C00000"><strong>当前状态。</strong> 上述低实体页面是待产品负责人审核的视觉候选，不是 Streamlit 已实现界面；产品负责人通过后，再进入前端改造和可达性复核。它不会改变合同、Prompt、同意、外部调用、数据库或 Trace。</span>
+<span style="color:#C00000"><strong>当前状态。</strong> 本段的产品结构已在 2026-09-02 UI/UX Spec v2.0 冻结；E01/E02 关键帧、HTML/SVG 可编辑原型已生成。它仍不是 Streamlit 已实现界面，不改变合同、Prompt、同意、外部调用、数据库或 Trace。</span>
 
 ---
 
@@ -613,11 +615,11 @@ P0-B 当前不调用 LLM；当前运行时最多采纳 3 条已审核 evidence�
 
 <span style="color:#C00000"><strong>下一产品负责人决策门：</strong>人工 Gold Set 的具体问法/人数和数值阈值、知识 lifecycle/observability worker 与 RAG Dashboard、任何新 Provider 的完整准入、以及 external/hybrid 复测 Adapter。RAG P0-C 已回接证据层，但 RAG 新提出的外部/混合复测仍不能默认执行；这不回溯当前已实现的 Tencent 同一计划族确定性自动续跑。</span>
 
-### 2.18 视觉与 Agent 交互（已冻结结构，色彩待选）
+### 2.18 视觉与 Agent 交互（结构已冻结；视觉选择见 29）
 
 <span style="color:#C00000"><strong>已冻结：</strong>采用“中心舞台式首页／对齐工作台 + 母版档案 + 结果记录”的三空间信息架构。新用户只从“建立我的母版”或“我已有母版，开始本次对齐”进入；回访用户直接上传待对齐照片。母版是长期记忆锚点，当前照片与本次自然语言目标是中心任务。Agent 仅在澄清、真实进度、边界和结果时用人话发声；参数、依据、Provider 回执与脱敏 Trace 只进入第二层，不展示隐藏思维链。结果页承担前后对比、下载、点赞／点踩和继续说明，而不是把滑杆设为主角。视觉动效必须是适中、清晰、服务真实状态的电影感，不能用假进度掩盖调用状态。</span>
 
-<span style="color:#C00000"><strong>色彩收敛状态：</strong>已选定“参考图层次迁移”作为唯一视觉基线，并冻结雾紫、肉粉／奶油粉、墨黑与桃红的四色体系；同时冻结短标题／短按钮、低装饰密度和显著自然语言入口原则。新的奥卡姆式页面样张仍待产品负责人审核；当前样张不改变现有 Streamlit 代码、工具权限、照片处理链路或用户同意规则。页面审核通过后才进入 UI 视觉实现与可达性复核 Gate。</span>
+<span style="color:#C00000"><strong>色彩收敛状态：</strong>本段早期的雾紫、肉粉／奶油粉、墨黑与桃红属于历史视觉基线；产品负责人已在第 29 节将正式界面覆盖为 Tweakcn `Party Rock` 原始 Light/Dark token，并冻结苹方。短标题／短按钮、低装饰密度和显著自然语言入口原则继续有效；当前仍未改 Streamlit，必须通过 UI 视觉实现与可达性复核 Gate。</span>
 
 前端信息架构、页面状态、组件、视觉 token、动效、文案、可访问性与验收指标的执行规格见[《前端与交互设计需求文档》](前端与交互设计需求文档.md)。该专项文档只把已冻结产品边界翻译成 UI 需求，不新增业务合同或执行权限。
 
@@ -1147,7 +1149,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | Tencent BeautifyPic live smoke        | **已实现并验证**   | 授权内部单人照片的 IMS `Pass` 后，BeautifyPic 瘦脸/大眼各 5、美白/磨皮 0 得到真实 RequestId，1924 ms；结果仅内存引用 | 单样本既有 Provider 回执只证明当前工具链可用，不代表母版一致性效果、当前 UI 端到端或用户接受 |
 | 8B 确认后单次编辑/ProviderRun Gate        | **已实现并离线验证** | 确认作用域、hash/期限/Gate 校验、一次调用、脱敏回执、6 个初始执行案例与 fixture Trace；8C-2 子轮回执新增 `parent_run_id`/上一结果输入血缘 | 尚无新的 UI 真实照片回执；本地幂等不是宕机后的分布式 exactly-once；首轮外部调用需页面可见确认，后继子轮在同一有效 scope 内由 preflight 后自动执行，scope 变化才重新确认 |
 | Streamlit 本地壳                        | **已实现并验证**   | session、双图内存预览、质量门、显式安全/同人按钮、Profile v0、文本 IntentFrame、8A 草案、8B 确认/结果预览、8C 复测、子计划展示、点赞/点踩/文字反馈与回退预览；健康检查通过     | 首轮真实外部调用仅在用户勾选/点击后才允许；8C-2 同一有效 scope 内可受限自动续跑；没有完整多轮澄清、外部/混合复测或部署级会话恢复                     |
-| 视觉交互设计（中心舞台首页 + 三空间）      | **已冻结待开发**   | 2026-08-30 产品设计决策；已制作无摄影底图的色彩／交互探索样张 | 现有 Streamlit UI 尚未升级；最终配色未冻结；不得把样张当成线上体验或改变权限、工具链与 Trace 边界 |
+| 视觉交互设计（轻量四区 Agent 工作台 + 对齐/母版/记录三空间）      | **设计已冻结待开发**   | 2026-08-30 Agent 结构决策；2026-09-02 冻结 Party Rock 原始 token、苹方、右侧 Agent 对话、短文案及紫色与米白共同大面积（紫色略强）、黑色结构、其余色少量点缀；活跃关键帧收敛为 E01 入口与 E02 Agent 对话；关键帧执行 Prompt 与可编辑源见 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`design/keyframes/party-rock-pingfang/` | 现有 Streamlit UI 尚未升级；E01/E02 HTML/SVG/PNG 已生成，UI Gate 仍待完成；不得把样张当成线上体验或改变权限、工具链与 Trace 边界 |
 | Reference Profile 真实建档               | **部分已实现并验证** | `reference_profile.py` + 4 个 Profile 测试 + Checkpoint 6 临时 SQLite 纵向测试   | V0 仅脸框/眼睛几何；无加密锚点和 UI                                 |
 | 内容安全 + subject/quality/editability 门 | **部分已实现并验证** | OpenCV/Pillow 质量门、Tencent Adapter、页面显式同意按钮、CompareFace live 成功；IMS 真实 `Pass` 与 `Block` 回执 | 两条安全路由已验证；完整状态机和多脸隔离尚未实现 |
 | 多脸隔离/裁剪/回贴/复测                        | **已冻结待开发**   | 产品链路与合同路由                                                               | 当前必须要求用户单脸/先裁剪                                        |
@@ -1620,3 +1622,198 @@ Streamlit 重跑时随机生成新的 `request_ref`。`reset_token` 与签名时
 <span style="color:#C00000"><strong>产品决策。</strong>同一请求代次继续使用稳定 `request_ref`；任何失败回执都必须保留为失败 ProviderRun，并允许用户重新点击执行；服务端在签名前拒绝 URL 形式 APPID；浏览器只向页面展示有限的 `error_code` 和安全中文解释，原始 SDK 对象、Token、图片和密钥不进入 Trace。真实图片未成功前，Web Card 继续为 `candidate`，不能进入主流程或被 RAG 自动放行。</span>
 
 <span style="color:#C00000"><strong>带来的效果与下一步。</strong>本轮真实重试证明回执关联修复有效，但也证明 Web Provider 尚未通过图片处理准入；失败证据已可追溯、可重试、可解释。下一步由负责人在 Streamlit Cloud → App Settings → Secrets 将 `TENCENT_EFFECT_APP_ID` 改为腾讯账号数字 APPID，保留 License Key/Token，Reboot 后只运行一次官方示例图；只有取得成功 Browser Receipt 并完成隐私、区域、成本和负责人审核，才讨论 Card promotion。</span>
+<span style="color:#C00000"><strong>2026-09-02 后续事实。</strong>负责人修正 Secret 后再次明确点击执行；稳定请求代次复用 `request_ref`，最新脱敏回执为 `web_receipt_effect_web_3a3c71bec3f24557`，耗时 628ms，SDK 错误码 100、规范化错误码 20001001，未生成结果图。它证明回执关联和可重试组件仍按合同工作，但没有解决 Web SDK 鉴权；License/Token 配对、签名/数字 APPID、精确域名绑定和 Cloud Secret 重载仍待核对。Card 继续 `candidate`，不能把两次失败尝试写成 Web 图片能力已接入。</span>
+
+## 2026-09-02｜产品设计：用独立 V4 Holdout 验证 RAG 是否真正泛化
+
+<span style="color:#C00000"><strong>背景与问题。</strong>V3 在负责人授权后被解冻为 validation，已经用于逐题复盘和候选修正，不能再作为“系统从未见过的新题”来证明泛化。此前的优化还出现过连续零增益，原因是只改了最后的答案整理，没有改变系统理解用户问题的入口。因此本轮需要重新建立一套不与 V3 重叠、覆盖更远场景的考试题，并把“出题—盲测—解冻诊断—按失败模式修正—回归—停止”做成可复核的产品质量机制。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>我先核对 V3 题目覆盖和当前评测 Rubric，再把 V4 扩展到工具能力、权限、隐私、主体锚点生命周期、知识过期、资料冲突、提示注入、未就绪 Provider、复测策略、批量/多脸、缺少关键偏好和参数越界等组合情境。评测不能只看一个平均分：安全硬门必须是 0 次错误放行；质量还要同时看任务路由、证据集合、证据关系、前五条召回、首条正确证据位置和排序质量。由于很多题的 Gold 只有 1–2 条证据，固定 Precision@3 会天然受稀疏分母影响，所以保留 fixed、effective、returned 三种口径，但不通过替换分母来抬高冻结的项目 Gate。</span>
+
+<span style="color:#C00000"><strong>产品决策。</strong>建立 48 道与 V3 不重叠的 V4 独立 Holdout；工作区运行包只保留题目，不保存答案；先完成一次 answerless 盲测并封存预测/Trace，之后才允许在工作区外由产品负责人授权解冻做逐题诊断。RAG 的“聪明”被定义为在审核过的知识范围内理解任务、分清直接证据/参考信息/冲突信息并提出受限建议，而不是自由搜索、增加工具或越过权限。候选修正先作用于自然语言→查询投影的入口；每代只改一个可解释变量，同时跑公开回归、安全硬门和反过拟合检查；候选没有得到新 Holdout 的项目 Gate 证据前，不得 promotion。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>V4 正式 baseline 盲测（48 题）得到 Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%，hard-safety=0/48（PASS），project quality Gate=FAIL。负责人授权后的 V4 validation 候选将语义诊断指标提升到 100%，但这是同一批题目的解冻复盘，不是新的泛化成绩；固定 Precision@3 仍为 51.39%，冻结 Gate 仍 FAIL，active baseline 未改变，RAG 仍 proposal-only。准确的项目表述是“完成独立 V4 盲测并定位泛化问题，在授权验证副本完成失败驱动候选修正”，不能写成“RAG 已产品化”。</span>
+
+### V4 实现与证据矩阵（2026-09-02 当前）
+
+| 产品/工程能力 | 当前状态 | 证据 | 边界 |
+|---|---|---|---|
+| V4 题目与答案隔离 | **已实现并验证** | `data/evaluation/rag_v4_holdout_runtime.json`；答案键在工作区外受限目录 | 在线 RAG 不读答案；盲测最多运行一次 |
+| V4 独立 baseline 盲测 | **已完成** | `reports/rag_v4_holdout_blind_aggregate.json/.html`；48/48 predictions | 只输出聚合，不回流逐题 Gold |
+| V4 逐题 Trace/失败分析 | **已完成（负责人授权后）** | `reports/rag_v4_validation_diagnostics_v1.json/.html`；G0–G5 | validation 不能证明泛化或 promotion |
+| 查询编译候选 | **已实现，未 promotion** | `rag_v4_query_compiler_candidate.py`、诊断 runner、7 条专项测试 | proposal-only，不产生参数/权限/ProviderRun |
+| RAG 优化 SOP 与看板 | **已实现** | `RAG_V4_HOLDOUT.md`、SOP、Rubric、page 5 | 只读治理，不自动发布 |
+| 图片/LLM/网络调用 | **本轮未发生** | Trace：均为 `false` | V4 只验证离线检索/路由逻辑 |
+
+<span style="color:#C00000"><strong>当前质量 Gate。</strong>安全硬门通过不等于质量通过；在新的独立 Holdout 证据达到冻结门槛前，RAG 仍不得进入主执行链。</span>
+
+<span style="color:#C00000"><strong>本轮工程交叉校验。</strong>全量 pytest=`189 passed, 4 warnings`；V4 专项测试=`8 passed`；Ruff check/format、compileall、`git diff --check` 和 V4 diagnostics runner 均通过。4 条 warning 为既有 Pillow 弃用提示。该工程回执只证明当前代码、合同、测试和报告可共同运行，不改变 V4 project quality Gate=`FAIL`、RAG proposal-only 或 active baseline 未改变。</span>
+
+### 17.21 2026-09-02 产品设计：对 RAG 多轮低成功率做反思审计，先校正“测到了什么”
+
+<span style="color:#C00000"><strong>背景与问题。</strong>在完成多轮 RAG 迭代、V3/V4 评测和失败模式 SOP 后，V4 独立盲测仍然只有 Route=`12.50%`、Evidence relation=`18.75%`、Recall@5=`57.99%`，project quality Gate=`FAIL`。如果继续加题、调排序或补最后的答案文字，无法判断到底是自然语言没听懂、知识库没有资料、召回失败、证据关系错误，还是评测分母造成的假象。因此本轮先暂停“继续优化”，把之前每一轮实际改动和真实被测链路重新拆开审计。
+
+<span style="color:#C00000"><strong>调研与判断。</strong>我先重建了早期 public no-op、失败驱动开发集、V3 解冻验证和 V4 独立盲测的时间线，再对照 `rag_gold_baseline.py`、P0-B retriever、线上 `DeepSeek → IntentFrame → RagQuery` 链路、评测器公式和生命周期审计。审计发现：V4 48 道题中只有 8 道生成了结构化检索请求并留下检索 Trace，40 道题在检索前就结束；baseline 还会把 projection 产生的 route/evidence alias 合并进 Prediction，而 P/FX 等标签并不是当前 3 张 Provider Card 的真实知识块。与此同时，知识库只有 3 张 Card/10 条规则；盲测使用的是可重复的 token fixture 后端，不是线上语义模型证据。最后，V4 23 道题只有 1 条 Gold、24 道只有 2 条 Gold，fixed Precision@3 的理论上限约为 `0.513889`，低于现行 `0.80` 门槛，说明固定 Precision 不能单独指导这一批稀疏 Gold 的检索调参。
+
+<span style="color:#C00000"><strong>本轮产品决策（先记录结论，涉及 Gate 的改变仍待负责人确认）。</strong>把 RAG 质量拆为两条轨道：①自然语言→结构化 `RagQuery`/路由，专门衡量 Agent 是否听懂用户；②结构化 `RagQuery`→真实知识召回/排序/证据关系，专门衡量 retriever。评测结果必须标明证据来自真实知识块、策略编译还是评测投影，禁止用 projection alias 代替真实召回；隐私、生命周期、冲突和提示注入若要计入检索质量，必须先进入审核过的 Policy/Rule Card。当前不新增 Holdout、不读取新的答案键、不推广 V4 候选，也不调整 fixed project Gate；先运行 10–15 道公开 smoke，逐题验证“原话→查询→召回→采用证据→路由”真实走通，再由产品负责人决定指标新口径和新的独立 Holdout。
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>本轮没有提高一个漂亮的总分，而是把“为什么低”从一个混合问题拆成了可以单独修复和验收的工程问题：上游理解、真实检索、知识覆盖、评分口径和泛化泄漏。独立盲审者在不读取受限逐题答案的情况下复核了同一结论。审计输出了可复用 Prompt、JSON/HTML 报告和下一 Gate；它证明当前继续堆题或调排序缺乏有效性，不证明 RAG 已通过，也没有改变 RAG `proposal-only`、Provider 白名单、权限或 active baseline。
+
+### 17.21.1 实现矩阵与当前待决策项
+
+| 能力 | 当前状态 | 真实边界 |
+|---|---|---|
+| 低成功率反思审计 Prompt | **已完成** | 规定事实/推断、层级、指标、泄漏和最小验证的审计顺序 |
+| 公开事实审计 JSON/HTML | **已运行** | 只读取公开聚合、answerless Trace、公开评测和生命周期摘要；不读取新答案键 |
+| 根因排序与独立复核 | **已完成** | 结论指向测量边界和上游查询编译；不能称作 RAG 质量通过 |
+| 两轨评测合同 | **待产品负责人确认** | 需要决定 Gold 是直接绑定真实 chunk，还是先补 Policy/Rule Card |
+| fixed Precision 新诊断口径 | **待产品负责人确认** | 保留历史 Gate；是否新增可达的诊断门不能在本轮静默修改 |
+| 新独立 Holdout | **暂缓** | 先完成两轨公开 smoke，避免继续在错误对象上加题 |
+
+<span style="color:#C00000"><strong>本轮审计入口。</strong>可复用 Prompt 见 `docs/RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md`；机器事实与可视化报告见 `reports/rag_low_success_reflection_audit.json/.html`。当前准确表述是“完成 RAG 低成功率反思审计并定位测量/上游边界问题”，不能写成“RAG 已产品化”。</span>
+
+### 17.21.2 反思审计后的当前工程状态
+
+<span style="color:#C00000"><strong>本轮最终交叉校验。</strong>新增反思审计 Prompt、机器报告和专项测试后，当前全量 `.venv/bin/pytest -q` 为 `193 passed, 4 warnings`；Ruff check、`ruff format --check`（188 files）、compileall、`git diff --check`、反思审计 runner 及既有 RAG/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。</span>
+
+该 QA 只证明代码、合同、测试、报告和看板可以共同运行；V4 独立盲测的 project quality Gate 仍为 `FAIL`，RAG 仍是 `proposal-only`，active baseline 未改变。下一步必须先由产品负责人确认两轨评测、Policy/Rule Card 入库和指标诊断口径，不能把本轮审计或 validation 高分写成 RAG 产品化通过。
+
+### 29. 2026-09-02 产品设计：冻结 Party Rock + 苹方及色彩面积比例（历史记录；最新执行以 29.1 为准）
+
+<span style="color:#C00000"><strong>2026-09-02 最新覆盖提示：</strong>本节下方早先的“米白最大、紫色第二”表述已被本轮产品负责人反馈覆盖。执行以“紫色与米白共同最大、紫色略强；黑色结构；其他颜色稀疏”为准；原始 Party Rock token 不变。</span>
+
+<span style="color:#C00000"><strong>产品负责人明确决策。</strong>正式界面配色冻结为 Tweakcn `Party Rock` 的原始 Light/Dark token（Light background `#F2F1E6`、primary `#A855F7`、secondary `#C084FC`、destructive `#FF4D4D`；Dark background `#121212`、foreground `#F2F1E6`、primary `#A855F7`）。正式界面字体冻结为苹方（`PingFang SC`）；四元黑体及其他字体只保留为后续品牌字标/实验候选。</span>
+
+<span style="color:#C00000"><strong>面积与层级决策（历史记录，已由 29.1 最新覆盖替代）。</strong>早期曾将米白写成页面画布、中央工作区和大多数容器的最大面积，将紫色写成第二大面积；该表述仅保留决策时间线，不再作为实现依据。当前执行以紫色与米白共同承担最大面积、紫色在暗流/对齐舞台/关键操作块中略强为准；黑色承担导航、暗流底、文字、分隔线和高对比结构；其他颜色只作少量语义点缀。Party Rock 原始 token 不变。</span>
+
+<span style="color:#C00000"><strong>边界与实现状态。</strong>本决策只冻结视觉 token 的选用、正式字体和相对使用范围，不改变同意、权限、Provider、结果保留、RAG、审计或 Trace 合同。Streamlit 尚未完成视觉迁移；必须在 UI Gate 中验证真实状态、键盘/屏幕阅读器、reduced motion 和颜色使用范围后才能称为“已实现”。</span>
+
+### 29.1 2026-09-02 产品设计：活跃关键帧收敛为入口与 Agent 对话
+
+<span style="color:#C00000"><strong>产品负责人最新要求。</strong>视觉评审不再制作四张状态页面；活跃交付只保留两张主关键帧：E01「入口」和 E02「Agent 对话」。这不是删除底层状态机，而是把上传、自动检查、澄清、一次授权、结果与停止都收束到两个空间内，用对话消息、事实块、授权 Sheet 和结果块顺序呈现。</span>
+
+<span style="color:#C00000"><strong>构图决策。</strong>E01 使用“紫色暗流视觉场 + 米白行动面”，只突出建立母版/上传与自然语言输入；E02 使用“深色照片对齐舞台 + 米白 Agent 面板”，只展示一条用户消息、一条 Agent 复述、一块关键事实和一个 composer。紫色通过暗流、激活状态和对齐轴形成大面积视觉记忆，米白负责可读性，黑色负责结构。PNG 是 Image 2 方向稿，HTML/SVG 是精确文字和布局源。</span>
+
+<span style="color:#C00000"><strong>耦合边界。</strong>本次收敛同步更新 `docs/前端与交互设计需求文档.md` 第 4、7、9、12、15 节、`docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`PRODUCT.md`、`PRODUCT_RULES.md`、`README.md`、`PROJECT_CONTEXT.md`、`DECISION_LOG.md` 与 `DEVELOPMENT_PROGRESS.md`；旧 K01—K04 资产移入 `design/keyframes/party-rock-pingfang/archive/v1-four-state/`，不再作为实现依据。业务合同、隐私/权限、Provider、结果保留、Trace 和 RAG 事实均未改变。</span>
+
+## 附录 F. 2026-09-02 产品设计：完整 Web 试验的鉴权失败闭环
+
+<span style="color:#C00000"><strong>背景与判断。</strong>在修复回执错位、更新 Cloud Secret 后，产品负责人再次要求从当前页面完整执行官方示例图。系统不能只依赖“按钮已点击”判断成功，必须等待 SDK 完整返回，并把鉴权等待、错误码、耗时、结果图状态和 Card 状态一起作为证据。</span>
+
+<span style="color:#C00000"><strong>真实结果与决策。</strong>本次明确点击确实进入腾讯 Web SDK；SDK 等待自身鉴权窗口后返回回执 `web_receipt_effect_web_3a3c71bec3f24557`，耗时 `10360ms`，SDK 错误码 `100`、规范化错误码 `20001001`，未生成输出图。稳定 `request_ref` 仍只表示同一输入/参数代次，不代表自动重试。产品继续保持 Card=`candidate`，不放行主流程，也不让 Prompt/LLM 把失败改写成成功。</span>
+
+<span style="color:#C00000"><strong>带来的效果与下一步。</strong>这次测试证明“完整调用→等待最终回执→保存失败事实→保持 fail-closed”链路可观测；未证明 Web Provider 可用。下一次只在核对 License/Token 配对、数字 APPID/签名、精确域名绑定和 Cloud Secret 重载后运行一次官方示例图，避免无效重复调用。</span>
+
+## 附录 G. 2026-09-02 产品设计：修复 Web Canvas 结果捕获错误
+
+<span style="color:#C00000"><strong>背景与判断。</strong>第一次真实图片试验从鉴权阶段进入结果捕获时，浏览器报错 `Cannot resize canvas after call to transfer...`。复核腾讯 Web SDK 生命周期后确认：SDK 初始化后会接管输出 Canvas，原实现又在 `takePhoto()` 返回后修改同一 Canvas 的宽高，导致部分浏览器/WebGL 构建拒绝操作。</span>
+
+<span style="color:#C00000"><strong>产品与工程决策。</strong>保留 SDK 输出 Canvas 作为 SDK 内部对象，不再由业务代码调整其尺寸；另建一个浏览器自有结果 Canvas 接收 `ImageData`，再生成预览、下载链接和结果 hash。结果捕获失败仍必须生成失败回执，不得把“拿到 SDK 事件”当成成功。</span>
+
+<span style="color:#C00000"><strong>带来的效果。</strong>这项修复只解决前端 Canvas 生命周期兼容性，不改变 License、签名、图片出站、隐私、Provider Card 或 RAG 准入结论；部署新版本后需要重新跑一次官方示例图 smoke。</span>
+
+<span style="color:#C00000"><strong>验证证据。</strong>Web 专项测试 `12 passed`，全量测试 `193 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。离线 smoke 仍明确不联网，Cloud 真实成功回执尚待新版本部署后取得。</span>
+
+## 30. 2026-09-02 产品设计：把 RAG 质量评测改成“两条轨道 + 独立过程考官”
+
+<span style="color:#C00000"><strong>背景。</strong>前几轮 V3/V4 评测的低分长期混合了“有没有听懂用户问题”和“有没有找到真实知识”。反思审计还发现，旧 runner 有些题在结构化查询前就停止，并把 projection 里的路由/证据别名混入 Prediction。这样即使分数变化，也无法证明检索真的变好了；继续加题或读取答案来补规则会浪费数据。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>产品负责人要求过程公平、每道题不漏跑、答案不泄露，并接受把自然语言理解与真实知识检索拆开。由此确定：评测先检查“考试有没有按规定完成”，再连接 Gold 评分；过程检查由独立的确定性监督程序完成，不与被测编译器共享 Gold 标签。LLM Judge 只在过程门通过之后作为脱敏辅助，不可替代人工金标准。</span>
+
+<span style="color:#C00000"><strong>冻结决策。</strong></span>
+
+1. <span style="color:#C00000">轨道 A 只衡量自然语言→结构化 `RagQuery`/路由；每道题必须明确记录 `structured` 或 `unknown_fallback`。听不懂不等于可以跳过 RAG。</span>
+2. <span style="color:#C00000">轨道 B 只衡量结构化查询→真实知识召回/排序/证据关系；最终路由和证据必须来自 P0-A/P0-B 实际回执，不能来自 projection、题目标签或答案键。</span>
+3. <span style="color:#C00000">保留历史 fixed Precision；新增诊断带：低于三分之一为弱，达到三分之一为已有一定效果，达到三分之二为较强。诊断带只解释迭代，不替代既定项目质量 Gate。</span>
+4. <span style="color:#C00000">当前知识库规模先不扩张，先用已有 V3/V4 题目完成过程完整性改造；正式质量评分前不再通过扩题掩盖流程问题。</span>
+5. <span style="color:#C00000">V3/V4 历史快照若过程不完整，不能补写或改名为 PASS；修正后的同题重放只证明新 runner 的流程能力，不改写旧盲测质量分数。</span>
+
+### 30.1 过程监督考官的产品合同
+
+过程考官逐题检查：题目无重复/缺失；未读答案、标注、照片、人脸向量或密钥；原题只在内存使用且 Trace 只保留哈希；无论编译是否成功都创建合法 `RagQuery`；每题存在 query contract、检索步骤、route 和 finalized Trace；Prediction 明确标记 route/evidence 来源为 `retrieval_result`；证据能在真实召回/采用列表中找到；不存在 projection/evidence_aliases/Gold 字段注入；没有网络、LLM、图片 Provider 副作用。任意一题失败，质量评分保持锁定。
+
+### 30.2 实际链路与效果
+
+```text
+读取已有 answerless V3/V4 题目
+→ 内存中编译；未知时生成中性查询
+→ 每题进入 P0-A/P0-B/P0-C 并留下真实检索 Trace
+→ 只从 retrieval_result 生成预测
+→ 独立过程考官逐题验收
+→ 过程门通过后才允许另行连接 Gold
+```
+
+本轮新增 `services/rag_process_supervisor.py`、`scripts/run_rag_fair_process_audit.py` 和 `docs/RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md`。使用同一批现有输入的无答案过程重放中，V3 `36/36`、V4 `48/48` 均完成检索 Trace；其中 V3 `5` 题、V4 `8` 题结构化编译成功，其余题明确标为 `unknown_fallback`，并没有因此漏跑。四份脱敏 predictions/Trace 运行包已封存，供后续按哈希连接 Gold。旧 V4 正式快照审计仍为 FAIL（缺少完整阶段且存在 projection 注入），所以其历史质量分数保持锁定，不能被新重放覆盖。
+
+### 30.3 实现矩阵与当前边界
+
+| 能力 | 状态 | 证据/边界 |
+|---|---|---|
+| 两轨评测结构 | **已实现（过程层）** | 编译层与检索层分开记录；尚未连接新的 Gold 质量分数 |
+| 每题完整进入 RAG | **新版过程重放通过** | V3 36/36、V4 48/48；中性 fallback 只为保证流程完整，不冒充理解成功 |
+| 独立过程监督考官 | **已实现并通过新版重放** | 检查阶段、证据血缘、字段注入和副作用 |
+| 历史 V4 正式快照 | **FAIL（不可回写）** | 仅作历史审计证据；不能借重放改写旧成绩 |
+| Gold 质量评分 | **新重放可进入独立连接** | V3/V4 新无答案过程门均 PASS；旧正式快照的质量分数仍锁定，Gold 连接只用于验证，不是新的泛化盲测 |
+| RAG 执行权限 | **保持 proposal-only** | 过程考官不调用工具、不授权图片出站、不改变 active baseline |
+
+<span style="color:#C00000"><strong>本轮交叉校验。</strong>过程考官专项测试 `3 passed`；公平过程报告 `reports/rag_fair_process_audit_v1.json/.html` 已生成，答案键、原题和 case ID 不写入报告（仅保留哈希）。`fresh_replay_process_gate=PASS` 表示新流程完整，`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN` 表示新无答案运行可以进入单独 Gold 验证；历史正式快照仍为 `FAIL`，其质量状态为 `LOCKED_HISTORICAL_PROCESS_AUDIT`，不能被修写或复用。无论验证分数如何，RAG 仍不能宣称产品化。</span>
+
+## 30.4 2026-09-02｜腾讯特效 Web 结果捕获修复与真实成功证据
+
+<span style="color:#C00000"><strong>背景与问题。</strong>首次真实 Web 试验在 SDK `takePhoto()` 后调整 SDK 持有的输出 Canvas 尺寸，浏览器报 `Cannot resize canvas after call to transfer`，导致结果图无法形成。该问题属于前端结果捕获生命周期错误，不是腾讯账号权限或图片内容安全结论。</span>
+
+<span style="color:#C00000"><strong>产品/工程决策。</strong>保持 SDK 输出 Canvas 不可变；把 `ImageData` 复制到独立结果 Canvas，再生成预览、下载数据和输出哈希。Python 只接收脱敏回执，不接收或持久化原图/结果图。此决策保留浏览器会话级隐私边界，并让失败原因、修复版本和回执可以被复盘。</span>
+
+<span style="color:#C00000"><strong>真实验证结果。</strong>修复推送 GitHub 并完成 Cloud 重部署后，page 6 官方示例图真实点击成功：`web_receipt_effect_web_4d58ea15a0794370`，`status=succeeded`，`elapsed_ms=2601`，`output_hash_saved=true`，`result_retention=browser_session_only`。这证明“浏览器 SDK → 处理 → 脱敏回执”链路已闭合；不代表细项五官、批量能力、供应商留存/区域/费用或 Provider Card promotion 已完成，Card 继续 `candidate`。</span>
+
+### 30.5 当前交叉校验补充（2026-09-02）
+
+<span style="color:#C00000"><strong>当前工程回执。</strong>全量 `pytest`=`196 passed, 4 warnings`；Ruff check/format、
+compileall、`git diff --check`、P0-A/P0-B/advisory/lifecycle/8C/8C2/Web/候选 Provider 离线 smoke 和公平
+过程审计均通过。新版 V3/V4 分别 `36/36`、`48/48` 完整走过 RAG，旧 V4 快照的历史失败保持不变。</strong></span>
+
+<span style="color:#C00000"><strong>产品边界。</strong>这证明的是“评测流程公平且可回放”，不是“RAG 内容答对”。下一步只允许
+从封存的新运行包按哈希连接 Gold，分别计算两条评测轨道；不重新跑题、不把 Gold/Projection 写入 Prediction，
+也不改变 RAG `proposal-only`、active baseline 或图片执行权限。</strong></span>
+
+## 30.6 2026-09-02｜产品设计：腾讯特效 Web SDK 纳入 Meta-Agent 的边界
+
+### 背景与问题
+
+产品负责人希望把已经完成一次真实浏览器 Smoke 的 Tencent Effect Web SDK 接入真正的工具决策链，而不是让它停留在孤立的 page 6 试验。直接把 Web 代码塞进 BeautifyPic 的 `EditPlan` 或让 LLM 自由调用，会造成三个耦合风险：Web 使用浏览器 SDK 而非 REST 参数；当前 Browser Receipt 只有脱敏元数据、没有结果图 bytes；Card 仍缺少完整的供应商留存、区域、费用和多样本准入证据。若忽略这些差异，页面成功可能被误写成主流程成功，RAG 也可能绕过权限直接放行。
+
+### 调研与判断
+
+我先对照 `tencent_effect_web.json`、`TENCENT_EFFECT_WEB_ADAPTER.md`、`ProviderRun`/`EditPlan` 合同、现有 8A/8B/8C 主流程和一次真实 Browser Receipt，确认 Web Card 的 `lift/shave/eye/chin/whiten/dermabrasion` 是独立的浏览器字段，不能与 Python BeautifyPic 的 `0—100` 整数参数混用。随后核对 RAG 的 `proposal-only` 规则，确认“能检索到一张能力卡”不能自动制造参数、权限、签名、ProviderRun 或图片出站。最后按可回滚的小步纵向切片拆成 Card → Registry → ToolProposal → Policy → Adapter → Receipt → Verification，并把真实执行停在准入证据齐全之后。
+
+### 本轮产品决策
+
+<span style="color:#C00000"><strong>第一，采用“候选可见、权限分离”的 Meta-Agent 边界。</strong>新增只读 Tool Registry，同时登记已审核的 `tencent_beautify_pic` baseline 和仍为 `candidate` 的 `tencent_effect_web`。Meta-Agent 可以提出 Web 候选并解释 `candidate_not_admitted`，也可以给出 BeautifyPic fallback；但 `ToolProposal.execution_authorized` 固定为 `false`，真正放行仍由状态机、Consent、预算、Card 和 Adapter 完成。</span>
+
+<span style="color:#C00000"><strong>第二，禁止跨合同偷换。</strong>Web 继续使用独立的 `EffectWebRequest`/`EffectWebBrowserReceipt` 和浏览器参数合同；本轮不修改 `EditPlan` 的 BeautifyPic 专用字段，不把 Web 参数伪装成 REST 参数，不把一次 Browser Receipt 写成“效果达标”。</span>
+
+<span style="color:#C00000"><strong>第三，Meta-Agent 只作受限提议。</strong>输入只允许结构化功能、RAG 证据引用和当前阶段；输出只允许工具、Card 版本、原因码、所需检查和 fallback。它不接收照片、向量、密钥或隐藏思维链，不生成绝对修图数值、不签名、不创建 `ProviderRun`，RAG 冲突/未知时 fail-closed。</span>
+
+<span style="color:#C00000"><strong>第四，保留未决的结果交接 Gate。</strong>若要让 Web 进入 8A/8B/8C 主流程，必须另行决定：A 浏览器端复测；B 一次性将结果 data URL/bytes 回 Python；或 C Web 只做展示/下载、主流程继续 BeautifyPic。本轮不擅自改变既定 `python_receives_image=false` 边界。</span>
+
+### 决策带来的效果
+
+现在系统可以真实回放“工具卡 → 受限 Meta-Agent → candidate 阻断 → baseline 兜底”的完整链路，且不产生网络、图片或 Provider 副作用。它让 Agent 的“智能”体现为在有限工具集合中提出可解释选择，而不是把 LLM 说法当成执行授权；同时保留了 Web SDK 未来接入主链所需的清晰升级点和回滚点。该结果是工程接入层已实现，不是 Web Provider promotion、效果通过或批量能力结论。
+
+### 当前实现矩阵补充
+
+| 能力 | 当前状态 | 真实边界/下一步 |
+|---|---|---|
+| Web Provider Card 读取 | **已实现，candidate** | 仍需隐私、区域、费用、多样本和负责人准入 |
+| 统一 Tool Registry | **已实现并测试** | 只读 Card 投影；不持有密钥和图像 |
+| Meta-Agent ToolProposal | **已实现并测试** | 可提议 Web、标记阻断并给 baseline fallback；`execution_authorized=false` |
+| 主流程 Web 执行 | **未 promotion** | 等结果交接 A/B/C Gate，不能静默改 `EditPlan`/执行器 |
+| Web Browser Receipt | **真实成功一次** | 仅证明浏览器处理和脱敏回执；不证明一致性/效果达标 |
+
+### 可复核证据
+
+`services/tool_registry.py`、`services/meta_agent.py`、`scripts/smoke_meta_agent_tool_routing.py`、`tests/test_meta_agent.py` 和 [腾讯特效 Web Meta-Agent 执行 Prompt](TENCENT_EFFECT_META_AGENT_INTEGRATION_PROMPT.md)。离线 smoke 明确输出 `network_called=false`、`image_bytes_read=false`、`provider_run_created=false`；该事实与 RAG `proposal-only`、Web Card `candidate` 和现有六类图片合同保持一致。
+
+### 30.7 当前工程回执覆盖（2026-09-02）
+
+本轮新增 Registry/Meta-Agent 后，全量 `.venv/bin/pytest -q`=`205 passed, 4 warnings`；专项 `tests/test_meta_agent.py`=`6 passed`，Ruff check、format、compileall 和 `git diff --check` 均通过。新增的离线 smoke 明确没有网络、图片或 ProviderRun 副作用。此前文档中的 `196 passed` 是本轮前的历史快照，以本节为当前工程回执；该更新不改变 Web Card `candidate`、RAG `proposal-only` 或主流程准入结论。

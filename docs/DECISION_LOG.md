@@ -194,7 +194,7 @@
 | D-TECH-060 | 2026-09-01 | v3 deterministic runner/scorer 完成一次私有聚合盲测：36/36 predictions，无答案键、照片、向量、LLM、Provider、网络读取；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、evidence relation=23.61%，hard-safety=0/36，project quality Gate=`FAIL`。 | 已完成并留证 | 明确暴露当前 baseline 的检索/证据关系/路由泛化问题，同时证明 canonical safety 目录的拦截路径；不能写成 RAG 质量通过 | 只在 public/dev/challenge 上修正；需要再验收时另建 Holdout |
 | D-PROD-071 | 2026-09-01 | 第一位用户测试采用“产品负责人亲自操作 Private Streamlit 页面”的证据规则；Codex 只打开页面和提供新手指引，不代上传照片、不代点击外部图片调用。 | 已冻结；页面已打开，真实操作待完成 | 防止把 fixture、页面加载或 Codex 代跑误写成用户效果；真实 UI 8C 多轮回执必须由页面实际产生 | 用户完成后记录脱敏事件、ProviderRun、VerificationResult、反馈和 Dashboard 快照 |
 
-## 2026-08-30 追加记录｜视觉与 Agent 交互结构冻结（配色待选）
+## 2026-08-30 追加记录｜视觉与 Agent 交互结构冻结（历史配色，已由 2026-09-02 覆盖）
 
 | 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
 |---|---|---|---|---|---|
@@ -286,3 +286,65 @@
 | D-TECH-097 | 2026-09-02 | 回执关联修复后的本地全量 QA：`.venv/bin/pytest -q` 为 `180 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 通过；Web 专项 11 条回归通过。Cloud 已进入组件执行区，但本轮尚未取得新 Browser Receipt。 | 已验证 | 代码与合同一致；真实 Web Provider 仍是 candidate，不把 Cloud Secrets 已配置或页面可加载写成图片处理成功 | 用户点击当前版本组件后保存脱敏 Browser Receipt，再补 Card/准入证据 |
 | D-TECH-098 | 2026-09-02 | Cloud page 6 真实重试已消除 `request_ref` 错位；腾讯 Web SDK 返回失败回执 `web_receipt_effect_web_fa6f0765ad924597`，耗时约 965ms、未生成输出图。浏览器日志出现 SDK 鉴权码 100；当前最可能的配置问题是 `TENCENT_EFFECT_APP_ID` 被填成绑定域名，而不是腾讯账号数字 APPID。 | 已定位；Provider 仍 blocked | 真实请求已到达浏览器 SDK，但不能写成处理成功；Card 继续 `candidate`，不改变主流程权限 | 负责人在 Cloud Secrets 仅修正数字 APPID 后 Reboot，再运行一次官方示例图 |
 | D-TECH-099 | 2026-09-02 | 为避免重复失败与黑箱，Web bridge 在失败回执后重新启用按钮；服务端拒绝 URL 形式 APPID；前端把 SDK 已知错误码映射为安全中文提示并在页面显示 `error_code/safe_error`。本地全量 QA：`181 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 通过。 | 已实现并验证 | 重试可用、错误可观测且不泄漏密钥/原始 SDK 信息；不放宽回执合同，不自动升级 Card | 修正数字 APPID 后只做一次 live smoke；成功仍需完成隐私/区域/成本和负责人准入 |
+## 2026-09-02 追加记录｜V4 独立 Holdout 与失败驱动 RAG 优化
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-100 | 2026-09-02 | V3 已被负责人解冻为 validation，不能继续作为独立泛化证据；建立与 V3 不重叠的 48 题 V4 Holdout，覆盖能力、路由、权限、隐私、生命周期、过期/冲突、注入、未就绪 Provider、复测、批量/多脸、缺槽位和参数边界。 | 已冻结并实现 | 运行包只含 `case_id + query`，答案键工作区外保管；正式盲测最多一次 | 新 Holdout 必须在答案键不回流的条件下重新验收 |
+| D-TECH-101 | 2026-09-02 | V4 answerless baseline 已完成一次：48/48 predictions；未读答案/annotations、照片/向量、网络、LLM 或 Provider；盲测快照已封存，私有评分仅输出聚合。 | 已验证 | V4 baseline Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%；hard-safety 0/48 PASS，project Gate FAIL | 不得把安全 PASS 写成质量 PASS；不得把盲测答案带回开发代码 |
+| D-PROD-102 | 2026-09-02 | RAG 继续 proposal-only；“智能”定义为在审核知识范围内理解任务、区分直接/参考/冲突证据并提出受限建议，不得新增工具、参数、权限或图片出站。 | 已冻结 | 8A/8C 可消费证据建议，但状态机、权限策略和 Adapter 仍是事实放行边界 | 任一 promotion 需新 Holdout、公开回归、安全、权限和真实回执证据 |
+| D-TECH-103 | 2026-09-02 | 新增 `rag_v4_query_compiler_candidate.py`、validation diagnostics、私有 scorer、运行脚本、V4 文档和 page 5 看板。G2–G5 解冻验证语义指标达到 100%，fixed Precision@3=51.39%，project Gate 仍 FAIL；`blind_snapshot_match=true`、`active_baseline_changed=false`、`proposal_only=true`。 | 已实现；候选未 promotion | 修正触达自然语言→查询投影真实输入层；G3–G5 无新增预测变化后按 SOP 停止 | 只可在新的未参与诊断 Holdout 上讨论 promotion |
+| D-PROD-104 | 2026-09-02 | V4 的 fixed/effective/returned Precision 并行保留。Gold 稀疏时 fixed K=3 会产生统计偏低；不通过改分母抬分，semantic diagnostic 仅作解释和调试，冻结 project Gate 仍权威。 | 已冻结 | 看板和报告必须同时显示统计口径与 Gate，避免将诊断分数写成泛化分数 | 后续若调整 Gold 粒度，先由产品负责人冻结新 Rubric，再建独立 Holdout |
+| D-TECH-105 | 2026-09-02 | 完成 V4 后最终一致性校验：全量 `pytest 189 passed, 4 warnings`；V4 专项 `8 passed`；Ruff check/format、compileall、`git diff --check`、V4 diagnostics runner 和既有 RAG/8C smoke 均通过。 | 已验证 | 代码、合同、测试、报告、看板和文档口径同步；4 条 warning 为既有 Pillow 弃用提示；不改变 project Gate=`FAIL`、RAG proposal-only 或 candidate 未 promotion | 若调整 Rubric/Gold 或 promotion，必须重新建未参与诊断的新 Holdout |
+| D-TECH-106 | 2026-09-02 | 产品负责人修正 Cloud Secret 后再次明确点击 Tencent Effect Web；稳定请求代次复用 `request_ref`，最新回执 `web_receipt_effect_web_3a3c71bec3f24557`，耗时 628ms，SDK 错误码 100/规范化码 20001001，未生成输出图。 | 已验证；Provider 仍 candidate/blocked | 回执关联和失败可重试链路保持有效；不能把鉴权失败写成 Web 能力成功；候选仍不进入主流程或 RAG 自动放行 | 只在确认 License/Token、数字 APPID/签名、精确域名和 Secret 重载后再做一次官方示例图；不盲目重复调用 |
+
+| D-TECH-107 | 2026-09-02 | 在当前 Cloud 页面完整重新执行官方示例图流程；SDK 等待自身鉴权窗口后返回 `web_receipt_effect_web_3a3c71bec3f24557`，耗时 10360ms，SDK 错误码 100/规范化码 20001001，未生成输出图。稳定 `request_ref` 是同一代次的合同设计，本次为新的明确点击。 | 已验证；Provider 仍 candidate/blocked | 回执关联已通过，但 Web 鉴权仍阻塞；不升级 Card、不进入主流程、不由 RAG 放行 | 先完成 Cloud Secret 重载、License/Token 配对、数字 APPID/签名与精确域名核对，再做一次官方示例图 smoke |
+
+## 2026-09-02 追加记录｜RAG 多轮低成功率反思审计
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-107 | 2026-09-02 | 在继续新增题目或调检索参数前，先对 V3/V4 多轮优化做独立反思审计。审计暂不改变质量门、active baseline 或 RAG proposal-only 边界；当前提出的下一 Gate 是把“自然语言→结构化查询”和“结构化查询→真实知识召回”拆成两条评测轨道，并补齐可检索的 Policy/Rule Card。该 Gate 仍待产品负责人确认，不把审计建议当成已冻结产品规则。 | 待下一 Gate 确认 | 防止把“听懂问题”的失败误写成向量检索失败，也防止在错误层继续加题、调 Top-K 或读取 Holdout 答案；现有 V4 盲测结果保持历史事实 | 产品负责人确认两条轨道、Policy/Rule Card 是否纳入质量评测、以及固定 Precision 与诊断口径的关系后，才进入下一轮开发 |
+| D-TECH-108 | 2026-09-02 | 新增 `RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md`、`audit_rag_low_success.py`、JSON/HTML 反思报告和专项测试。审计只读公开代码、公开聚合、answerless Trace 与生命周期摘要；当前证据为 V4 48 题中仅 8 题生成结构化检索请求、40 题在检索前结束；知识库为 3 张卡/10 条有效规则；V4 fixed Precision@3 理论上限约 51.39%，公开集约 47.44%。独立审计视角复核后得到相同结论。 | 已实现；全量 QA 待本轮完成 | 形成“事实→推断→根因→最小验证”的可复核材料；不读取隐藏答案、照片、向量或密钥，不调用网络/LLM/Provider，不修改 active baseline | 完成全量测试和文档交叉检查后更新实际测试数；两条评测轨道 Gate 未确认前不新建 Holdout、不 promotion |
+| D-TECH-109 | 2026-09-02 | 反思审计专项测试加入后完成最终交叉校验：`.venv/bin/pytest -q`=`193 passed, 4 warnings`；Ruff check、format（188 files）、compileall、`git diff --check` 和 `audit_rag_low_success.py` 均通过；P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均 exit 0。 | 已验证 | 代码、合同、测试、报告、SOP 和工作协议在当前快照一致；4 条 warning 为既有 Pillow 弃用提示。工程通过不等于 RAG 质量通过，V4 project Gate 仍 `FAIL`，RAG 仍 proposal-only | 等产品负责人确认两轨评测与 Policy/Rule Card Gate 后，才进入最小公开 smoke；不得用本轮报告直接 promotion |
+
+## 2026-09-02 追加记录｜Party Rock + 苹方视觉决策冻结
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-110 | 2026-09-02 | 产品负责人冻结正式界面采用 Tweakcn `Party Rock` 原始 Light/Dark token，并冻结苹方（`PingFang SC`）为正式 UI 字体；四元黑体及其他字体只保留作后续字标/实验候选。 | 已冻结；UI 实现待 Gate | 关键帧与后续前端实现不再在三套配色或十种字体之间切换；主题原始值保持不变，业务合同、权限、Provider、RAG、结果保留和 Trace 均不受影响。 | 实现前单独核验字体/主题授权；UI Gate 验证桌面关键帧、组件状态、可访问性和响应式降级。 |
+| D-PROD-111 | 2026-09-02 | 冻结色彩面积层级：米白（`#F2F1E6`）为最大面积的画布/中央工作区/容器，紫色（`#A855F7`、`#C084FC`）为第二大面积的主操作/激活/选中/结果高光，黑色为侧栏/文字/分隔线等结构色，荧光绿、珊瑚红及其他颜色只作少量语义点缀。面积参考用户示意图的“米白画布 + 黑色侧栏 + 紫色高光”关系，不复制示意图内容。 | 已冻结；UI 实现待 Gate | 视觉评审只验证比例、层级和真实状态，不再做主题颜色改造，也不让点缀色竞争主 CTA；Streamlit 尚未迁移。 | 在 1440×900 与 1280×800 关键帧中复核相对面积和对比层级；通过后再进入 Frontend 原型与 Impeccable Critical/Audit。 |
+
+| D-TECH-112 | 2026-09-02 | Tencent Effect Web 结果捕获出现浏览器错误：SDK 初始化后旧代码重新设置其输出 Canvas 的 `width/height`，触发 Chromium 的 Canvas transfer resize 限制。修复为 SDK Canvas 固定不变，`takePhoto()` 返回的 `ImageData` 写入新建结果 Canvas；新增回归断言覆盖该边界。Web 专项 `12 passed`，全量 `193 passed, 4 warnings`，静态检查通过。 | 已修复；待 Cloud 重跑 | 解决结果捕获阶段的前端兼容性问题；不改变 License、签名、图片留存、Provider Card 或 RAG 准入状态。 | Cloud 拉取新版本后用官方示例图重跑一次；成功回执仍需完整准入证据。 |
+
+## 2026-09-02 追加记录｜UI/UX Spec v1.0 审计冻结与 Image 2 关键帧
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-113 | 2026-09-02 | 对 `docs/前端与交互设计需求文档.md` 完成一致性审计：以最新手动决策为最高优先级，清除旧英文 slogan、长标题、背景摄影、下方 Agent 对话、前台安全确认、Plan A/B/C、默认 Trace 和弹窗新窗口等冲突；统一为四区桌面工作台、对齐首页 + Agent 对话子页面、自然语言主控制面和短中文文案。 | 已冻结 | Spec 升级为 `UI/UX-SPEC-v1.0`；关键帧与 Frontend 原型必须以该文档为唯一设计基线。重大变更只能通过变更请求重新确认，不得在 Critical/Audit 中静默改写。 | UI Gate 只检查实现还原、状态诚实、可访问性、响应式和真实用户走查；业务合同与权限边界保持不变。 |
+| D-TECH-114 | 2026-09-02 | 新增 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`design/keyframes/party-rock-pingfang/index.html`、4 张分层 SVG 和 4 张 Image 2 PNG 视觉方向稿；PNG 已嵌入 `impeccable:prompt` 元数据并保留 prompt sidecar。SVG/HTML 是精确中文排版和可编辑布局源，不声称已生成原生 Figma `.fig` 或 Streamlit 功能。 | 已生成；待 UI Gate | 设计师可直接修改 HTML/CSS 或将 SVG 导入 Figma 后取消编组；PNG 只用于材质/比例参考，不包含真实照片、Provider 结果或敏感数据。 | 浏览器正式视觉回归、WCAG 2.2 AA、Frontend 接入、Critical/Audit 和真实用户证据仍待完成；不得把样张写成线上效果。 |
+
+| D-TECH-115 | 2026-09-02 | 修复 Tencent Effect Web `takePhoto()` 结果捕获：旧代码调整 SDK 输出 Canvas 的 `width/height`，触发 Chromium Canvas transfer resize 错误；现改为保持 SDK Canvas 不变，将 `ImageData` 写入独立结果 Canvas 后生成 hash。部署后真实 page 6 回执 `web_receipt_effect_web_4d58ea15a0794370` 成功，耗时 2601ms，输出哈希已保存。 | 已完成技术验证；Card 仍 candidate | Web 静态图 Adapter 已证明一次端到端成功；结果图仍只留浏览器会话，Python 只留脱敏回执，不改变 RAG proposal-only 或主流程 Provider。全量 pytest 196 passed，Web 专项 12 passed。 | 继续补充多图/异常回归、供应商隐私/区域/预算与精确域名准入后，才可人工评审 Card promotion。 |
+
+## 2026-09-02 追加记录｜RAG 反思后的公平评测与过程监督
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-116 | 2026-09-02 | 产品负责人确认：把“自然语言理解”和“真实知识检索”拆成两条评测轨道；同时覆盖工具能力、权限、隐私、生命周期、过期、冲突和提示注入；保留历史 fixed Precision，并增加低于三分之一/达到三分之一/达到三分之二的诊断带，但不替换既定 project Gate。当前知识库不扩张，RAG 继续 proposal-only。 | 已冻结 | 后续指标可以说明到底是没听懂、没召回、关系标错还是 Gold 口径问题；不再用新题或换分母掩盖流程缺口 | 过程门通过后，再由负责人审核两条轨道的 Gold 连接字段；新的独立 Holdout 才能用于泛化/promotion |
+| D-PROD-117 | 2026-09-02 | 产品负责人确认：V3/V4 在连接质量答案之前，必须由独立过程监督考官逐题检查“无缺失/重复、无答案/标注/照片/向量/密钥泄露、编译成功或明确降级、每题合法查询、完整检索 Trace、Prediction 只来自 retrieval_result、无 projection/Gold 注入、无网络/LLM/Provider 副作用”。旧快照不完整时不得补写为 PASS。 | 已冻结 | 过程门 PASS 只表示考试流程完整，不等于内容正确；质量评分在过程门失败时保持锁定 | 新版 answerless 运行包封存后再连接 Gold；旧 V4 快照永久保留为历史证据 |
+| D-TECH-118 | 2026-09-02 | 实现 `RagFairEvaluationRunner`、`RagProcessSupervisor`、公平评测脚本、专项测试、脱敏 answerless 运行包和 page 5 看板。新版无答案重放：V3 `36/36`、V4 `48/48` 均有完整检索 Trace，分别 `structured=5/8`、`unknown_fallback=31/40`，新运行过程门均 PASS；旧 V4 快照审计 FAIL（`MISSING_REQUIRED_STAGE=432`、`MISSING_GOVERNANCE_FACTS=48`、`PROJECTION_INJECTED_INTO_EVALUATION=48`、`FORBIDDEN_SIDE_EFFECT_OR_LEAK=2`）。 | 已实现并验证 | 新运行可进入独立 Gold 验证，旧快照质量状态仍 `LOCKED_HISTORICAL_PROCESS_AUDIT`；不改 active baseline、不放行工具、不把验证成绩当泛化 | 连接 Gold 只能消费新 answerless 运行包；不得把过程 PASS、旧质量分数或验证分数写成 RAG 产品化 |
+| D-TECH-119 | 2026-09-02 | 为避免旧快照的历史缺陷浪费已经完整跑通的新数据，门控拆为“当前新运行过程门”和“历史快照过程门”：新运行过程门 PASS 即可进入独立 Gold 验证；历史快照 FAIL 只锁定历史质量分数，不阻塞新运行，也不得被修写或复用。 | 已实现并验证 | 报告同时展示两种状态；`quality_scoring_gate` 只描述新运行，`historical_quality_scoring_gate` 单独描述旧快照；RAG 仍 proposal-only | 新验证结束后仍需独立 Holdout/公开回归/安全门和负责人批准，才能讨论 promotion |
+
+| D-TECH-120 | 2026-09-02 | 交叉检查发现公平评测的脱敏 Trace 虽已移除顶层案例编号，但嵌套 Prediction 仍带有 `case_id`；已改为序列化前同时移除嵌套编号，仅保留 `case_id_sha256`，并新增回归断言。 | 已修复并验证 | 四份 answerless predictions/Trace 均不含题干、答案字段或任何明文案例编号；过程门字段与 Gold 连接规则不变，RAG 仍 proposal-only | 仅允许下一步按哈希连接 Gold；不得因脱敏修复而重跑或改写旧快照 |
+
+| D-TECH-123 | 2026-09-02 | 为把 Tencent Effect Web 从孤立 page 6 试验接入工具决策面，新增只读 `ToolRegistry` 和受限 `ToolProposal` Meta-Agent 层。Registry 登记 verified BeautifyPic baseline 与 candidate Web Card；Meta-Agent 可提出 Web 候选、记录 Card/证据/检查项并提供 baseline fallback，但 `execution_authorized` 永远为 `false`。 | 已实现并离线验证 | `Provider Card → Registry → Meta-Agent → proposal-only Trace` 可回放；无图片读取、密钥、网络、ProviderRun 或参数副作用。Web Card 仍 candidate，不改变主流程。 | 结果交接 A（浏览器端复测）/B（一次性回 Python）/C（只展示下载）需产品负责人另行冻结后，才可修改 EditPlan/执行器和 Web promotion |
+
+| D-TECH-124 | 2026-09-02 | 本轮 Registry/Meta-Agent 增量完成最终 QA：新增专项 6 条、全量 `pytest`=`205 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check` 和离线 smoke 均通过。 | 已验证 | 仅证明 proposal/Trace 控制面与既有代码一致；不改变 Web Card `candidate`、RAG `proposal-only`、六类业务合同或主流程图片权限。 | 下一步必须先冻结 Web 结果交接 A/B/C，才可继续主流程 Adapter/Verification 改造 |
+
+## 2026-09-02 追加记录｜UI/UX v2 两关键帧视觉覆盖与可编辑资产
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-120 | 2026-09-02 | 产品负责人将活跃视觉交付收敛为两张关键帧：E01「入口」与 E02「Agent 对话」。此前四张 K01—K04 只保留为历史资产，不再作为实现依据；底层上传、自动门控、授权、结果与停止状态仍由同一 Agent 对话空间承载。 | 已冻结；UI 实现待 Gate | 设计评审只需确认入口与对话两种空间，避免把状态机误拆成多页面；不改变合同、权限、Provider、结果保留或 Trace 边界。 | UI Gate 复核两帧的状态诚实、可访问性、响应式和自然语言主控制面；重大语义变化须重新确认。 |
+| D-PROD-121 | 2026-09-02 | 产品负责人覆盖旧的“米白最大、紫色第二”描述：Party Rock 原始 token 和苹方保持不变，页面面积改为紫色与米白共同主导、紫色在暗流/对齐舞台/关键操作中略强；黑色负责结构，其他颜色稀疏点缀。 | 已冻结；UI 实现待 Gate | 不改主题色值，只改使用层级；关键帧以紫色暗流与米白行动/对话面形成高级、直接的对比，避免米白铺满造成土感。 | 在 1440×900 与 1280×800 帧中用 QA 带宽复核：紫色约 40—45%、米白 35—40%、黑色 15—20%、其他≤5%。 |
+| D-TECH-122 | 2026-09-02 | 用 Image 2 生成 E01/E02 视觉方向稿；建立无依赖 HTML 原型、分层 SVG/Figma 导入源、1280/1440 同源渲染和 prompt sidecar。旧 K01—K04 已安全移入 `design/keyframes/party-rock-pingfang/archive/v1-four-state/`。 | 已生成并静态验证；待 UI Gate | HTML/SVG 提供精确中文、颜色与可编辑图层；PNG 只作材质/比例参考，不声称原生 Figma `.fig`、Streamlit 迁移或真实用户结果。 | 完成浏览器正式视觉回归、WCAG 2.2 AA、Frontend 映射、Impeccable Critical/Audit 后再进入代码实现。 |

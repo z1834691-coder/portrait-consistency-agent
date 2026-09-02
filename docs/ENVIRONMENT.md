@@ -103,8 +103,30 @@ Cloud 已从最新提交完成重建，page 6 可以正常加载；旧进程缓�
 
 最终 G3 的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 因 public regression 退化不采纳，G4/G5 无增益。全量 QA 需同时包含 validation runner、pytest、Ruff、format、compileall、diff check；该 validation 证据不改变 active baseline 或 `execution_authorized=false`，推广仍需独立 V4 Holdout。
 
+## 2026-09-02｜V4 Holdout 与当前环境回执
+
+V4 运行包位于 `data/evaluation/rag_v4_holdout_runtime.json`，只含 48 个 `case_id + query`；答案键和盲测快照位于工作区外受限目录。answerless baseline 已运行一次并封存，未读取答案、照片、向量、LLM、Provider 或网络。blind Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%，hard-safety=0/48 PASS，project quality Gate=FAIL。
+
+负责人授权后，`scripts/run_rag_v4_validation_diagnostics.py` 在同一快照上生成逐题 validation，候选语义诊断指标达到 100%，但不改变 active baseline 或 RAG proposal-only 边界。完整命令、报告和保管规则见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。本轮最终全量 pytest=`189 passed, 4 warnings`，V4 专项=`8 passed`，Ruff/format/compileall/diff check 均通过。
+
 ## 2026-09-02｜Web 组件重跑修复
 
 page 6 现在将同一输入/参数代次的 `request_ref` 保存在 Streamlit session state 的脱敏请求合同中，
 并使用稳定 `reset_token`；签名只按当前时间刷新。旧组件回执若与当前 request/hash 不一致会被忽略，
 不会写入运行账本。Session state 不保存图片 data URL、输出图或 Effect Token。
+
+## 2026-09-02｜公平评测过程监督当前覆盖（最新）
+
+当前全量工程校验以 `.venv/bin/pytest -q`=`196 passed, 4 warnings` 为准；`ruff check .`、
+`ruff format --check .`、`python -m compileall -q src scripts tests`、`git diff --check`、P0-A/P0-B/
+advisory/lifecycle/8C/8C2/候选 Provider 离线 smoke 和公平评测脚本均 exit 0。4 条 warning 是既有
+Pillow 弃用提示。此前 178/189/193 条属于历史快照，不覆盖当前结果。
+
+公平过程报告 `reports/rag_fair_process_audit_v1.json/.html` 的当前真相为：新版 V3 `36/36`、
+V4 `48/48` 完整检索 Trace，`fresh_replay_process_gate=PASS`，`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`；
+旧 V4 快照仍为 `historical_snapshot_process_gate=FAIL`，其历史质量评分锁定。过程门通过不等于
+RAG 内容正确或产品化通过；下一步只能把已封存的新运行包单独连接 Gold，不能修写旧快照。
+
+## 2026-09-02｜Tencent Web Meta-Agent 环境增量
+
+新增的 `ToolRegistry`/`MetaAgentToolSelector` 只读取仓库内 Provider Card，不加载照片、模型、密钥或浏览器资源；离线 smoke 可在没有腾讯 Secret、License 和网络的本地环境运行。page 6 的真实 Web SDK 仍在 Cloud 浏览器组件中运行，结果留存边界不变。该环境增量只验证工具编排提议和 Trace，不能替代 Web License、隐私/区域/成本或主流程准入证据。

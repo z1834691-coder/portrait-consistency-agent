@@ -519,3 +519,48 @@ V3 的原始 Holdout-A answerless 运行合同仍保持“一次性、不可重�
 失败回执之后组件必须可重试，服务端必须拒绝 URL 形式 `TENCENT_EFFECT_APP_ID`，页面只能展示
 脱敏 `error_code/safe_error`。原始 SDK 错误对象、License Token、图片 data URL 和密钥不进入
 合同持久化或 Trace；Card 继续 `candidate`，直到数字 APPID 修正后取得成功回执并完成准入清单。
+
+## 2026-09-02｜V4 Holdout 与 validation 合同边界
+
+V4 runtime 合同只允许 `dataset_version + status + cases[]`，每个 case 只包含 `case_id` 和 `query`；禁止在运行包中出现 `gold_*`、答案、`must_not`、实现版本或图片。正式盲测运行器只能读取 answerless runtime，完成一次后先封存预测/Trace，再由负责人控制的私有评分器读取答案并只输出聚合。
+
+负责人授权后的 validation 合同是独立用途：可在离线诊断报告中显示题干、Gold、Prediction、失败码和完整脱敏 Trace，但不能被在线 RAG、Prompt、Provider、业务合同或现役 baseline 读取。V4 validation 的 `owner_unlocked=true`、`historical_blind_snapshot_preserved=true`、`blind_snapshot_match=true` 和 `active_baseline_changed=false` 必须同时记录，防止把解冻诊断冒充新的正式考试。
+
+RAG 候选输出仍属于 advisory/proposal 合同：可以给出查询投影、证据集合、证据关系和推荐路由，但 `execution_authorized` 必须为 `false`，不能生成真实参数、授予权限、调用 Adapter、写入 `ProviderRun` 或造成图片出站。V4 的候选诊断即使语义指标达到 100%，也不得改变这一合同边界。
+
+Web Provider 最新失败回执仍按 `EffectWebBrowserReceipt → ProviderRun` 保存：`request_ref` 在同一输入/参数代次保持稳定，最新 SDK 错误码为 `100`、规范化页面码 `20001001`，未产生输出图。稳定引用不等于自动重试；每次用户明确点击都必须有独立的尝试事实，旧回执不得覆盖新回执。Card 未取得成功 Browser Receipt 前保持 `candidate`，RAG 不得放行。
+
+完整流程最新回执的耗时为 `10360ms`；其余合同结论不变。SDK 等待自身鉴权窗口后仍返回 `100/20001001`，因此该回执只能证明真实失败已被正确记录，不能证明 Web 图片能力可用。稳定 `request_ref` 不等于自动重试，新的明确点击仍须按同一 `EffectWebBrowserReceipt → ProviderRun` 链路入账。
+
+结果捕获实现约束：SDK 输出 Canvas 在初始化后视为不可变对象；业务代码不得在 `takePhoto()` 后修改其 `width/height`。结果 ImageData 写入独立 Canvas 后才能生成输出 hash 和成功回执。该约束属于前端实现，不改变 Browser Receipt 字段或成功准入条件。
+
+最新真实 Browser Receipt：`web_receipt_effect_web_4d58ea15a0794370`，`status=succeeded`，`elapsed_ms=2601`，`output_hash_saved=true`，`result_retention=browser_session_only`。它已通过 `EffectWebBrowserReceipt → ProviderRun` 合同，证明回执字段和结果捕获链路真实闭合；Card 仍为 `candidate`，不得把该单次证据解释为已完成 Provider promotion。
+
+## 25. 2026-09-02｜RAG 公平评测与过程监督合同
+
+本轮新增的 `FairEvaluationRun`、`FairCaseAudit` 和 `FairProcessAuditReport` 是评测治理合同，不是六个图片业务合同的扩展。它们把自然语言理解与真实检索分开：编译器只在内存里产生 `structured` 或 `unknown_fallback` 状态；检索层必须接收一个合同合法的 `RagQuery`，最终 Prediction 只能引用真实检索结果。
+
+过程监督考官的职责是检查流程事实，而不是替系统判断答案。每个 case 必须有输入哈希、明确的编译状态、query contract、P0-A/P0-B 检索 Trace、route、prediction lineage 和 finalized 标记；预测的 `route_source`、`evidence_source` 必须为 `retrieval_result`，且证据引用必须属于实际召回/采用列表。`projection`、`route_override`、`evidence_aliases`、Gold、题干和答案字段一旦进入 Trace/Prediction，过程门即失败。
+
+评测运行的全局合同固定为 `hidden_answer_key_read=false`、`annotations_read=false`、`quality_score_joined=false`、`network_called=false`、`llm_called=false`、`provider_api_called=false`、`photo_or_face_vector_read=false`、`raw_prompt_persisted=false`。原题只能在内存使用，落盘只能保留哈希；报告默认只保留 case 序号和 ID 哈希，不保留 V3/V4 题干或答案。
+
+### 2026-09-02 当前合同回执覆盖
+
+当前全量 QA 为 `196 passed, 4 warnings`（4 条为既有 Pillow 弃用提示）。新版 V3/V4 公平重放分别为
+`36/36`、`48/48` 完整过程，`fresh_replay_process_gate=PASS`；旧正式 V4 快照仍是历史过程 `FAIL`，
+其质量状态锁定。质量合同下一步是仅对封存的新 answerless 运行包做独立 Gold join；该连接不回写旧快照，
+不改变 `execution_authorized=false`、Provider 白名单、RAG `proposal-only` 或 active baseline。
+
+`process_gate=PASS` 只说明当前新运行过程完整、无泄露和无投影注入；`quality_scoring_gate` 仍须单独连接 Gold。历史快照若过程门失败，不得补 Trace、改名或以新版重放覆盖；其独立的 `historical_quality_scoring_gate` 保持锁定。新版重放可以证明评测器修好了，也可以作为验证 Gold 的输入，但不能改写旧 Holdout 的质量分数或替代新的泛化 Holdout。RAG `execution_authorized=false`、Provider 白名单、图片权限和 active baseline 不因该合同改变。
+
+## 2026-09-02｜Tencent Effect Web Tool Registry / Meta-Agent 提议合同补充
+
+`ToolDescriptor` 和 `ToolProposal` 是工具编排控制面的新增合同，不属于六个图片处理业务合同。`ToolDescriptor` 是 Provider Card 的只读投影，记录工具、操作、Card 版本、能力词、审核状态、所需检查和 `execution_allowed`；它不包含图片、密钥、签名或供应商回执。默认 Registry 同时登记已审核的 BeautifyPic baseline 与 `candidate` 的 Effect Web。
+
+`ToolProposal` 只记录当前阶段、请求功能、候选工具、Card 版本、RAG 证据引用、阻断原因和 baseline fallback。其 `execution_authorized` 为 `Literal[False]`，不能创建 `EditPlan`、`ProviderRun`、签名或任何网络副作用。RAG conflict/unknown 没有独立 baseline 时必须 fail-closed；候选 Web 即使有成功过的浏览器 Smoke，也只能输出 `candidate_proposal_only`。
+
+本轮不改变 `EditPlan.provider` 的 BeautifyPic 专用约束，也不把 `TencentEffectWebParams` 转成 `TencentBeautifyParams`。Web Receipt 仍只有浏览器端脱敏元数据，不能直接供当前 Python `verify_result` 消费。要进入 8A/8B/8C 主流程，须另行冻结浏览器端复测、一次性受限回传或只展示/下载三种结果交接方案之一；在此之前，Registry/Meta-Agent 只作为可回放提议层。
+
+### 当前工程回执覆盖（2026-09-02）
+
+新增控制面后全量 `.venv/bin/pytest -q`=`205 passed, 4 warnings`；Registry/Meta-Agent 专项 `6 passed`，Ruff、format、compileall、`git diff --check` 和离线 smoke 均通过。此前文档中的 196 条为上一回执快照；本轮只增加 proposal/Trace 能力，不改变六类图片合同、Provider 白名单或 Web Card `candidate`。

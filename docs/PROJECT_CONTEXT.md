@@ -29,7 +29,7 @@
 
 | 层 | 当前选择 | 边界 |
 |---|---|---|
-| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；交互结构已冻结为“中心舞台首页 + 母版档案 + 结果记录”，雾紫／肉粉／墨黑／桃红四色、低实体与强 Agent 输入框原则已选定；[前端与交互设计需求文档](前端与交互设计需求文档.md)已把页面、组件、动效和 UI Gate 写成执行规格；新页面样张待审核，UI 代码待后续 Gate；暂不做公网开放 |
+| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；设计已冻结为“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”三空间信息分组，桌面壳为全局导航、项目/母版上下文、中央对齐工作区、右侧 Agent 对话轻量四区；正式视觉为 Tweakcn Party Rock 原始 Light/Dark token 与 PingFang SC：紫色与米白共同主导、紫色略强，黑色为结构色、其他颜色少量点缀；活跃关键帧仅 E01 入口与 E02 Agent 对话；[前端与交互设计需求文档](前端与交互设计需求文档.md)与 [关键帧 Prompt](FRONTEND_UI_KEYFRAME_PROMPT.md) 已写成执行规格；HTML/SVG/PNG 关键帧源见 `design/keyframes/party-rock-pingfang/`；Streamlit 视觉迁移待 UI Gate；暂不做公网开放 |
 | 状态/编排 | Python 状态机 + 受限 ReAct 工具提议 | 状态机拥有权限与迁移最终权；不要求 LangGraph，LLM 只能在当前状态白名单内提议下一工具 |
 | 数据 | SQLite + JSONL trace + 匿名 `product_events`（本地）；部署后按平台存储方案扩展 | Demo 仍不做多租户；主体锚点需加密、可删除、受限访问、183 天到期；当前只是合同/Policy，真实加密/worker 未实现 |
 | 几何与质量视觉 | OpenCV Haar + Pillow V0 基线（可替换 CV Adapter） | 已实现真实图片解码、质量/可编辑性指标和粗粒度脸框/眼睛几何；不承担同一人物判断，后续可替换为关键点模型 |
@@ -123,3 +123,23 @@ Cloud 已从最新提交成功重建，page 6 能加载，旧进程缓存造成�
 2026-09-02 Web 试验修复：Cloud 首次回执的 `request_ref` 错位来自 Streamlit 重跑时随机重建请求，
 不是腾讯回执被放行或图片结果被篡改。page 6 已改为 fingerprint + 同代次 request 复用，签名刷新与
 组件 reset 解耦；旧回执不入账。Web Card 仍为 `candidate`，当前没有新的真实 Browser Receipt。
+
+## 2026-09-02 当前事实覆盖｜V4 Holdout 与最终 QA
+
+V4 已建立为与 V3 不重叠的 48 题独立 Holdout。answerless baseline 先运行一次并封存，再由产品负责人授权离线 validation 诊断。正式 blind 结果为 Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%，hard-safety=0/48（PASS），project quality Gate=FAIL。解冻候选语义诊断指标达到 100%，但不代表泛化，`active_baseline_changed=false`、`proposal_only=true`。
+
+V4 的具体题目、盲测聚合、逐题 Trace、失败模式、SOP 和验证命令见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。fixed/effective/returned Precision 并列保留，Gold 稀疏不能成为换分母抬分的理由；在新的未参与诊断 Holdout 通过前，RAG 不得 promotion 或称产品化。
+
+本轮最终工程回执：全量 pytest=`189 passed, 4 warnings`；V4 专项=`8 passed`；Ruff check/format、compileall、`git diff --check`、V4 diagnostics runner 及既有 RAG/8C smoke 均通过。腾讯特效 Web 最新明确重试仍是 SDK 100/规范化码 20001001、无输出图，Card 继续 `candidate`。4 条 warning 为既有 Pillow 弃用提示。
+
+## 2026-09-02 当前事实覆盖｜公平评测过程门
+
+上述 189 条是历史快照；当前全量工程校验为 `196 passed, 4 warnings`，代码静态检查、编译和全部离线
+smoke 均通过。新版 V3 `36/36`、V4 `48/48` 的无答案过程重放均完成检索 Trace，过程门 `PASS`，
+并封存了不含原题/答案的脱敏运行包；旧 V4 正式快照仍是历史 `FAIL`，不能补写或复用。当前质量评分
+状态是 `READY_AFTER_SEPARATE_GOLD_JOIN`，但 RAG project Gate 仍 `FAIL`、`proposal-only`，下一步只能
+按哈希把 Gold 单独连接到新运行包。
+
+## 2026-09-02 当前事实覆盖｜Tencent Web 工具编排
+
+新增 `ToolRegistry` 与 `MetaAgentToolSelector`，将已审核的 BeautifyPic baseline 和 candidate Web Card 纳入统一只读目录。Meta-Agent 输出 `ToolProposal`，可解释候选工具、准入检查、RAG 证据和 baseline fallback；proposal 永远不授权执行，不读图片、不持有密钥、不创建 ProviderRun、不调用网络。8A 和 page 6 已接入该提议/Trace 展示，真实 Web 结果仍仅作为独立候选 Browser Receipt。因为 `EditPlan` 仍是 BeautifyPic 专用且 Browser Receipt 不含结果图 bytes，Web 主流程接入等待 A/B/C 结果交接决策，Card 继续 `candidate`。

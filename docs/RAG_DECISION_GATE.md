@@ -945,3 +945,154 @@ Cloud 已成功重建 page 6 并解决旧进程 ImportError，但本轮没有进
 产品负责人明确授权将已审核 V3 作为 `validation` 使用；原始 Holdout-A answerless 快照仍不变。本轮报告在 [RAG_V3_VALIDATION_DIAGNOSTICS.md](RAG_V3_VALIDATION_DIAGNOSTICS.md) 和 `reports/rag_v3_validation_diagnostics_v1.json/.html` 中补齐 H01–H36 的逐题结论与完整 Trace，page 5 只读嵌入。G0–G5 的结果以 G3 为最终保守候选：Route=100%、Relation=97.22%、Recall@5=100%；G2 的 100% 因 public regression 退化不采纳，G4/G5 无新增改变。
 
 验证诊断允许读取 Gold，但只作用于离线候选；它不修改 active baseline、不调用网络/LLM/Provider、不读照片或向量，也不改变 `execution_authorized=false`。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`。下一次质量/泛化验收必须新建与 V3 不重叠的 V4 Holdout。
+
+## 35. 2026-09-02｜V4 独立 Holdout、逐题诊断与 RAG promotion 边界
+
+<span style="color:#C00000"><strong>本轮目的。</strong>V3 已被负责人授权解冻为 validation，不能再承担独立泛化证据。本轮新建 48 道与 V3 不重叠的 V4 题目，覆盖工具能力、任务路由、权限/出站、隐私与主体生命周期、知识过期与冲突、提示注入、未就绪 Provider、复测策略、批量/多脸、缺槽位和参数边界。V4 运行包只含 `case_id + query`，答案键在工作区外保管。</span>
+
+### 35.1 一次性盲测结果
+
+正式 answerless 运行保存了 `reports/rag_v4_holdout_blind_predictions.json`、`..._trace.json`，并在封存后生成只含聚合的 `reports/rag_v4_holdout_blind_aggregate.json/.html`。实际回执为 48/48 题完成，`hidden_answer_key_read=false`、`annotations_read=false`、`llm_called=false`、`network_called=false`、`external_provider_called=false`、`photo_or_face_vector_read=false`。私有评分只在快照封存后进行，公开聚合不含题干、Gold 或答案键路径。
+
+| 指标 | V4 baseline | Gate 含义 |
+|---|---:|---|
+| Route accuracy | 12.50% | 任务类型和处理方向泛化不足 |
+| Evidence relation | 18.75% | 直接/参考/冲突关系判断不足 |
+| Recall@5 | 57.99% | 前五条召回仍漏掉很多需要的证据 |
+| MRR / nDCG@5 | 81.25% / 63.22% | 排序局部尚可，但不能覆盖路由和关系失败 |
+| Hard-safety | 0/48，PASS | 已知安全事件没有错误放行 |
+| Fixed Precision@3 | 28.47% | Gold 稀疏导致固定分母偏低，继续保留为冻结项目口径 |
+| Project quality Gate | **FAIL** | 不得 promotion 或写成产品化 |
+
+### 35.2 解冻诊断和候选代次
+
+答案键在盲测快照封存后由负责人授权读取，只用于离线验证。G0 baseline → G1 既有查询编译 → G2 V4 通用查询编译 → G3/G4/G5 关系与证据整理，最终语义诊断 Route、Evidence relation、Recall@5、MRR、nDCG 和 effective/returned Precision 均为 100%；固定 Precision@3 为 51.39%，project Gate 仍 FAIL。G2–G5 不会改变 active baseline，候选保持 proposal-only。
+
+V4 的 100% 是“同一批题目被解冻后用于修正的验证成绩”，不是新的盲测，也不是产品泛化保证。继续修补下游层已连续两代无新增预测变化，按 SOP 在 G5 停止；下一次 promotion 必须使用未参与诊断的新 Holdout。
+
+### 35.3 RAG 在系统中的允许位置
+
+| 节点 | 可以做什么 | 不可以做什么 |
+|---|---|---|
+| 8A 生成 EditPlan 前 | 查询审核过的工具能力/限制，提出证据和候选路线 | 不生成最终参数、不授权图片出站 |
+| 8C 选择复测策略时 | 比较已允许的本地/云端/人工复测证据，提出策略 | 不绕过权限、不把 CompareFace 当五官一致性证明 |
+| Provider 失败后 | 查找已审核的降级和解释规则 | 不自行换 Provider 或重试收费调用 |
+| 新 Provider 接入前 | 提示 Card、Adapter、权限、预算、隐私和 Gold 准入缺口 | 不因文档命中就自动接入 |
+
+### 35.4 promotion 必须同时满足
+
+1. 新 Holdout answerless 运行已封存，且没有答案键回流；
+2. Hard-safety 0 违规、0 未知安全标签；
+3. 通过冻结的 project quality Gate；fixed/effective/returned Precision 的差异已解释，不能用换分母抬分；
+4. Public regression、开发集回归、anti-overfit 和 active baseline 未越权改变；
+5. 所有新增工具均具备审核 Card、真实 Adapter receipt、权限/隐私/预算证据和负责人确认；
+6. RAG 仍只向状态机和权限策略提议，真实执行事实必须由 Adapter/ProviderRun 产生。
+
+详细题集、指标、Trace 和命令见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+## 36. 2026-09-02｜RAG 低成功率反思审计：先拆评测对象，再继续优化
+
+<span style="color:#C00000"><strong>背景与问题。</strong>多轮优化之后，V4 独立盲测仍为 Route=`12.50%`、Evidence relation=`18.75%`、Recall@5=`57.99%`，质量 Gate=`FAIL`。继续添加题目或调 Top-K 之前，必须先回答：这些低分到底来自自然语言理解、真实检索、证据关系、知识覆盖还是评分口径。如果这一点不澄清，新的分数无法证明系统变好了。</span>
+
+<span style="color:#C00000"><strong>审计方法。</strong>本轮使用公开代码、V4 answerless 聚合与 Trace、公开评测、失败驱动公开 Loop 和生命周期摘要；未读取新的隐藏答案、V4 解冻题目/Gold、照片、人脸向量、密钥，也未调用网络/LLM/Provider。另有一个独立盲审视角在同样边界下复核结论。可复用审计 Prompt 和机器报告分别见 `docs/RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md`、`reports/rag_low_success_reflection_audit.json/.html`。</span>
+
+<span style="color:#C00000"><strong>关键事实。</strong>V4 48 道题中只有 8 道生成了结构化 `RagQuery` 并留下检索 Trace，40 道在检索前就结束，其中 36 道被标为 `no_reliable_structured_projection`。因此低 Route 不能直接解释为向量召回低。Gold runner 还会把 projection 的 route/evidence alias 合并进最终 Prediction，而 P/FX 等评测标签并不是当前 3 张 Provider Card 的真实知识块；这使“查询理解、策略规则和真实召回”混在一个分数里。生命周期审计显示当前知识库为 3 张 Card/10 条有效规则、index=`in_sync`；这证明索引数量一致，不证明政策和失败知识覆盖完整。</span>
+
+<span style="color:#C00000"><strong>评测口径发现。</strong>V4 的 Gold 分布为 23 题 1 条证据、24 题 2 条、1 题 3 条，fixed Precision@3 的数学上限约为 `0.513889`，低于当前项目门槛 `0.80`；公开集上限约为 `0.474359`。Route=`12.50%`、Relation=`18.75%` 仍是真实质量问题，但 fixed Precision 不能继续作为这批稀疏 Gold 的单独调参目标。另发现 evaluator 将多路由拆成 alternatives、relation 不惩罚额外键、nDCG 仍是二元相关性；这些必须在新评测合同中单独处理，不能悄悄改历史 Gate。</span>
+
+<span style="color:#C00000"><strong>本轮产品结论（不等于已冻结的 Gate 改变）。</strong>下一阶段先拆成两条评测轨道：①原始自然语言→结构化查询/路由；②结构化查询→真实知识块召回、排序和证据关系。Prediction 必须来自被测层，不能由 projection 预先注入。需要计入检索质量的隐私、生命周期、冲突和提示注入规则，先整理成版本化、审核过的 Policy/Rule Card。新的 10–15 道公开 smoke 通过前，暂停新 Holdout、排序调参和候选 promotion；RAG 继续 `proposal-only`，active baseline 不变。</span>
+
+### 36.1 根因优先级和下一 Gate
+
+| 优先级 | 根因 | 当前判断 | 最小证据 |
+|---:|---|---|---|
+| 1 | 自然语言→结构化查询失败 | 高置信首要原因 | 40/48 题无结构化请求 |
+| 2 | Projection 与真实检索事实混合 | 高置信测量混淆 | `project_runtime_prompt`、`_run_case` |
+| 3 | 知识库缺少政策/生命周期/冲突规则 | 高置信覆盖不足 | 3 卡/10 规则 |
+| 4 | fixture 检索后端与线上语义模型不同 | 高置信实验边界 | deterministic token embed/rerank |
+| 5 | fixed Precision 门槛不可达 | 高置信口径问题 | V4 上限 0.513889 |
+| 6 | 解冻 validation 过拟合风险 | 高置信泛化风险 | validation 100%、blind 仍低 |
+
+下一 Gate 不是“再加一套题”，而是由产品负责人确认三件事：是否接受两轨评测；是否把政策规则正式入库；是否保留历史 fixed Gate 并新增可达的诊断门。确认前不改 active baseline、不宣称 RAG 通过。
+
+### 36.2 当前工程回执
+
+反思审计新增测试后，全量 `.venv/bin/pytest -q` 为 `193 passed, 4 warnings`；Ruff、format（188 files）、compileall、`git diff --check` 和审计 runner 均通过。该回执只说明审计实现可复核，不改变本节的产品 Gate：V4 quality Gate=`FAIL`、RAG=`proposal-only`、active baseline 未改变。
+
+## 37. 2026-09-02｜中期反思后的公平评测与过程监督 Gate
+
+<span style="color:#C00000"><strong>背景。</strong>产品负责人复核了前一轮反思审计：V4 的低分不能简单归因于检索器，因为许多题在生成结构化检索请求之前就结束；旧评测还把上游投影的路由和证据别名合进了最终结果。因此继续增加题目、调排序或直接连接答案键，都会浪费数据并降低结论可信度。</span>
+
+<span style="color:#C00000"><strong>决策过程。</strong>本轮先把“系统是否听懂用户问题”和“检索器是否找到真实知识”拆成两条轨道，再检查每题是否完整走过统一流程。为了避免由同一套被测代码给自己打分，新增独立的确定性过程监督考官；它只检查题目覆盖、阶段完整性、证据来源和副作用事实，不判断内容答案。LLM Judge 仍只能在过程门通过后做脱敏辅助盲审，不能替代产品负责人维护的人工 Gold。</span>
+
+<span style="color:#C00000"><strong>本轮冻结的产品规则。</strong></span>
+
+1. <span style="color:#C00000">V3/V4 过程审计同时覆盖工具能力、权限、隐私、生命周期、过期、冲突和提示注入；不把安全题从质量流程中删掉。</span>
+2. <span style="color:#C00000">自然语言理解轨道单独记录 structured / unknown_fallback；即使听不懂，也必须用明确的中性 `RagQuery` 继续走检索，不能因为编译失败而浪费题目。</span>
+3. <span style="color:#C00000">结构化检索轨道的最终路由和证据只能来自实际 P0-A/P0-B 回执；`projection`、`route_override`、`evidence_aliases`、Gold 或题目标签不得进入 Prediction。</span>
+4. <span style="color:#C00000">旧 V3/V4 快照只保留为历史证据。若历史 Trace 不完整，不能补写、改名或重新解释为通过；修正后的同题重放只能证明新版评测器的过程能力，不能改写旧质量分数。</span>
+5. <span style="color:#C00000">保留历史 fixed Precision；同时新增不受 Gold 条数稀疏影响的诊断带：低于三分之一为弱，达到三分之一为已有一定效果，达到三分之二为较强。诊断带用于定位和迭代，不替换既定 project quality Gate。</span>
+6. <span style="color:#C00000">当前知识库规模先不扩张；先把同一批 V3/V4 题目公平跑完，再决定是否需要新增 Policy/Rule Card 或新 Provider。</span>
+
+### 37.1 过程考官的通过条件
+
+过程考官逐题检查：
+
+```text
+题目清单无重复/缺失
+→ 未读取答案、标注、照片、人脸向量、密钥
+→ 原题只在内存中使用，Trace 只保留题干哈希
+→ 编译状态明确，且无论成功与否都创建合法 RagQuery
+→ 每题都有 query_contract、检索步骤、route 和 finalized Trace
+→ Prediction 的 route/evidence 明确标记来源为 retrieval_result
+→ Prediction 的证据属于实际召回/采用证据
+→ 无 projection/evidence_aliases/Gold 字段注入
+→ 无网络、LLM、图片 Provider 副作用
+→ 全部题通过后，才允许单独连接 Gold 做质量评分
+```
+
+过程门 `PASS` 只证明考试没有漏题或作弊；它不代表 RAG 内容正确，也不代表已产品化。任何一题失败都使质量评分状态保持 `LOCKED_PROCESS_AUDIT`。
+
+### 37.2 本轮工程回执与边界
+
+新增 `docs/RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md`、`services/rag_process_supervisor.py`、`scripts/run_rag_fair_process_audit.py` 和专项测试。它使用已有 V3 validation copy、V4 holdout runtime（只读 `case_id + query`），不新建题目、不读取答案键、不调用网络/LLM/Provider。新版无答案过程重放的结果与旧快照分开保存，并封存四份脱敏 predictions/Trace 运行包：`reports/rag_fair_v3_answerless_predictions_v1.json`、`reports/rag_fair_v3_answerless_trace_v1.json`、`reports/rag_fair_v4_answerless_predictions_v1.json`、`reports/rag_fair_v4_answerless_trace_v1.json`。新版重放用于检查流程和后续独立 Gold 连接，旧正式 V4 快照继续显示历史 FAIL。过程考官专项测试 `3 passed`，本轮全量工程回归 `196 passed, 4 warnings`。
+
+报告/看板必须同时显示四件事：`fresh_replay_process_gate`、`historical_snapshot_process_gate`、`quality_scoring_gate` 和 `historical_quality_scoring_gate`。新无答案重放只要过程门通过，就可以把新运行包交给下一步独立 Gold 连接；旧快照不完整时，旧质量分数仍永久锁定，不能因为新重放通过而被修写或复用。
+
+### 37.3 实现矩阵（本轮）
+
+| 能力 | 状态 | 证据与边界 |
+|---|---|---|
+| 两轨评测合同 | **已实现（过程层）** | compiler 轨记录 structured/unknown；retrieval 轨只读真实结果；内容质量仍未评分 |
+| 每题完整进入 RAG | **新版重放通过** | V3 36/36、V4 48/48 有检索 Trace；未知编译题使用中性查询并单独计数 |
+| 独立过程监督考官 | **已实现并通过新版重放** | `process_gate=PASS`；无答案、无网络、无 Provider、无 Projection 注入 |
+| 历史 V4 快照审计 | **FAIL（历史事实）** | 旧快照缺完整阶段且存在 Projection 注入；不可补写为 PASS |
+| 质量 Gold 连接 | **新重放可进入独立连接** | `quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`；旧快照质量状态仍为 `LOCKED_HISTORICAL_PROCESS_AUDIT` |
+| RAG 执行边界 | **保持 proposal-only** | 过程考官、检索器和 Judge 都不能授权图片工具或改变 active baseline |
+
+下一道门不是继续调 Top-K，而是：将已经封存的过程完整 answerless 运行包分别连接两条轨道的 Gold，计算验证指标并保留逐题血缘。旧 V4 快照仍不能参与新的质量结论；无论验证分数如何，V3/V4 都不能被写成新的泛化盲测或产品化通过。
+
+## 38. 2026-09-02｜中期反思审计后的当前真相与交接门
+
+<span style="color:#C00000"><strong>本轮任务已完成过程层。</strong>反思审计的结论已经写入本 Gate，并由
+独立过程监督 Prompt 驱动新版重放。V3 `36/36`、V4 `48/48` 均无缺题、无答案/标签泄露、无外部副作用，
+且每题都留下了合法查询、真实检索和 retrieval-only Prediction 的 Trace；旧 V4 正式快照仍保留为历史
+`FAIL`，不允许修写。</span>
+
+<span style="color:#C00000"><strong>当前交叉校验。</strong>全量测试 `196 passed, 4 warnings`，Ruff、format、
+compileall、`git diff --check`、全部离线 smoke 和公平过程审计均通过。报告当前字段为：
+`fresh_replay_process_gate=PASS`、`historical_snapshot_process_gate=FAIL`、
+`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`、
+`historical_quality_scoring_gate=LOCKED_HISTORICAL_PROCESS_AUDIT`。这只代表过程可审计，不代表内容质量
+或产品化通过；RAG 仍 `proposal-only`，active baseline 不变。</strong></span>
+
+<span style="color:#C00000"><strong>下一道交接门。</strong>把四份已封存的脱敏 answerless 运行包按题目哈希连接到负责人保管的
+Gold，分别计算“自然语言理解”和“真实知识检索”两条轨道；输出只能是聚合和脱敏逐题血缘。不得重新运行
+V3/V4、不得把旧快照改名或补写、不得把 Gold 标签注入被测 Prediction。完成该连接后，才进入失败模式分析和
+单变量候选迭代；在独立新 Holdout 通过前，不能宣称 RAG 已产品化。</strong></span>
+
+## 39. 2026-09-02｜RAG 证据到 Tencent Web 工具的受限编排
+
+RAG 检索到 Web Provider Card 后，只能把它作为工具能力证据交给 `ToolRegistry`/Meta-Agent。Registry 生成只读 `ToolDescriptor`，Meta-Agent 生成结构化 `ToolProposal`；提案可以指出 `tencent_effect_web` 与请求功能匹配、列出精确域名/License/出站/预算等检查，并提供已审核 BeautifyPic baseline fallback，但 `execution_authorized` 固定为 `false`。RAG 不得因“召回到工具卡”而新增权限、参数或 ProviderRun。
+
+P0-C 的 direct/reference/conflict 语义继续适用：直接证据可以辅助现有规划器，参考信息只用于解释，冲突或未知必须停止/人工复核/原样 baseline 降级。Meta-Agent 的集成 smoke 只验证“Card → Proposal → 阻断/兜底”而不触发网络和图片；完整 Web 主链仍等待结果交接 A/B/C Gate。该层让 RAG 具备工具路由价值，同时保留 fail-closed、可回放和可回滚边界。

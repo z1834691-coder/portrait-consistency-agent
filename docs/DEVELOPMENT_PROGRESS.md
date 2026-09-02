@@ -27,7 +27,7 @@
 | 8B | 用户确认 → BeautifyPic → ProviderRun（修后复测不含在本步） | 已完成（离线验证） | Happy Path + 过期/换图/超时/取消/重复点击均可重复演示；不得跳过确认、不得自动重试、结果不得落盘 |
 | 8C-1 | 修后结果观察 → `VERIFICATION_STRATEGY_SELECT` → VerificationResult 趋势路由 | 已完成首个工程切片 | 结果图内存解码、逐特征趋势、目标证据、策略 allow-list、脱敏 Trace；6 条测试 + fixture smoke |
 | 8C-2 | 有界三轮计划族、父子回执血缘、自动续跑与反馈硬停止 | 已完成离线验证；自动续跑代码已同步 | 每轮新子 plan/run；只有可验证累积改善才能生成子计划；首次确认 scope 内自动执行/复测，preflight、trigger、hash 和结果全留 Trace |
-| RAG Gate / P0-A + P0-B + P0-C | 工具知识库、索引、召回/融合、受限 evidence 回接 | **已完成本地验收** | 已实现独立 SQLite 权威库、3 张审核 Card/10 条原子规则、metadata + FTS5、local dense/RRF/rerank、依据卡、脱敏 Trace，以及 8A/8C 的 direct/reference/conflict evidence 回接；不接 LLM、新 Provider、图片执行或 external/hybrid 复测 |
+| RAG Gate / P0-A + P0-B + P0-C | 工具知识库、索引、召回/融合、受限 evidence 回接 | **已完成本地工程验收；质量 Gate 未通过** | 已实现独立 SQLite 权威库、3 张审核 Card/10 条原子规则、metadata + FTS5、local dense/RRF/rerank、依据卡、脱敏 Trace，以及 8A/8C 的 direct/reference/conflict evidence 回接；不接 LLM、新 Provider、图片执行或 external/hybrid 复测；V4 泛化质量仍 FAIL |
 | Gold Set v2 evaluator / blind input | public/annotations/holdout 隔离、指标、人工审核材料 | **已完成本地验收；当前基线未通过** | 52 题 public + 20 题 holdout 输入、阈值 Gate、HTML/Markdown/JSON 报告和私有 aggregate-only scorer 已实现；public/private aggregate 均 `FAIL`；live Judge 未实现 |
 | Gold Set v3 一次性盲测 | 产品负责人审核、answerless runtime、私有聚合评分 | **已完成一次；质量 Gate 未通过** | 36/36 预测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%；hard-safety=PASS；逐题答案不回流 |
 | 新 Provider candidate shells | 火山美颜 API V2.0、腾讯特效移动/PC 细项、腾讯特效 Web | **已完成离线验收；火山 V0 暂缓** | 火山/移动 PC shell 仍未联网；Web 已有独立浏览器 Adapter、page 6、Browser Receipt 合同和离线 smoke，但仍为 `candidate`，当前实际执行链只用已验证 Tencent |
@@ -1910,3 +1910,232 @@ Tencent Effect Web 专项测试         → 12 passed
 4 条 warning 仍是既有 Pillow 弃用提示。本轮没有把失败回执写成成功，也没有升级 Card 或主流程
 权限。下一步只需在 Streamlit Cloud → App Settings → Secrets 将 `TENCENT_EFFECT_APP_ID` 修正为
 腾讯账号数字 APPID（License Key/Token 保持不变），Reboot 后再跑一次官方示例图。
+
+## 2026-09-02｜V4 Holdout 与失败驱动 RAG 优化（当前）
+
+### 本轮完成
+
+- 新建与 V3 不重叠的 48 题 answerless runtime：`data/evaluation/rag_v4_holdout_runtime.json`；题目覆盖工具能力、路由、权限、隐私、生命周期、过期/冲突、提示注入、未就绪 Provider、复测、批量/多脸、缺槽位和参数边界。
+- 先完成一次正式盲测，再把预测和 Trace 封存到工作区外受限目录；之后才按负责人授权使用答案做私有 aggregate 和 validation 诊断。
+- 新增 V4 查询编译候选、逐题诊断器、私有评分器、运行脚本、7 条专项测试、page 5 看板区和报告注册表入口。
+- 输出 `reports/rag_v4_holdout_blind_aggregate.json/.html`、`reports/rag_v4_validation_diagnostics_v1.json/.html`，以及 [RAG V4 Holdout 文档](RAG_V4_HOLDOUT.md)。
+
+### 真实回执与结果
+
+```text
+V4 answerless baseline：48/48 predictions；hidden_answer_key_read=false；
+annotations_read=false；llm_called=false；network_called=false；
+external_provider_called=false；photo_or_face_vector_read=false
+
+baseline：Route 12.50%｜Evidence relation 18.75%｜Recall@5 57.99%｜
+MRR 81.25%｜nDCG@5 63.22%｜hard-safety 0/48 PASS｜project Gate FAIL
+
+owner-unlocked validation：最终候选 Route/Relation/Recall@5/effective Precision 均 100%；
+blind_snapshot_match=true；active_baseline_changed=false；proposal_only=true；
+fixed Precision@3=51.39%｜frozen project Gate=FAIL
+```
+
+### 结论和边界
+
+V4 baseline 证明旧查询理解和证据关系在新表达上泛化不足；把修正前移到“自然语言→查询投影”后，解冻验证副本的语义指标明显提升。这个 100% 不是新盲测成绩，不能代表泛化或产品化。G3–G5 连续两代没有新的预测改变后停止，active baseline 没有替换，RAG 继续 proposal-only。固定 Precision 的稀疏 Gold 现象单列为统计提醒，不通过换分母制造成功。
+
+### 本轮验证
+
+`.venv/bin/pytest -q tests/test_rag_v4_validation_diagnostics.py` → `8 passed`；诊断 runner status=`complete`，`blind_snapshot_match=true`。文档、代码、报告、看板和合同边界均以 V4 当前记录为准；全量 QA 在本轮同步完成后重新执行并写入最终回执。
+
+### 下一道 Gate
+
+V4 项目 Gate 仍 FAIL。下一步不是继续对同一批题目调参，而是由产品负责人决定是否修改 Gold evidence 设计/固定 Precision 口径，或建立新的、未参与诊断的 V5 Holdout；在新 Holdout 通过前不得 promotion。真实 Provider、用户照片流程和 RAG 进入图片执行链也仍是独立 Gate。
+
+## 2026-09-02｜Tencent Effect Web 再次真实重试（当前）
+
+### 真实操作与回执
+
+- 产品负责人修正 Cloud Secret 后，在 Cloud page 6 再次明确点击“开始腾讯特效处理”；本次是新的 SDK 调用，不是读取旧的页面文字。
+- 同一输入/参数请求代次按合同复用 `request_ref`，所以回执引用仍为 `web_receipt_effect_web_3a3c71bec3f24557`；这是稳定幂等引用，不代表没有重新点击。浏览器 SDK 日志的本次初始化时间为 `2026-09-02T07:28:40Z`（北京时间 15:28:40）。
+- 脱敏结果：`status=failed`、`elapsed_ms=628`、SDK 错误码 `100`、规范化页面错误码 `20001001`（鉴权失败）、`output_hash_saved=false`、未生成结果图；`ProviderRun` 已保存失败事实，Card 继续 `candidate`。
+
+### 结论与下一步
+
+回执错位问题已保持修复，组件也允许用户再次点击；但腾讯 Web SDK 仍未通过鉴权。仅凭错误码 100 不能在不查看密钥的情况下断言唯一根因，剩余待核对项是 License Key/Token 配对、签名与数字 APPID、精确域名绑定，以及 Cloud Secret 修改后的应用重载。不要继续盲目重复调用；应在 Cloud App 完成 Reboot/Secret 重载后只做一次新的官方示例图 smoke。取得成功 Browser Receipt 前，不能宣称 Web 图片处理、细项五官或批量能力可用，也不能把候选 Card 放行到主流程。
+
+官方依据：[腾讯 Web 静态图教程](https://cloud.tencent.com/document/product/616/118039)、[腾讯特效 SDK API 文档](https://cloud.tencent.com/document/product/616/75676)、[腾讯特效 SDK 错误码](https://cloud.tencent.com/document/product/616/71684)。
+
+## 2026-09-02｜完整 Web 试验最新回执覆盖
+
+随后再次从当前 Cloud 页面完整执行官方示例图。SDK 完成自身鉴权等待后返回：
+`status=failed`、`provider_request_id=web_receipt_effect_web_3a3c71bec3f24557`、
+`elapsed_ms=10360`、SDK 错误码 `100`、规范化错误码 `20001001`、无输出图。
+同一 `request_ref` 是稳定请求代次的合同设计；本次是新的明确点击，不是自动重试。Provider 仍保持
+`candidate/blocked`，下一步只应在核对 Secret 已重载、License/Token 配对、数字 APPID/签名和精确
+域名后再运行一次，避免继续重复调用。
+
+## 2026-09-02｜本轮最终交叉校验回执
+
+```text
+.venv/bin/pytest -q                          → 189 passed, 4 warnings
+.venv/bin/pytest -q tests/test_rag_v4_validation_diagnostics.py
+                                             → 8 passed
+.venv/bin/ruff check .                       → passed
+.venv/bin/ruff format --check .              → 184 files already formatted
+.venv/bin/python -m compileall -q ...        → passed
+git diff --check                             → passed
+V4 diagnostics runner                        → status=complete
+blind_snapshot_match                        → true
+```
+
+既有 4 条 warning 仍是 Pillow 的弃用提示。本轮离线 RAG、V4 诊断和既有 P0-A/P0-B/advisory/lifecycle/8C/8C2/Web/候选 Provider smoke 均 exit 0；没有新增网络、LLM、照片或 Provider 调用。该回执确认代码、合同、测试、报告、看板和文档在当前快照一致，但不改变 V4 project quality Gate=`FAIL`、RAG proposal-only 或候选未 promotion 的产品结论。
+
+## 2026-09-02｜RAG 低成功率反思审计（当前）
+
+本轮按 `docs/RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md` 对之前的 public no-op、失败驱动 Loop、V3 validation 和 V4 独立盲测做了只读复盘，并安排独立盲审视角复核。审计只读取公开聚合、V4 answerless Trace、公开失败驱动报告和生命周期摘要；没有读取新的隐藏答案、解冻逐题 Gold、照片、人脸向量、密钥，也没有调用网络/LLM/Provider。
+
+关键事实：V4 48 题中只有 8 题生成结构化 `RagQuery` 并留下检索 Trace，40 题在检索前结束，其中 36 题是 `no_reliable_structured_projection`；当前知识库为 3 张审核 Card/10 条有效规则、lifecycle issue=0、index=`in_sync`。所以 V4 Route=`12.50%`、Evidence relation=`18.75%`、Recall@5=`57.99%` 首先暴露自然语言→结构化查询的入口和评测事实混合，不能直接写成 P0-B 向量算法失败。Gold runner 还会把 projection route/evidence alias 合并到 Prediction，P/FX 等评测标签并非当前知识库真实可检索 chunk；盲测使用 deterministic token embedding/overlap fixture，适合重复测试但不代表线上语义模型证据。
+
+fixed Precision@3 的理论上限在 V4 Gold 分布下约为 `0.513889`（公开集约 `0.474359`），低于现行 `0.80` 门槛；这属于评测口径问题，不能解释 Route/Relation 的真实失败，也不能静默修改冻结 Gate。V3/V4 解冻 validation 的高分不能当泛化证据；早期 V0/V1/V2 的 `0.947436` no-op 也确认是修错后处理层。
+
+本轮交付 `docs/RAG_LOW_SUCCESS_REFLECTION_AUDIT.md`、`scripts/audit_rag_low_success.py`、`tests/test_rag_low_success_audit.py` 和 `reports/rag_low_success_reflection_audit.json/.html`。下一步先走“评测合同与真实检索边界 Gate”：拆成①自然语言→结构化查询/路由；②结构化查询→真实 chunk 召回/排序/关系；补齐需要计入 RAG 的 Policy/Rule Card；用 10–15 道公开 smoke 逐题确认“原话→查询→召回→采用→路由”真实发生。产品负责人确认前，active baseline 不变、RAG 仍 proposal-only、不建立新 Holdout。
+
+本轮审计不是质量通过；它只把低成功率拆成可修复的层，防止继续在错误对象上迭代。
+
+## 2026-09-02｜视觉决策冻结：Party Rock + 苹方（历史记录；最新覆盖见下方，无应用代码变更）
+
+### 已冻结的产品输入
+
+- 正式界面主题：Tweakcn `Party Rock` 原始 Light / Dark token；Light background=`#F2F1E6`、primary=`#A855F7`、secondary=`#C084FC`、destructive=`#FF4D4D`，Dark background=`#121212`、primary/accent=`#A855F7`、destructive=`#800000`。本轮不调整明暗、饱和度、对比度或色相。
+- 正式界面字体：苹方（`PingFang SC`）；四元黑体及此前字体评审候选不进入当前 UI 实现，只保留为后续品牌字标/实验候选。
+- 色彩面积（历史表述）：米白曾被写成最大面积、紫色曾被写成第二大面积；该层级已由下方最新覆盖改为紫色与米白共同主导、紫色略强，黑色结构、其他色少量点缀。
+- 面积比例的参考仅取用户示意图的“米白画布 + 黑色侧栏 + 紫色高光”层级关系，不复制示意图内容或资产。
+
+### 边界与下一步
+
+本次只冻结视觉 token、正式字体和相对使用范围，没有修改业务合同、状态机、同意/权限、Provider、结果保留、RAG、审计或 Trace；没有宣称 Streamlit 已完成视觉迁移。下一步在 UI Gate 中用固定 Party Rock + 苹方复核 1440×900 与 1280×800 的 E01/E02 两张关键帧、四区布局、组件状态、可访问性、响应式降级和自然语言主入口，再进入 Frontend 原型与 Impeccable Critical/Audit。
+
+## 2026-09-02｜Web Canvas 生命周期错误修复
+
+前端真实运行暴露 Canvas 错误：SDK 初始化后旧代码尝试重新设置 SDK 输出 Canvas 的 `width/height`，浏览器在部分 WebGL 构建中拒绝该操作。已修复为“SDK 输出 Canvas 固定不变，结果 ImageData 写入新建结果 Canvas”，并新增回归断言防止再次在 `takePhoto()` 后调整 SDK Canvas。该修复只影响结果捕获，不改变鉴权、隐私、Provider Card 或 RAG 准入结论。下一次 Cloud smoke 需拉取新代码后重新验证。
+
+本地验证：`tests/test_tencent_effect_web.py`=`12 passed`；全量 `.venv/bin/pytest -q`=`193 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check` 均通过。离线 Web smoke 仍按设计输出 `status=not_run`、`network_called=false`。
+
+## 2026-09-02｜UI/UX Spec v1.0 审计冻结与关键帧资产（历史记录；v2.0 覆盖见下方）
+
+### 已完成
+
+- 对 `docs/前端与交互设计需求文档.md` 完成前后冲突审计，文档升级为 `UI/UX-SPEC-v1.0`；以最新手动决策覆盖旧候选，冻结四区 Agent 工作台、右侧对话、对齐首页 + Agent 对话子页面、短中文文案、后台自动门控与一次外部授权。
+- 清理旧英文 slogan、长标题、背景摄影、前台内容安全按钮、Plan A/B/C、默认工程 Trace、下方 Agent 对话和弹窗新窗口等冲突表达；Trace 收敛为用户主动打开的脱敏执行记录摘要。
+- 新增 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md`，当时明确 Image 2 视觉稿、HTML/SVG/Figma 导入边界、K01–K04 状态、文案纪律和 Critical/Audit 检查顺序；该范围已由 v2.0 收敛为 E01/E02。
+- 当时生成 `design/keyframes/party-rock-pingfang/` 的四状态版本；旧资产现已归档。当前 active package 为两张 Image 2 PNG、两张分层 SVG 和同源 HTML。
+- 完成 SVG XML 校验、HTML 脚本语法校验、Image 2 prompt 元数据扫描（4/4）和 `git diff --check`；Impeccable detector 因本地缺少 HTML parser 依赖以 regex degraded 模式运行，未发现 regex finding，不能替代浏览器/WCAG Gate。
+
+## 2026-09-02｜Tencent Effect Web 真实成功回执（Canvas 修复后）
+
+- 已把独立结果 Canvas 修复推送到 GitHub，并完成 Streamlit Cloud 重部署。
+- page 6 真实点击一次成功：`web_receipt_effect_web_4d58ea15a0794370`，`status=succeeded`，`elapsed_ms=2601`，`output_hash_saved=true`，结果只保留在浏览器会话。
+- 这闭合了“浏览器 SDK 能否真实返回结果”的技术证据；Provider Card 仍为 `candidate`，因为成功回执不等于完成精确域名、隐私/区域、预算和产品准入。
+- 根因与修复：SDK 输出 Canvas 不可调整尺寸；`ImageData` 写入新 Canvas 后再生成 hash。Web 专项回归 12 条，全量 pytest 196 条通过（另有 4 条既有 warning）。
+
+## 2026-09-02｜公平 RAG 评测过程监督（当前最新）
+
+### 本轮目标
+
+反思审计确认，V3/V4 的低分不能直接归因于检索器：有些题没有真正生成检索请求，旧运行器还把上游投影的路由/证据别名混入了最终结果。本轮按产品负责人确认的公平评测 Prompt，先建立“自然语言理解”和“真实知识检索”两条轨道，再用独立过程监督考官检查考试完整性，避免继续浪费 Holdout 数据。
+
+### 已完成
+
+- 新增 `services/rag_process_supervisor.py`：离线、确定性、无答案读取的过程考官；检查题目覆盖、编译状态、合法查询、检索阶段、证据血缘、Prediction 来源和副作用事实。
+- 新增 `scripts/run_rag_fair_process_audit.py`：使用已有 V3 validation copy 与 V4 holdout runtime 做无答案过程重放；不扩题、不读答案、不调用网络、LLM、照片、人脸向量或图片 Provider。
+- 新增 `tests/test_rag_process_supervisor.py` 三条专项测试，并把报告注册到 page 5「RAG 优化看板」的公平评测区。
+- 新增执行规范 `docs/RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md`，并同步执行版 PRD、PRODUCT_RULES、CONTRACTS、AGENT_PROMPTS、RAG Gold Evaluator、Rubric、失败 SOP、DECISION_LOG、README 和 AGENTS 当前真相。
+
+### 真实回执
+
+```text
+新版 V3 过程重放：36/36 完整检索 Trace；structured=5；unknown_fallback=31；case_fail=0；process_gate=PASS
+新版 V4 过程重放：48/48 完整检索 Trace；structured=8；unknown_fallback=40；case_fail=0；process_gate=PASS
+旧 V4 正式快照：process_gate=FAIL
+  MISSING_REQUIRED_STAGE=432
+  MISSING_GOVERNANCE_FACTS=48
+  PROJECTION_INJECTED_INTO_EVALUATION=48
+  FORBIDDEN_SIDE_EFFECT_OR_LEAK=2
+新运行过程门：PASS；新运行质量状态：READY_AFTER_SEPARATE_GOLD_JOIN
+历史快照过程门：FAIL；历史快照质量状态：LOCKED_HISTORICAL_PROCESS_AUDIT
+```
+
+新版过程重放通过，说明每道题都完整走了“理解/降级 → 合法查询 → RAG 检索 → 结果 Trace”流程，并且没有把答案、上游投影或外部调用混进来；它不说明 RAG 内容答对。旧快照不完整的事实不能通过补写或改名消除，因此旧质量分数永久锁定；新无答案运行可以在下一步单独连接 Gold 做验证，但不能把验证结果当成新的泛化盲测。
+
+### 当前边界与下一步
+
+过程考官已经把“考试有没有走满、有没有作弊”从内容质量中独立出来；V3/V4 的过程完整 answerless 运行包已经封存，下一步可分别连接两条轨道的 Gold 做验证。RAG 继续 `proposal-only`，active baseline 不变，V4 原有 project quality Gate 仍为 `FAIL`。本轮报告见 `reports/rag_fair_process_audit_v1.json/.html`；脱敏运行包见 `reports/rag_fair_v3_answerless_predictions_v1.json`、`reports/rag_fair_v3_answerless_trace_v1.json`、`reports/rag_fair_v4_answerless_predictions_v1.json`、`reports/rag_fair_v4_answerless_trace_v1.json`；完整过程规范见 [RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md](RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md)。
+
+### 当前边界与下一步
+
+这些是设计定调和可编辑原型，不是 Streamlit 视觉迁移、生产 Figma 云文件、真实用户照片结果或 Provider 效果证明。下一步按冻结源文件进入浏览器正式视觉回归、Frontend 组件映射、Impeccable Critical/Audit、WCAG 2.2 AA 与真实用户走查；任何必须改变冻结产品语义的重大问题都要走变更请求并重新取得确认。
+
+## 2026-09-02｜UI/UX Spec v2.0：两张主关键帧与紫色强化（无应用代码变更）
+
+### 本轮完成
+
+- 按产品负责人最新反馈把活跃视觉收敛为两张主关键帧：E01「入口」与 E02「Agent 对话」；上传、自动门控、澄清、一次外部授权、结果与停止仍由 E02 的同一对话空间承载，不再制作独立状态页。
+- 将旧 K01—K04 资产安全归档到 `design/keyframes/party-rock-pingfang/archive/v1-four-state/`；当前 `index.html` 顶部只保留 E01/E02 切换。
+- 重新生成 Image 2 E01/E02 方向稿，使用 Party Rock 原始 token 与苹方：紫色与米白共同主导，紫色在暗流、对齐舞台、激活状态和关键操作块中略强；黑色只做导航/暗流底/文字/分隔结构，其他色少量点缀。PNG 不含真实人物、真实结果或工程 Trace。
+- 生成同源可编辑 `e01-entry.svg`、`e02-agent.svg`，并导出 `renders/1280/` 与 `renders/1440/`；HTML/SVG 是精确文案和布局源，PNG 仅作材质与比例参考，未声称原生 Figma `.fig`。
+- 同步更新 `docs/前端与交互设计需求文档.md`、`docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、执行版 PRD、`PRODUCT.md`、`PRODUCT_RULES.md`、`README.md`、`PROJECT_CONTEXT.md`、`AGENTS.md` 与关键帧包 README；明确旧的“米白最大、紫色第二”仅为历史记录，当前执行以紫色—米白共同主导为准。
+
+### 本轮静态回执
+
+- SVG XML 解析通过；四张 SVG-derived 1280/1440 renders 已做图像检查。
+- HTML 内联脚本语法通过；两张 active Image 2 PNG 的 `impeccable:prompt` 元数据扫描为 `2 raster, 0 missing`；四张 1280/1440 PNG 是由 SVG 源导出的评审帧，不重复计入 Image 2 资产。
+- 已执行旧英文 slogan、Plan A/B/C、假进度、隐藏思维链和未经校准分数的静态禁用文案扫描；没有把这些内容放入 active keyframes。
+- Impeccable detector 如因本地 HTML parser 依赖缺失而以 regex degraded 模式运行，结果只能作为静态提示，不能替代浏览器视觉回归和 WCAG 2.2 AA。
+
+### 当前边界
+
+本轮只完成设计规范、Image 2 方向稿和可编辑源，没有修改 Streamlit 应用代码，也没有取得真实用户照片、多轮 UI 回执、Provider 视觉效果或生产级 Figma 云文件。下一步按 UI Gate 做浏览器回归、Frontend 组件映射、Critical/Audit、可访问性和真实用户走查；若必须改变已冻结语义，需新增带原因、影响和回滚点的变更请求。
+
+## 2026-09-02｜反思审计后公平评测的最终同步回执
+
+本轮任务按公平评测 Prompt 完成并封存：新版 V3 `36/36`、V4 `48/48` 均有完整的“自然语言理解/未知降级
+→ 合法查询 → P0-A/P0-B 检索 → retrieval-only Prediction → finalized Trace”；过程监督考官均为
+`PASS`。过程报告同时保留旧 V4 正式快照的历史 `FAIL` 及其违规计数，不用新版重放覆盖它。
+
+最终 QA：`uv run pytest -q`=`196 passed, 4 warnings`；`ruff check .`、`ruff format --check .`、
+`python -m compileall -q src scripts tests`、`git diff --check`、P0-A/P0-B/advisory/lifecycle/8C/
+8C2/Web/候选 Provider smoke 和 `run_rag_fair_process_audit.py` 均 exit 0。当前下一步是独立 Gold join：
+只连接已经封存的新运行包，不重新跑题，不读取或修改旧快照，不把过程 PASS 写成内容质量或产品化通过。
+### 脱敏边界修复
+
+复核发现 Trace 的嵌套 Prediction 仍保留明文 `case_id`，已在序列化层移除并用 `case_id_sha256` 替代；
+新增回归断言后，四份 answerless 运行包均通过题干/答案/明文案例编号扫描。该修复不改变过程门或质量
+指标，只确保下一步 Gold 连接不会把案例标识带入公开产物。
+
+## 2026-09-02｜Tencent Effect Web → Tool Registry → Meta-Agent 提议层
+
+### 本步目标
+
+把 page 6 已有的 Tencent Effect Web 试验接入统一的 Provider Card 和 Meta-Agent 控制面，同时保持 candidate 工具不能偷偷进入真实主流程的边界。
+
+### 已完成
+
+- 新增 `services/tool_registry.py`：从 `tencent_beautify_pic.json` 和 `tencent_effect_web.json` 生成只读 `ToolDescriptor`；verified baseline 与 candidate Web 的 `execution_allowed` 明确分离。
+- 新增 `services/meta_agent.py`：输出结构化 `ToolProposal`，记录阶段、功能、工具/Card 版本、RAG 证据、所需检查、阻断原因和 baseline fallback；`execution_authorized=false` 固定不可变。
+- 8A 在现有 RAG advisory 后记录 Meta-Agent proposal；page 6 也展示候选工具选择 Trace，并把 proposal 引用写入脱敏事件账本。两处都不会因 proposal 直接调用新工具。
+- 新增 `tests/test_meta_agent.py`（6 条）和 `scripts/smoke_meta_agent_tool_routing.py`；覆盖 baseline、Web candidate、RAG conflict、未知能力、无网络/无图片/无 ProviderRun 副作用。
+- 新增执行 Prompt `docs/TENCENT_EFFECT_META_AGENT_INTEGRATION_PROMPT.md` 的当前执行增量，保持 A/B/C 结果交接为下一道产品 Gate。
+
+### 离线回执
+
+```text
+Meta-Agent smoke: implemented=true
+requested_features=face_lifting + eye_enlarging
+selected=tencent_effect_web/WebARImage (candidate_proposal_only)
+fallback=tencent_beautify_pic
+execution_authorized=false
+network_called=false
+image_bytes_read=false
+provider_run_created=false
+专项测试：6 passed；本轮全量 `pytest -q`=`205 passed, 4 warnings`；Web/RAG/规划器回归仍通过。
+```
+
+### 当前状态与下一道 Gate
+
+这一步已完成“工具卡 → Registry → Meta-Agent → proposal-only Trace”的控制面接入；它不表示 Web Provider promotion，也不表示 Web 结果图可直接进入当前 Python `VerificationResult`。当前 `EditPlan` 仍是 BeautifyPic 专用，Browser Receipt 仍只有浏览器元数据。要进入主流程，需由产品负责人冻结 A 浏览器端复测、B 一次性受限回传 Python 或 C Web 只展示/下载之一；冻结前不改现有图片留存边界。

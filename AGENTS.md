@@ -160,6 +160,18 @@ unimplemented until owner approval. Any UI work must preserve real consent, erro
 tool states, results, feedback, evidence visibility, and the prohibition on exposing
 hidden chain-of-thought.
 
+## 2026-09-02 visual design override
+
+The owner has superseded the earlier exploratory palette and frozen Tweakcn Party Rock
+raw Light/Dark tokens and PingFang SC as the formal UI font. Beige (`#F2F1E6`) is the
+largest area, purple (`#A855F7` / `#C084FC`) is the second-largest visual layer, black
+is structural (rail, text, dividers), and green/coral/other colors are sparse semantic
+accents only. The screenshot contributes only the beige-canvas/black-rail/purple-
+highlight area relationship; it is not a content or asset reference. The freeze is a
+design input, not a Streamlit implementation or a change to consent, tool, result,
+Trace, or privacy behavior. See `docs/PRODUCT_RULES.md` and section 29 of the
+execution PRD for the authoritative record.
+
 ## 2026-09-01 current truth override
 
 The owner has completed the v3 Holdout review. A 36-case answerless runtime was run
@@ -237,4 +249,79 @@ Cloud 在拉取 `14b692b` 后已成功重建，page 6 能正常加载；此前�
 
 ## 2026-09-02 current QA override
 
-The current repository snapshot has passed `.venv/bin/pytest -q` (`180 passed, 4 warnings`), `ruff check`, `ruff format --check` (`138 files already formatted`), `compileall`, and `git diff --check`. The V3 validation runner and P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke runs also exit 0. The four warnings are existing Pillow deprecation warnings. This is an engineering-consistency receipt only: the RAG project Gate remains `FAIL`, RAG remains proposal-only, the active baseline is unchanged, and the original answerless V3 Holdout snapshot is not reclassified as a promotion result.
+The current repository snapshot has passed `.venv/bin/pytest -q` (`189 passed, 4 warnings`), `ruff check`, `ruff format --check` (`184 files already formatted`), `compileall`, and `git diff --check`. The V3/V4 validation runners and P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke runs also exit 0. The four warnings are existing Pillow deprecation warnings. This is an engineering-consistency receipt only: the RAG project Gate remains `FAIL`, RAG remains proposal-only, the active baseline is unchanged, and the original answerless V3 Holdout snapshot is not reclassified as a promotion result.
+
+## 2026-09-02 current V4 truth override
+
+V4 is now the latest independent RAG quality evidence: 48 non-overlapping answerless cases were run once and sealed before private aggregate scoring. The blind baseline is Route=12.50%, Evidence relation=18.75%, Recall@5=57.99%, MRR=81.25%, nDCG@5=63.22%, hard-safety=0/48 PASS, project quality Gate=FAIL. After the owner explicitly authorized a validation copy, the V4 candidate reached 100% on semantic diagnostic metrics, but this is not a new blind score; `blind_snapshot_match=true`, `active_baseline_changed=false`, and `proposal_only=true` remain mandatory. Do not promote the candidate or call RAG productized. See `docs/RAG_V4_HOLDOUT.md`, `reports/rag_v4_holdout_blind_aggregate.html`, and `reports/rag_v4_validation_diagnostics_v1.html`.
+
+The next RAG quality evidence must be a new Holdout not used for diagnosis. Fixed/effective/returned Precision must stay side by side because V4 Gold is sparse; fixed project Gate remains authoritative. V4 traces and reports must not be used to grant Provider permission, create image parameters, or send photos out.
+
+## 2026-09-02 reflection audit override
+
+Before adding another Holdout or tuning retrieval, run the public-artifact-only
+reflection audit in `docs/RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md` and keep its
+scope flags explicit. The current V4 score is a mixed measurement: only 8/48
+questions created a structured retrieval query, while the offline baseline also
+projects route/evidence aliases before retrieval. Treat the leading issue as the
+measurement and natural-language-to-query boundary, not as proven BGE/reranker
+failure. The next product gate is still pending owner confirmation: split the
+compiler benchmark from the canonical retrieval benchmark, add reviewed
+Policy/Rule Cards for facts that must be retrieved, and run 10–15 public smoke
+cases with a complete query→retrieval→adopted-evidence→route trace. Do not read
+new Holdout answers, change the active baseline, promote a candidate, or call RAG
+productized from this audit.
+
+## 2026-09-02 fair evaluation supervisor current truth
+
+The product owner has now confirmed the reflection Gate: evaluate natural-language
+understanding and canonical retrieval as separate tracks, keep the historical fixed
+Precision alongside diagnostic bands, and require an independent answerless process
+supervisor before any Gold join. The current knowledge base is intentionally not
+expanded in this step and RAG remains proposal-only.
+
+`services/rag_process_supervisor.py` and `scripts/run_rag_fair_process_audit.py` now
+replay the existing V3 validation copy and V4 holdout input without reading answers,
+annotations, photos, face vectors or secrets and without network/LLM/Provider calls.
+The fresh process gate is PASS for V3 (36/36) and V4 (48/48); unknown compiler cases
+receive a neutral legal query and are counted as `unknown_fallback`, not silently
+discarded. The historical V4 formal snapshot is still FAIL because it lacks required
+stages/governance facts and contains projection injection. That snapshot is immutable
+history; do not patch it into PASS. The fresh run's process gate is PASS and its
+`quality_scoring_gate` is `READY_AFTER_SEPARATE_GOLD_JOIN`; the historical snapshot's
+quality gate remains `LOCKED_HISTORICAL_PROCESS_AUDIT`. No validation score, promotion,
+or productization claim is allowed until Gold is joined only to the fresh run and
+interpreted under the two-track rubric. See `reports/rag_fair_process_audit_v1.json/.html` and
+`docs/RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md`.
+
+After sealing the four redacted answerless artifacts, the current full QA is
+`.venv/bin/pytest -q` = `196 passed, 4 warnings`; Ruff check/format, compileall and
+`git diff --check` pass. The four warnings are existing Pillow deprecations. This is
+engineering consistency evidence only; V4 project quality remains FAIL and RAG remains
+proposal-only.
+
+## 2026-09-02 latest visual override
+
+The owner’s latest visual feedback supersedes the earlier area hierarchy for active UI work:
+Party Rock raw token values and PingFang SC remain unchanged, but purple and ivory are now
+co-dominant with purple slightly stronger in the key visual blocks. Use dark ink for structure
+and purple-flow fields; keep coral/dark-red and any other derived colors sparse. The active
+visual package is exactly two keyframes—E01 entry and E02 Agent conversation—rather than the
+historical four-state set. The four-state files remain recoverable under
+`design/keyframes/party-rock-pingfang/archive/v1-four-state/` and are not implementation
+references. This is a visual/documentation change only; it does not alter contracts, consent,
+Provider permissions, persistence, Trace, RAG, or the claim that Streamlit UI migration is
+unfinished.
+
+## 2026-09-02 latest Tencent Web Meta-Agent integration override
+
+The current integration slice adds a read-only `ToolRegistry` and a
+deterministic, structured `ToolProposal` layer. The registry exposes the
+reviewed BeautifyPic baseline and the separate Tencent Effect Web candidate;
+the proposal layer may explain a candidate route and a baseline fallback, but
+it never authorizes execution, reads image bytes, holds credentials, creates a
+ProviderRun, or calls a network/API. Keep `tencent_effect_web` as `candidate`
+until the product owner freezes the result handoff (browser-side verification,
+bounded Python handoff, or display/download only) and completes the remaining
+privacy, region, cost, regression and admission evidence. Do not change the
+BeautifyPic-only EditPlan contract silently.

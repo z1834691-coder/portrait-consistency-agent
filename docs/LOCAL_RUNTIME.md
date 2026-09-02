@@ -182,3 +182,29 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 若 page 6 发生 Streamlit 重跑，当前输入/参数代次会继续使用同一 `request_ref`，不会再把正常回执
 误判为“prepared request 不匹配”。如果用户换图或改参数，旧回执会被安全忽略，页面提示重新点击当前
 请求；不要把旧回执手动复制到新请求。真实 smoke 仍须在 Secrets 配齐后运行官方示例图。
+
+2026-09-02 更新：Secrets 配齐并完成 Canvas 修复部署后，官方示例图真实浏览器调用成功，回执为
+`web_receipt_effect_web_4d58ea15a0794370`、耗时 2601ms、输出哈希已保存。离线 smoke 仍保持
+`status=not_run`/`network_called=false`，因为它按设计不加载浏览器 SDK；真实成功只记录在 Cloud
+page 6 的 Browser Receipt，Card 仍为 `candidate`。
+## 2026-09-02｜V4 独立 Holdout 与诊断入口
+
+V4 的正式运行包是 `data/evaluation/rag_v4_holdout_runtime.json`，只含 48 道无答案题目。它先在本机离线运行一次并封存预测/Trace，再由负责人授权的私有评分器输出聚合；正式 baseline 为 Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、hard-safety=0/48 PASS、project Gate=FAIL。诊断副本和逐题答案不进入在线 RAG。
+
+page 5「RAG 优化看板」现在同时提供 V4 盲测聚合和 owner-unlocked validation 诊断入口。validation 候选把同一批题目的语义指标提升到 100%，但它不是新的泛化成绩；`blind_snapshot_match=true`、`active_baseline_changed=false`、`proposal_only=true`。完整保管、Trace、失败模式和运行命令见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+本轮最终工程 QA：全量 pytest=`189 passed, 4 warnings`，V4 专项=`8 passed`，Ruff、format、compileall、`git diff --check` 和 diagnostics runner 均通过。当前知识库仍是 3 张审核 Card、10 条 active 规则；RAG 质量 Gate 仍 FAIL。
+
+## 2026-09-02｜公平评测过程监督后的当前运行真相
+
+上面的 189 条是历史快照；当前全量回归为 `196 passed, 4 warnings`，Ruff check/format、compileall、
+`git diff --check` 及全部离线 smoke 均通过。公平过程报告显示新 V3 `36/36`、V4 `48/48` 都完成
+“理解/未知降级 → 合法查询 → 检索 → Trace”，新过程门 `PASS`；旧 V4 快照的完整性问题保持历史
+`FAIL`，不能补写或复用。质量分数仍未连接 Gold，RAG 仍 `proposal-only`，下一步是仅对封存的新运行包
+进行独立 Gold join。
+
+## 2026-09-02｜Tencent Web Meta-Agent 控制面当前回执
+
+本轮新增的 `ToolRegistry`/`MetaAgentToolSelector` 可在本地离线运行：读取 Web candidate Card 和 BeautifyPic baseline，输出结构化 `ToolProposal` 与脱敏 Trace；不加载浏览器 SDK、不读图片、不读 Secret、不发网络、不创建 `ProviderRun`。本地 smoke 的 `network_called=false`、`image_bytes_read=false`、`provider_run_created=false` 已通过测试。Web 的真实浏览器处理仍只在 Cloud page 6 产生过一次成功回执，Card 继续 `candidate`；主流程结果交接 A/B/C 尚未冻结。
+
+本轮新增代码后的最终 QA：全量 `.venv/bin/pytest -q`=`205 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 和相关离线 smoke 均通过。文档中的 196/189/178 条是历史快照，不覆盖本节当前回执。

@@ -102,6 +102,10 @@ Adapter：[tencent_effect.py](../src/portrait_consistency_agent/services/tencent
 
 当前尚未取得新的浏览器成功回执，因此不能声称 Web 图片处理已经 live、细项五官已可用、批量已支持或隐私/区域已确认。正式准入由 `evaluate_effect_web_admission()` 按 License、精确域名、出站/区域、预算、Adapter、成功 receipt 和产品批准逐项返回；它不自动改 Card。三项运行配置名为 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，只放本机 `.env` 或 Streamlit Cloud Secrets，Token 不下发给浏览器。
 
+## 2026-09-02 最新覆盖
+
+Canvas 生命周期修复后，Cloud page 6 已完成一次真实成功的 Web 静态图处理：回执 `web_receipt_effect_web_4d58ea15a0794370`，耗时 2601ms，输出哈希已保存，结果只留浏览器会话。上段“尚未取得成功回执”是历史状态，不能覆盖本节最新事实。Card 仍保持 `candidate`，因为供应商隐私/区域/预算、多样本回归和产品负责人准入尚未完成。
+
 ## 12. 2026-09-01｜Cloud 运行状态覆盖
 
 Web 静态图的独立 Adapter 与 page 6 已随最新提交在 Streamlit Cloud 重建成功；此前的旧进程
@@ -115,3 +119,7 @@ License “正常”写成 Web Provider 正式准入。
 
 - [测试 License 申请与有效期](https://cloud.tencent.com/document/product/616/80189)
 - [Web 价格和精确域名绑定](https://cloud.tencent.com/document/product/616/86942)
+
+## 2026-09-02｜与 Meta-Agent 的接入边界
+
+本候选 Spike 现在可由 `ToolRegistry` 读取并由 Meta-Agent 提议，但仍不授予执行权限。Web 浏览器字段与 REST BeautifyPic 字段保持独立；候选提案必须列出 License、精确域名、出站/区域、预算、Adapter、Smoke 和产品批准检查。一次成功 Browser Receipt 只证明浏览器处理链可运行，不能替代多样本效果、供应商条款或 Card promotion。下一步如果要进入主流程，必须先确定结果交接 A/B/C，不能把候选 Card 静默改为 verified。

@@ -159,3 +159,85 @@ card_review_status=candidate
 Streamlit Cloud → App Settings → Secrets 中只把 `TENCENT_EFFECT_APP_ID` 改为腾讯账号数字 APPID，
 保留现有 License Key/Token，不要在聊天中发送任何密钥；修改后 Reboot/刷新，再用官方示例图运行
 一次。成功前 Card 必须继续保持 `candidate`，不得写入主流程。
+
+## 11. 2026-09-02｜再次真实重试：鉴权阻塞仍在
+
+产品负责人修正 Secret 后，本轮在 Cloud page 6 再次明确点击组件执行。请求确实重新进入腾讯 Web
+SDK；由于输入、参数和 Card 版本没有变化，合同按同一请求代次复用 `request_ref`，因此回执引用仍为
+`web_receipt_effect_web_3a3c71bec3f24557`。这不是自动重试，也不是读取旧的成功结果；本次点击的 SDK
+初始化时间为 `2026-09-02T07:28:40Z`，耗时 `628ms`。
+
+本次脱敏 Browser Receipt：
+
+```text
+status=failed
+provider_request_id=web_receipt_effect_web_3a3c71bec3f24557
+sdk_error_code=100
+normalized_error_code=20001001
+safe_error=SDK 鉴权失败，请检查 License 和签名
+output_hash_saved=false
+```
+
+这说明前一处 `request_ref` 错位已经没有复现，但 Web SDK 仍未通过鉴权。官方错误码只能确认
+“鉴权失败”，不能仅凭页面信息断言唯一原因；应按 License Key/Token 是否成对、签名使用的数字
+腾讯 APPID、精确绑定域名和 Cloud Secret 是否已重载逐项核对。Card 继续 `candidate`，不产生主流程
+执行权限；在 Cloud Reboot/Secret 重载后只做一次新的官方示例图 smoke，避免无意义的重复调用。
+
+## 12. 2026-09-02｜完整流程重试回执更新
+
+在当前 Cloud 页面从头执行一次官方示例图流程后，SDK 等待自身鉴权窗口并返回最终失败回执：
+
+```text
+status=failed
+provider_request_id=web_receipt_effect_web_3a3c71bec3f24557
+elapsed_ms=10360
+sdk_error_code=100
+normalized_error_code=20001001
+output_hash_saved=false
+```
+
+稳定 `request_ref` 仍表示同一输入/参数代次；这次是新的用户点击，不是系统自动重试。回执关联链路
+正常，但鉴权阻塞仍未解决，Card 继续 `candidate`，不进入主流程。
+
+## 13. 2026-09-02｜Canvas 生命周期错误修复
+
+最新一次前端运行暴露浏览器错误：`Failed to set the 'width' property on 'HTMLCanvasElement': Cannot resize canvas after call to transfer...`。根因是腾讯 SDK 初始化后接管了输出 Canvas，而旧代码在 `takePhoto()` 返回后再次修改同一 Canvas 的宽高。适配器现已将 SDK 输出 Canvas 与结果 Canvas 分离：SDK Canvas 初始化后保持不变；`ImageData` 复制到新建的浏览器自有 Canvas，再生成预览、下载链接和输出 hash。这样不改变 License、签名、图片留存或 Provider 准入边界，只修复结果捕获阶段的浏览器兼容性问题。
+
+## 11. 2026-09-02｜第二次明确重试回执
+
+负责人在修正 Cloud Secret 后再次明确点击执行。同一输入/参数仍属于同一个请求代次，因此按合同复用
+`request_ref`；这次是新的 SDK 点击，不是自动重试或重复写入。最新脱敏回执为：
+
+```text
+status=failed
+receipt_id=web_receipt_effect_web_3a3c71bec3f24557
+elapsed_ms=628
+sdk_error_code=100
+normalized_error_code=20001001
+output_hash_saved=false
+```
+
+前一次回执 `web_receipt_effect_web_fa6f0765ad924597` 继续保留为历史失败证据。两次都到达 SDK 鉴权阶段，
+均未生成图片；当前尚不能在没有控制台凭据核对的情况下断言唯一根因。候选核对项仍为 License Key/Token
+配对、签名/数字 APPID、精确域名绑定和 Cloud Secret 重载。Card 继续 `candidate`，不能接入主流程或被
+RAG 自动放行；不要继续盲目重复调用。
+
+## 14. 2026-09-02｜Canvas 修复后的真实浏览器成功回执
+
+已将 GitHub 最新代码部署到 Streamlit Cloud，并在 page 6 使用官方示例图完成一次真实的腾讯特效 Web 浏览器调用。执行链为：Streamlit Cloud 拉取修复 → 浏览器加载 SDK → `takePhoto()` 返回 `ImageData` → 写入独立结果 Canvas → 生成结果哈希 → 返回脱敏 Browser Receipt。真实回执为：
+
+```text
+status=succeeded
+receipt_id=web_receipt_effect_web_4d58ea15a0794370
+elapsed_ms=2601
+output_hash_saved=true
+result_retention=browser_session_only
+```
+
+根因是旧实现修改了 SDK 持有的输出 Canvas 尺寸；现在 SDK Canvas 保持不可变，结果写入独立 Canvas 后再取哈希。该事实证明 Web 静态图 Adapter 已完成一次端到端成功运行，但不自动把 Card 从 `candidate` 升级为 `verified`：精确域名、供应商留存/区域、预算、更多图片回归和产品负责人准入仍需单独核验。
+
+## 15. 2026-09-02｜Tool Registry / Meta-Agent 接入层
+
+`services/tool_registry.py` 将本 Card 投影为只读 `ToolDescriptor`，并与 verified 的 BeautifyPic baseline 同时登记；`services/meta_agent.py` 输出 `ToolProposal`，允许在 8A 计划前、8C 策略选择或失败路由时解释 Web 候选及其准入检查。对于当前 `review_status=candidate`，提议路由固定为 `candidate_proposal_only`，可以记录 `tencent_beautify_pic` fallback，但不得调用浏览器或创建 `ProviderRun`。
+
+这一层不改变本 Adapter 的输入/输出边界：图片和 License Key 仍只在浏览器组件使用，Python 只接收脱敏 Browser Receipt；Web Receipt 仍不含结果图 bytes。因此它完成的是“工具卡 → 受限 Meta-Agent → 阻断/兜底 Trace”的控制面接入，不是 Web 主流程 promotion。结果交接 A/B/C 决策冻结后，才可继续修改 `EditPlan`、执行器和 8C 复测。
