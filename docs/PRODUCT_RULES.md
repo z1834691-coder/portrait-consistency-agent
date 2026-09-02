@@ -760,3 +760,13 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 ## 2026-09-02｜Web 纵向绑定测试与 E2 指标口径修正
 
 新增一条 Meta-Agent proposal→Web `EditPlan` provider/Card 绑定测试，确保提议层和计划层不会静默选用不同工具；同时将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 分开计算：坏样本必须被拦截，是否有后续样本证明批量继续是独立字段。随后补齐输入哈希错位与结果大小上限样例。最新全量 QA=`216 passed, 4 warnings`，Web E2 为 8/8；Web Card 继续 `candidate`，不改变正式主流程或 E3 准入规则。
+
+## 2026-09-02｜RAG 深度优化候选与 V5 过程规则（当前）
+
+<span style="color:#C00000"><strong>候选规则。</strong>operation coverage 只扩大真实检索候选池，并在已审核、有效、未过期的知识中按请求 operation/provider 保留代表证据；它不能创造能力事实、绕过冲突/权限/生命周期、改变 active baseline 或生成图片执行权限。候选只作为 `proposal-only` 分支供诊断。</span>
+
+<span style="color:#C00000"><strong>过程规则。</strong>新 Holdout 必须先封存答案键，再由独立过程监督逐题核验无漏题、无答案/标签/照片/向量/密钥泄露、有合法查询和完整检索 Trace、Prediction 只来自真实检索回执、无投影注入和无外部副作用。过程门 PASS 只代表考试过程完整，不代表内容质量正确。</span>
+
+<span style="color:#C00000"><strong>当前结果。</strong>开发集候选 Evidence relation/Recall@5/MRR=`100%`，公开回归候选 Evidence relation/Recall@5=`100%`、MRR=`93.27%`、nDCG@5=`95.30%`，hard-safety PASS；候选 promotion 状态仍为 `not_promoted_proposal_only`。V5 `60/60` 过程门 PASS，但质量评分尚未取得负责人授权。</span>
+
+这次不把指标优化写成产品化：只有 V5 完成一次独立 Gold join，且同时通过安全、公开回归、成本/延迟、逐题失败检查和产品负责人准入，才可讨论 promotion；在此之前，RAG 仍不能直接调用图片工具或改变腾讯主流程。
