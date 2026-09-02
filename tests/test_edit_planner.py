@@ -16,6 +16,7 @@ from portrait_consistency_agent.core.contracts import (
     SubjectMatchEvidence,
     SubjectMatchStatus,
     TargetScope,
+    TencentEffectWebParams,
 )
 from portrait_consistency_agent.core.policies import build_v0_quality_routing_policy
 from portrait_consistency_agent.services.edit_planner import (
@@ -183,6 +184,36 @@ def test_planner_generates_two_bounded_executable_changes_and_trace() -> None:
         "map",
         "persist_plan",
     ]
+
+
+def test_planner_can_generate_a_web_card_plan_with_provider_scale_snapshot() -> None:
+    profile = make_profile()
+    target = make_observation(
+        "photo_target",
+        PhotoRole.TARGET,
+        face_width=540,
+        eye_boxes=((0.28, 0.36, 0.11, 0.07), (0.60, 0.37, 0.11, 0.07)),
+    )
+    result = diagnose_and_plan(
+        profile=profile,
+        target_observation=target,
+        quality_result=make_target_quality(target),
+        intent=make_intent(),
+        provider_id="tencent_effect_web",
+        plan_id="plan_web_001",
+    )
+
+    assert result.plan is not None
+    assert result.plan.provider == "tencent_effect_web"
+    assert result.plan.provider_card_id == "tencent-effect-web"
+    assert isinstance(result.plan.provider_absolute_params, TencentEffectWebParams)
+    assert result.plan.provider_absolute_params.lift == 0.10
+    assert result.plan.provider_absolute_params.eye == 0.10
+    assert {change.provider_parameter for change in result.plan.executable_changes} == {
+        "lift",
+        "eye",
+    }
+    assert any("candidate" in note for note in result.plan.risk_notes)
 
 
 def test_uncertain_subject_requires_ack_then_allows_bounded_plan() -> None:

@@ -3,6 +3,8 @@
 > 版本：`v0.1`｜日期：2026-09-01  
 > 用途：记录从 v3 baseline 失败模式到候选迭代的真实过程。它是当前优化实验账本，不是“RAG 已上线”的证明。
 
+> **2026-09-02 当前覆盖：**V4 已按后文完成独立盲测和授权后的 validation 诊断；文中“待建立独立 v4”的句子属于 V4 创建前的历史快照。当前 V4 project Gate 仍为 `FAIL`，候选未 promotion；再次验收必须使用未参与 V4 诊断的新 Holdout。
+
 ## 1. 背景
 
 v3 Holdout 已按 Holdout A 完成一次正式盲测，质量 Gate=`FAIL`。聚合错误主要是 `evidence_relation_mismatch`、`evidence_set_mismatch` 和 `route_mismatch`。产品目标不是把分数调好看，而是找到可解释、可回滚、不会越权的修正方法，并能在后续新增独立 Holdout 时验证泛化。
@@ -126,3 +128,37 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 | G4/G5 | 下游关系/打包检查 | 100% | 97.22% | 100% | 保持基线 | 0 改变，停止 |
 
 V3 的最终失败只剩 1 条 `evidence_relation_mismatch` 和 36 条 `metric_sparse_gold_denominator`；后者是固定 Precision 口径提醒，不是检索缺陷。最终固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，active baseline 未改变。报告中的 `hidden_answer_key_read=true` 仅表示这次负责人授权的离线 validation 诊断，不是在线流程，也不构成正式 Holdout 通过。完整报告见 `reports/rag_v3_validation_diagnostics_v1.json/.html`；推广仍需新建独立 V4 Holdout。
+## 2026-09-02｜V4 独立 Holdout 优化闭环（当前）
+
+V3 已成为负责人授权的 validation，不能继续作为独立泛化证明。本轮先冻结 48 道与 V3 不重叠的 V4 题目，使用无答案运行包完成一次 baseline 盲测；快照封存后才生成私有聚合和逐题诊断。这样可以把“真实考试成绩”和“看答案后的错题练习”分开。
+
+| 代次 | 修正位置 | Route | Evidence relation | Recall@5 | 固定 Precision@3 | 状态 |
+|---|---|---:|---:|---:|---:|---|
+| G0 | V4 独立 baseline | 12.50% | 18.75% | 57.99% | 28.47% | 真实盲测基线 |
+| G1 | 复用 v2 查询编译 | 41.67% | 46.88% | 65.97% | 33.33% | validation 候选 |
+| G2 | V4 通用同义词 + 策略/权限优先查询编译 | 100% | 100% | 100% | 51.39% | validation 候选，不 promotion |
+| G3 | 回归守门确认 | 100% | 100% | 100% | 51.39% | 无新增改变 |
+| G4 | 关系归一化 | 100% | 100% | 100% | 51.39% | 无新增改变 |
+| G5 | 证据打包 | 100% | 100% | 100% | 51.39% | 无新增改变，停止 |
+
+G2–G5 的 100% 只属于 owner-unlocked validation；fixed Precision 的低值来自 Gold 稀疏（47/48 题少于三条证据），不是允许通过增加无关证据抬分的理由。effective/returned Precision 作为诊断口径并列展示，冻结的 project Gate 仍 FAIL。
+
+本轮候选改变了真实的“自然语言→查询投影”判断，而不是只改最终答案文字；所有代次都保持 `active_baseline_changed=false`、`proposal_only=true`，没有读取照片/向量、调用网络/LLM/Provider 或写入图片执行合同。G3–G5 连续无新增预测变化，按停止规则达到边际效益递减，未继续堆补丁。
+
+详细题集和盲测/诊断边界见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+## 9. 2026-09-02｜多轮低成功率反思审计：先确认测量对象，再继续优化
+
+本轮没有继续新增 Holdout，也没有读取新的隐藏答案。原因是连续几轮的低分可能来自不同层：用户原话没有被整理成检索请求、知识库没有对应规则、检索器没有召回、证据关系判断错误，或者评测分母本身不可达。若不先拆开这些层，下一轮分数无法说明改动究竟解决了什么。
+
+独立审计只读取公开代码、V4 answerless 聚合与 Trace、公开失败驱动 Loop 和生命周期摘要。事实为：V4 48 题中只有 8 题生成了结构化检索请求，40 题在检索前结束；当前知识库为 3 张审核卡、10 条有效规则；离线盲测使用确定性词元 fixture，不等于线上 BGE 语义模型；V4 fixed Precision@3 的理论最高值约为 51.39%，而冻结门槛是 80%。因此 V4 的 Route/Relation 低分首先说明上游查询编译和评测边界不足，不能直接说“向量检索只有 12.5% 的能力”。
+
+本轮形成三个待产品负责人确认的下一 Gate：
+
+1. 将“自然语言→结构化查询”和“结构化查询→真实检索”拆为两条指标与数据轨道；每条证据必须来自真实可索引 chunk，禁止评测投影预先注入证据别名。
+2. 将隐私、出站、过期、撤回、冲突、提示注入和人工复核等事实整理为版本化、可审核的 Policy/Rule Card；没有入库的内容不能被计为 RAG 已召回。
+3. 用 10—15 道公开 smoke 先验证每题都留下“原话→结构化查询→召回→采用证据→路由”Trace，再决定是否校准 Precision 口径、加载真正的本地模型或新建下一份 Holdout。
+
+这是一份反思与工程证据，不是质量通过。RAG 仍为 proposal-only，active baseline 未改变，V4 project Gate 仍为 `FAIL`。可复核材料见 [RAG 低成功率反思审计](RAG_LOW_SUCCESS_REFLECTION_AUDIT.md)、`reports/rag_low_success_reflection_audit.json` 和 `reports/rag_low_success_reflection_audit.html`。
+
+本轮最终交叉校验：`.venv/bin/pytest -q`=`193 passed, 4 warnings`；Ruff check、format（188 files）、compileall、`git diff --check` 和 `audit_rag_low_success.py` 均通过。4 条 warning 为既有 Pillow 弃用提示；该工程回执不改变 V4 project Gate=`FAIL`、RAG `proposal-only` 或 active baseline 未改变。

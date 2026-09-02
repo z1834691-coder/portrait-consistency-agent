@@ -170,3 +170,13 @@ active_baseline_changed=false
 本报告在本轮重新生成并通过全量一致性检查：V3 validation runner、失败驱动 Loop、P0-A、P0-B、advisory、生命周期审计、8C 和 8C2 smoke 均 exit 0；全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`，Ruff check、`ruff format --check`（138 files）、compileall 和 `git diff --check` 均通过。4 条 warning 是既有 Pillow 弃用提示。
 
 本回执不改变报告中的产品边界：V3 是负责人授权的 validation，不是新的 Holdout；`hidden_answer_key_read=true` 只反映这次离线诊断读取了已授权 Gold，不代表在线读取；RAG 仍 proposal-only，active baseline 未改变，固定 Precision/project Gate 仍为 `FAIL`，正式推广必须使用不与 V3 重叠的 V4 Holdout。
+
+## 2026-09-02｜公平重放后的当前状态
+
+上面的工程数字属于历史验证快照；当前全量回归为 `196 passed, 4 warnings`。V3 validation 副本已被
+重新用于无答案过程完整性重放：`36/36` 题均完成合法查询、检索和 finalized Trace，其中 `structured=5`、
+`unknown_fallback=31`。这只是过程证据，不能覆盖原始 V3 质量结果或把 validation 叫作新的 Holdout；
+若要评分，必须消费已封存的公平运行包并单独连接 Gold。
+## 2026-09-02 当前边界
+
+本文件只描述 V3 的 owner-unlocked validation 诊断；它不是新的 Holdout，也不再承担泛化证明。V3 诊断完成后，新的独立质量证据已经转移到 [RAG V4 Holdout](RAG_V4_HOLDOUT.md)。V4 的 answerless blind 运行和 validation 诊断分别在 `reports/rag_v4_holdout_blind_aggregate.json/.html` 与 `reports/rag_v4_validation_diagnostics_v1.json/.html` 中保存。

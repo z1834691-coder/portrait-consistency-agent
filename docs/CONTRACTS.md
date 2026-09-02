@@ -564,3 +564,20 @@ Web Provider 最新失败回执仍按 `EffectWebBrowserReceipt → ProviderRun` 
 ### 当前工程回执覆盖（2026-09-02）
 
 新增控制面后全量 `.venv/bin/pytest -q`=`205 passed, 4 warnings`；Registry/Meta-Agent 专项 `6 passed`，Ruff、format、compileall、`git diff --check` 和离线 smoke 均通过。此前文档中的 196 条为上一回执快照；本轮只增加 proposal/Trace 能力，不改变六类图片合同、Provider 白名单或 Web Card `candidate`。
+
+## 2026-09-02｜Web EditPlan 联合合同与一次性结果交接（B 冻结）
+
+上一段“BeautifyPic 专用 EditPlan、Web Receipt 无结果 bytes、A/B/C 待决”是历史状态。本轮产品负责人冻结 B，合同现已覆盖以下边界：
+
+1. `EditPlan.provider` 允许 `tencent_beautify_pic` 或 `tencent_effect_web`；`provider_absolute_params` 是两种互斥模型。BeautifyPic 字段为整数 0—100；Web 字段 `lift/shave/eye/chin/whiten/dermabrasion` 为浮点 0—1。`ExecutableChange.provider_parameter`、Provider、operation、Card ID/version 必须一致，越界或错配 fail-closed。
+2. `EffectWebBrowserResult` 是短生命周期输入合同，不是 `ProviderRun` 字段。它只携带 request_ref、输入/输出 hash、输出尺寸、受限图片 data URL 和 `python_memory_only`；Adapter 验证后返回 bytes，调用方不得持久化。
+3. `accept_effect_web_browser_result()` 是服务端 handoff seam：只有明确 `allow_candidate_trial=true`、执行 scope/质量/同意校验通过、Receipt 关联正确且结果 hash/尺寸/MIME/大小通过时，才创建共同 `ProviderRun` 并把 bytes交给 Verification；无效结果、失败回执、重复幂等或未 promotion 都安全阻断。
+4. `EffectWebAdmissionInput` 另有 `multi_sample_regression_succeeded` 与 `batch_failure_isolation_verified`；E2 未通过时，准入决策必须返回 `keep_candidate`。任何成功 Browser Receipt 都不能单独触发 Card promotion。
+
+### 合同回放证据
+
+`tests/test_execution.py` 已覆盖 Web handoff → ProviderRun → VerificationResult 和未显式候选试验的阻断；`tests/test_tencent_effect_web_regression.py` 与 `scripts/run_effect_web_regression.py` 覆盖 6 个成功/失败/异常/隔离案例。结果图 data URL 不进入事件账本。当前全量回归 `214 passed, 4 warnings`，E1/E2 为合同和 fixture 证据，Web Card 仍 `candidate`。
+
+## 2026-09-02｜合同回归最新覆盖
+
+补充的 Meta-Agent→Web `EditPlan` provider/Card 绑定测试通过；E2 报告的安全拦截与批量隔离现在是两个独立事实，避免把“坏样本在末尾”误判为安全失败。随后补齐输入哈希错位和结果大小上限案例。最新全量回归为 `216 passed, 4 warnings`；Web handoff、共同 `VerificationResult` 和 8 个 E2 样例仍不保存结果 payload，Card 仍 `candidate`。

@@ -123,3 +123,9 @@ License “正常”写成 Web Provider 正式准入。
 ## 2026-09-02｜与 Meta-Agent 的接入边界
 
 本候选 Spike 现在可由 `ToolRegistry` 读取并由 Meta-Agent 提议，但仍不授予执行权限。Web 浏览器字段与 REST BeautifyPic 字段保持独立；候选提案必须列出 License、精确域名、出站/区域、预算、Adapter、Smoke 和产品批准检查。一次成功 Browser Receipt 只证明浏览器处理链可运行，不能替代多样本效果、供应商条款或 Card promotion。下一步如果要进入主流程，必须先确定结果交接 A/B/C，不能把候选 Card 静默改为 verified。
+
+## 13. 2026-09-02｜B 结果交接与 E1/E2 实施覆盖
+
+上一段关于 A/B/C 尚未冻结是历史状态。当前采用 B：Web 浏览器通过独立 result 触发器把结果图一次性回 Python；服务端验证请求代次、hash、尺寸、MIME 与大小后，只在内存中交给共同 8C 复测器。Web 仍是 candidate，RAG/Meta-Agent 只能提议，E3 promotion 不自动发生。
+
+本轮新增的 Web EditPlan 联合合同、`accept_effect_web_browser_result()`、Meta-Agent→EditPlan 绑定 smoke、E1 handoff/Verification 和 E2 8 案例异常/批量隔离回归，均已通过离线测试。它们证明接口耦合和安全边界，不证明真实视觉泛化、供应商隐私/费用或 Card promotion；后续必须以真实多样本证据和人工准入为准。

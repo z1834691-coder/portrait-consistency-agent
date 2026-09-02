@@ -45,6 +45,7 @@ from portrait_consistency_agent.core.contracts import (
     ProviderRunStatus,
     ReferenceProfile,
     TencentBeautifyParams,
+    TencentEffectWebParams,
     UserFeedback,
     VerificationDecision,
     VerificationResult,
@@ -144,7 +145,31 @@ def _feature_field(feature: EditableFeature) -> str:
     return fields[feature]
 
 
-def _params_for_changes(changes: list[ExecutableChange]) -> TencentBeautifyParams:
+def _params_for_changes(
+    changes: list[ExecutableChange],
+    *,
+    provider: str = "tencent_beautify_pic",
+) -> TencentBeautifyParams | TencentEffectWebParams:
+    if provider == "tencent_effect_web":
+        values = {
+            "lift": 0.0,
+            "shave": 0.0,
+            "eye": 0.0,
+            "chin": 0.0,
+            "whiten": 0.0,
+            "dermabrasion": 0.0,
+        }
+        fields = {
+            EditableFeature.FACE_LIFTING: "lift",
+            EditableFeature.FACE_NARROW: "shave",
+            EditableFeature.EYE_ENLARGING: "eye",
+            EditableFeature.CHIN: "chin",
+            EditableFeature.WHITENING: "whiten",
+            EditableFeature.SMOOTHING: "dermabrasion",
+        }
+        for change in changes:
+            values[fields[change.feature]] = change.proposed_absolute / 100.0
+        return TencentEffectWebParams(**values)
     values = {
         "face_lifting": 0,
         "eye_enlarging": 0,
@@ -431,7 +456,7 @@ def propose_followup_plan(
         baseline_feature_differences=differences,
         executable_changes=changes,
         suggestion_only_changes=previous_plan.suggestion_only_changes,
-        provider_absolute_params=_params_for_changes(changes),
+        provider_absolute_params=_params_for_changes(changes, provider=previous_plan.provider),
         constraints_snapshot=previous_plan.constraints_snapshot,
         safety_policy=previous_plan.safety_policy,
         risk_notes=list(

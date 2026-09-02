@@ -61,7 +61,9 @@ class EditableFeature(str, Enum):
     """Product feature vocabulary; execution still depends on a Provider Card."""
 
     FACE_LIFTING = "face_lifting"
+    FACE_NARROW = "face_narrow"
     EYE_ENLARGING = "eye_enlarging"
+    CHIN = "chin"
     WHITENING = "whitening"
     SMOOTHING = "smoothing"
     EYE_DISTANCE = "eye_distance"
@@ -943,7 +945,15 @@ class SafetyPolicySnapshot(ContractModel):
 
 
 class EditPlan(ContractModel):
-    """Immutable pre-edit plan for exactly one target photo."""
+    """Immutable pre-edit plan for exactly one target photo.
+
+    A plan may target either the reviewed REST BeautifyPic surface or the
+    separately contracted Tencent Effect Web surface.  The parameter models
+    stay distinct because BeautifyPic uses an integer 0--100 scale while the
+    browser SDK uses a 0--1 scale.  ``ExecutableChange`` continues to carry
+    the product-facing 0--100 strength; the provider snapshot carries the
+    exact value that the adapter will send.
+    """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, frozen=True)
 
@@ -958,7 +968,7 @@ class EditPlan(ContractModel):
     intent_id: SafeId
     quality_result_id: SafeId
     iteration: PositiveInt
-    provider: Literal["tencent_beautify_pic"] = "tencent_beautify_pic"
+    provider: Literal["tencent_beautify_pic", "tencent_effect_web"] = "tencent_beautify_pic"
     provider_api_version: str = Field(min_length=1, max_length=64)
     provider_card_id: SafeId
     provider_card_version: str = Field(min_length=1, max_length=64)
@@ -966,7 +976,7 @@ class EditPlan(ContractModel):
     baseline_feature_differences: list[FeatureDifference] = Field(default_factory=list)
     executable_changes: list[ExecutableChange] = Field(default_factory=list)
     suggestion_only_changes: list[SuggestionOnlyChange] = Field(default_factory=list)
-    provider_absolute_params: TencentBeautifyParams
+    provider_absolute_params: TencentBeautifyParams | TencentEffectWebParams
     constraints_snapshot: PlanConstraintsSnapshot
     safety_policy: SafetyPolicySnapshot
     risk_notes: list[str] = Field(default_factory=list, max_length=16)
@@ -991,24 +1001,63 @@ class EditPlan(ContractModel):
         blocked = set(self.constraints_snapshot.blocked_features)
         if any(feature not in allowed or feature in blocked for feature in features):
             raise ValueError("executable changes must remain inside the constraint snapshot")
-        tencent_parameter_map = {
+        beautify_parameter_map = {
             EditableFeature.FACE_LIFTING: ("FaceLifting", "face_lifting"),
             EditableFeature.EYE_ENLARGING: ("EyeEnlarging", "eye_enlarging"),
             EditableFeature.WHITENING: ("Whitening", "whitening"),
             EditableFeature.SMOOTHING: ("Smoothing", "smoothing"),
         }
+        web_parameter_map = {
+            EditableFeature.FACE_LIFTING: ("lift", "lift"),
+            EditableFeature.FACE_NARROW: ("shave", "shave"),
+            EditableFeature.EYE_ENLARGING: ("eye", "eye"),
+            EditableFeature.CHIN: ("chin", "chin"),
+            EditableFeature.WHITENING: ("whiten", "whiten"),
+            EditableFeature.SMOOTHING: ("dermabrasion", "dermabrasion"),
+        }
+        parameter_map = (
+            beautify_parameter_map if self.provider == "tencent_beautify_pic" else web_parameter_map
+        )
+        expected_params_type = (
+            TencentBeautifyParams
+            if self.provider == "tencent_beautify_pic"
+            else TencentEffectWebParams
+        )
+        if not isinstance(self.provider_absolute_params, expected_params_type):
+            raise ValueError(
+                f"{self.provider} plans require {expected_params_type.__name__} parameters"
+            )
         for change in self.executable_changes:
-            mapping = tencent_parameter_map.get(change.feature)
+            mapping = parameter_map.get(change.feature)
             if mapping is None:
-                raise ValueError("current Tencent execution only accepts Provider Card features")
+                raise ValueError(
+                    "current Tencent execution only accepts Provider Card features; "
+                    f"{self.provider} does not expose {change.feature.value}"
+                )
             expected_parameter, params_field = mapping
             if change.provider_parameter != expected_parameter:
                 raise ValueError("executable change does not match the Provider Card parameter")
-            if change.proposed_absolute != getattr(self.provider_absolute_params, params_field):
+            expected_value = (
+                change.proposed_absolute
+                if self.provider == "tencent_beautify_pic"
+                else change.proposed_absolute / 100.0
+            )
+            actual_value = getattr(self.provider_absolute_params, params_field)
+            if actual_value != expected_value:
                 raise ValueError("planned absolute value must match the provider request snapshot")
-        if self.provider_absolute_params.whitening > 0 and EditableFeature.WHITENING not in allowed:
+        whitening_value = (
+            self.provider_absolute_params.whitening
+            if self.provider == "tencent_beautify_pic"
+            else self.provider_absolute_params.whiten
+        )
+        smoothing_value = (
+            self.provider_absolute_params.smoothing
+            if self.provider == "tencent_beautify_pic"
+            else self.provider_absolute_params.dermabrasion
+        )
+        if whitening_value > 0 and EditableFeature.WHITENING not in allowed:
             raise ValueError("non-zero whitening requires explicit permission")
-        if self.provider_absolute_params.smoothing > 0 and EditableFeature.SMOOTHING not in allowed:
+        if smoothing_value > 0 and EditableFeature.SMOOTHING not in allowed:
             raise ValueError("non-zero smoothing requires explicit permission")
         if self.iteration > self.safety_policy.max_provider_rounds:
             raise ValueError("iteration exceeds the applied configurable safety policy")

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from typing import Literal
 
 from portrait_consistency_agent.core.contracts import (
     AdjustmentMode,
@@ -36,11 +37,15 @@ from portrait_consistency_agent.core.contracts import (
     SubjectMatchStatus,
     SuggestionOnlyChange,
     TencentBeautifyParams,
+    TencentEffectWebParams,
 )
 from portrait_consistency_agent.core.policies import build_v0_safety_policy
 from portrait_consistency_agent.core.rag_contracts import RagAdvisoryDecision, RagAdvisoryRoute
 from portrait_consistency_agent.services.photo_quality import PhotoObservation
-from portrait_consistency_agent.services.provider_cards import load_tencent_beautify_card
+from portrait_consistency_agent.services.provider_cards import (
+    load_tencent_beautify_card,
+    load_tencent_effect_web_card,
+)
 from portrait_consistency_agent.storage.local_store import LocalTraceStore
 
 PLANNER_VERSION = "geometry-edit-planner-v0.1"
@@ -270,6 +275,40 @@ def _provider_parameters(
     )
 
 
+def _web_provider_parameters(
+    *,
+    face_lifting: int = 0,
+    eye_enlarging: int = 0,
+) -> TencentEffectWebParams:
+    """Build the Web SDK snapshot from product-facing 0--100 strengths.
+
+    ``ExecutableChange`` remains understandable to the product layer while
+    this provider snapshot contains the exact browser-side 0--1 values.  The
+    conversion is deterministic and never delegated to an LLM or the browser.
+    """
+
+    return TencentEffectWebParams(
+        lift=face_lifting / 100.0,
+        eye=eye_enlarging / 100.0,
+        shave=0.0,
+        chin=0.0,
+        whiten=0.0,
+        dermabrasion=0.0,
+    )
+
+
+def _provider_parameter(feature: EditableFeature, provider_id: str) -> str:
+    if provider_id == "tencent_effect_web":
+        return {
+            EditableFeature.FACE_LIFTING: "lift",
+            EditableFeature.EYE_ENLARGING: "eye",
+        }.get(feature, "")
+    return {
+        EditableFeature.FACE_LIFTING: "FaceLifting",
+        EditableFeature.EYE_ENLARGING: "EyeEnlarging",
+    }.get(feature, "")
+
+
 def _plan_message(
     *,
     executable_changes: list[ExecutableChange],
@@ -316,6 +355,7 @@ def diagnose_and_plan(
     mapping_policy: EditMappingPolicy | None = None,
     safety_policy: SafetyPolicySnapshot | None = None,
     rag_advice: RagAdvisoryDecision | None = None,
+    provider_id: Literal["tencent_beautify_pic", "tencent_effect_web"] = ("tencent_beautify_pic"),
     subject_match_uncertain_acknowledged: bool = False,
     store: LocalTraceStore | None = None,
     plan_id: str | None = None,
@@ -548,7 +588,7 @@ def diagnose_and_plan(
         executable.append(
             ExecutableChange(
                 feature=rule.product_feature,
-                provider_parameter=rule.provider_parameter,
+                provider_parameter=_provider_parameter(rule.product_feature, provider_id),
                 user_delta=strength,
                 current_absolute=0,
                 proposed_absolute=strength,
@@ -606,7 +646,14 @@ def diagnose_and_plan(
             )
         )
 
-    card = load_tencent_beautify_card()
+    if provider_id == "tencent_effect_web":
+        card = load_tencent_effect_web_card()
+        provider_params: TencentBeautifyParams | TencentEffectWebParams = _web_provider_parameters(
+            **params
+        )
+    else:
+        card = load_tencent_beautify_card()
+        provider_params = _provider_parameters(**params)
     plan = EditPlan(
         plan_id=plan_id or f"plan_{uuid.uuid4().hex}",
         revision=1,
@@ -618,7 +665,7 @@ def diagnose_and_plan(
         intent_id=intent.intent_id,
         quality_result_id=quality_result.quality_result_id,
         iteration=1,
-        provider="tencent_beautify_pic",
+        provider=provider_id,
         provider_api_version=str(card["api_version"]),
         provider_card_id=str(card["card_id"]),
         provider_card_version=str(card["card_version"]),
@@ -626,7 +673,7 @@ def diagnose_and_plan(
         baseline_feature_differences=differences,
         executable_changes=executable,
         suggestion_only_changes=suggestions,
-        provider_absolute_params=_provider_parameters(**params),
+        provider_absolute_params=provider_params,
         constraints_snapshot=PlanConstraintsSnapshot(
             allowed_features=allowed,
             blocked_features=blocked,
@@ -646,6 +693,11 @@ def diagnose_and_plan(
         risk_notes=[
             "几何差异来自当前照片测量，未校准为概率",
             "本计划只在用户确认后允许外部编辑",
+            *(
+                ["Tencent Effect Web 当前仍是 candidate；仅允许受限试验，不代表主流程准入"]
+                if provider_id == "tencent_effect_web"
+                else []
+            ),
             *(
                 ["同人比对处于不确定区间，已记录用户本人/编辑权确认；不把它升级为 match 事实"]
                 if subject_match_uncertain_acknowledged
@@ -671,6 +723,9 @@ def diagnose_and_plan(
             },
             {
                 "step": "map",
+                "provider": provider_id,
+                "provider_card_id": str(card["card_id"]),
+                "provider_card_version": str(card["card_version"]),
                 "mapping_policy_id": mapping_policy.policy_id,
                 "mapping_policy_version": mapping_policy.policy_version,
                 "adjustment_mode": mode.value,
@@ -690,6 +745,7 @@ def diagnose_and_plan(
                 "plan_id": plan.plan_id,
                 "status": plan.status.value,
                 "requires_confirmation": plan.requires_confirmation,
+                "provider": provider_id,
             },
         ]
     )

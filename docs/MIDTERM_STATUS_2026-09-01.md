@@ -122,6 +122,24 @@ Cloud 已完成最新代码重建，page 6 的旧导入错误已消失；但 Eff
 
 最终保守 G3 相比 G0：Route `30.56%→100%`、Evidence relation `23.61%→97.22%`、Recall@5 `59.72%→100%`；G2 虽在 V3 达到 100%，但 public regression 退化而拒绝，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，RAG 仍 advisory-only、active baseline 未变。下一步不是继续在 V3 上调参，而是由新建且不重叠的 V4 Holdout 验证泛化，再决定 promotion。
 
+## 2026-09-02 中期更新｜V4 独立 Holdout 与 RAG 优化
+
+V4 已建立为与 V3 不重叠的 48 道独立题集，先以无答案运行一次并封存，再由负责人授权做逐题诊断。正式 blind baseline：Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%；hard-safety=0/48（PASS），project quality Gate=FAIL。它说明当前系统安全拦截可靠，但面对新的表达和组合任务，任务理解与证据关系泛化不足。
+
+解冻后的 G2–G5 候选把同一批题目的语义诊断指标提升到 100%，并通过 `blind_snapshot_match=true`、公开回归和 anti-overfit 检查；但这是验证成绩，不是新的泛化证明，候选没有进入 active baseline，RAG 仍 proposal-only。固定 Precision@3 的稀疏 Gold 现象继续并列记录 fixed/effective/returned 三种口径，不能换分母制造通过。
+
+### 当前项目分层状态
+
+| 层级 | 当前状态 | 意义 |
+|---|---|---|
+| RAG 基础设施 | 已完成 | Provider Card、SQLite/FTS、dense/RRF/rerank、生命周期审计、Trace 和看板可运行 |
+| RAG 失败驱动优化 | 已完成一轮 | 能从逐题失败生成 SOP、候选和回归证据，并在边际收益递减时停止 |
+| RAG 泛化质量 | 未通过 | V4 blind project Gate=FAIL，不能 promotion/产品化 |
+| 图片 Agent 主链 | 已完成离线/单 Provider 受控闭环 | 真实 UI 多轮图片回执和候选 Provider 仍是独立 Gate |
+| 下一步 | 新的未参与诊断 Holdout 或先冻结 Gold/Rubric 修订 | 不重跑 V4，不把 validation 高分当泛化成绩 |
+
+完整 V4 记录见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)，当前中期状态以该节和执行版 PRD 的 V4 产品设计为准。
+
 完整回放入口：[V3 逐题诊断报告](RAG_V3_VALIDATION_DIAGNOSTICS.md)、[JSON](../reports/rag_v3_validation_diagnostics_v1.json)、[HTML](../reports/rag_v3_validation_diagnostics_v1.html)。本轮离线 Trace 均未调用网络、LLM、Provider，也未读取照片/人脸向量；这份验证结果不能替代真实用户 UI 图片回执。
 
 ## 2026-09-02｜Web 回执关联修复
@@ -129,3 +147,9 @@ Cloud 已完成最新代码重建，page 6 的旧导入错误已消失；但 Eff
 第一位用户反馈的 `browser receipt request_ref does not match` 已定位为 Streamlit 重跑生命周期问题：
 旧 page 6 每次重跑随机生成引用。现已按输入/参数 fingerprint 复用同代次 `request_ref`，签名刷新不重置
 组件；旧回执仍 fail-closed。Web 专项新增 2 条回归，真实 Browser Receipt 仍待 Cloud Secrets 配齐。
+
+## 2026-09-02｜Web Card 纳入统一计划与共同复测后的中期更新
+
+产品负责人冻结 B 后，Web 不再只是展示型 Spike：独立 Web 参数合同已进入 `EditPlan`/`ProviderRun`，浏览器结果通过一次性 handoff 进入共同 `VerificationResult`；Meta-Agent proposal 与 Web EditPlan 的 provider/Card 绑定也有独立回归。E2 的 8 个离线样本覆盖成功、供应商失败、请求/输入/输出哈希/尺寸/MIME/大小错位和坏样本后继续处理。
+
+这把项目从“工具卡能被看见”推进到“候选工具可被统一计划表达并被共同复测器消费”，但不等于 Web Provider 已通过准入：Web Card 仍 `candidate`，RAG 仍 `proposal-only`，E3 还需真实多样本视觉、批量结果、供应商隐私/区域/留存/费用证据和负责人批准。最新全量工程 QA 为 `215 passed, 4 warnings`；该数字是工程回执，不是用户 KPI 或视觉效果指标。

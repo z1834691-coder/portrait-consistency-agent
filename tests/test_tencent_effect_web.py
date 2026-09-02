@@ -283,6 +283,93 @@ def test_receipt_hash_scope_and_provider_run_are_validated() -> None:
         )
 
 
+def test_b_handoff_decodes_only_a_hash_bound_result_in_memory() -> None:
+    adapter = TencentEffectWebAdapter(_settings_with_effect_credentials())
+    request, _, input_hash = _request(adapter)
+    output_bytes = b"bounded-web-result-bytes-that-is-long-enough-for-the-data-url-contract"
+    output_hash = hashlib.sha256(output_bytes).hexdigest()
+    receipt = EffectWebBrowserReceipt(
+        status="succeeded",
+        receipt_id="web_receipt_b_001",
+        request_ref=request.request_ref,
+        sdk_version="web-sdk-test",
+        input_sha256=input_hash,
+        output_sha256=output_hash,
+        input_width=640,
+        input_height=480,
+        output_width=640,
+        output_height=480,
+        elapsed_ms=321,
+        created_at=utc_now().isoformat(),
+    )
+    payload = {
+        "request_ref": request.request_ref,
+        "input_sha256": input_hash,
+        "output_sha256": output_hash,
+        "output_data_url": "data:image/png;base64,"
+        + base64.b64encode(output_bytes).decode("ascii"),
+        "output_width": 640,
+        "output_height": 480,
+        "result_retention": "python_memory_only",
+        "created_at": utc_now().isoformat(),
+    }
+
+    decoded = adapter.validate_browser_result(payload, request=request, receipt=receipt)
+
+    assert decoded == output_bytes
+    assert "output_data_url" not in receipt.model_dump(mode="json")
+
+
+def test_b_handoff_rejects_hash_mismatch_and_oversized_or_wrong_mime_result() -> None:
+    adapter = TencentEffectWebAdapter(_settings_with_effect_credentials())
+    request, _, input_hash = _request(adapter)
+    output_bytes = b"bounded-web-result-bytes-that-is-long-enough-for-the-data-url-contract"
+    output_hash = hashlib.sha256(output_bytes).hexdigest()
+    receipt = EffectWebBrowserReceipt(
+        status="succeeded",
+        receipt_id="web_receipt_b_002",
+        request_ref=request.request_ref,
+        sdk_version="web-sdk-test",
+        input_sha256=input_hash,
+        output_sha256=output_hash,
+        input_width=640,
+        input_height=480,
+        output_width=640,
+        output_height=480,
+        elapsed_ms=321,
+        created_at=utc_now().isoformat(),
+    )
+    base = {
+        "request_ref": request.request_ref,
+        "input_sha256": input_hash,
+        "output_sha256": output_hash,
+        "output_width": 640,
+        "output_height": 480,
+        "result_retention": "python_memory_only",
+        "created_at": utc_now().isoformat(),
+    }
+    with pytest.raises(ValueError, match="output hash"):
+        adapter.validate_browser_result(
+            {
+                **base,
+                "output_data_url": "data:image/png;base64,"
+                + base64.b64encode(b"other-output-bytes-that-are-long-enough").decode("ascii"),
+            },
+            request=request,
+            receipt=receipt,
+        )
+    with pytest.raises(Exception, match="MIME|data URL"):
+        adapter.validate_browser_result(
+            {
+                **base,
+                "output_data_url": "data:image/svg+xml;base64,"
+                + base64.b64encode(output_bytes).decode("ascii"),
+            },
+            request=request,
+            receipt=receipt,
+        )
+
+
 def test_web_admission_is_fail_closed_until_all_non_secret_evidence_is_present() -> None:
     blocked = evaluate_effect_web_admission(EffectWebAdmissionInput(card_review_status="candidate"))
     assert blocked.allowed is False
@@ -302,6 +389,8 @@ def test_web_admission_is_fail_closed_until_all_non_secret_evidence_is_present()
             adapter_ready=True,
             static_image_smoke_succeeded=True,
             smoke_receipt_ref="receipt_web_001",
+            multi_sample_regression_succeeded=True,
+            batch_failure_isolation_verified=True,
             product_owner_approved=True,
         )
     )

@@ -687,6 +687,14 @@ License/Token 配对、数字 APPID/签名、精确域名和 Cloud Secret 重载
 
 <span style="color:#C00000"><strong>关键帧范围。</strong>活跃视觉交付只保留 E01 入口和 E02 Agent 对话两张主关键帧。上传、自动检查、澄清、一次外部授权、结果/复测和停止仍由同一对话空间中的消息、事实块、授权 Sheet 和结果块承载，不新增独立状态页面、报告页或参数页。旧 K01—K04 仅作为历史资产归档，不属于当前实现依据。</span>
 
+## 2026-09-02｜视觉候选最新覆盖：左侧黑导航与米白工作面
+
+<span style="color:#C00000"><strong>产品负责人最新反馈。</strong>上一版中间工作区的紫色与黑色暗影/暗流造成沉重和僵硬的 AI 工具箱观感，现明确不再作为当前构图。Party Rock 原始 token 与苹方不变；所有视觉候选统一为最左侧黑色导航、中央/右侧米白工作面，紫色/淡紫柔性圆角框和关系轨迹，荧光绿少量活动节点，黑色线框/文字结构。不得在中间或右侧铺黑底、使用紫黑暗影渐变、发光网格或大面积荧光绿。</span>
+
+<span style="color:#C00000"><strong>候选交付。</strong>基于 Getty `Tracing Art` 的关系轨迹与编辑式留白抽象，新增 A「档案游线」、B「柔性索引」、C「开放谱系」三套视觉候选；每套严格两张关键帧：E01 入口和 E02 Agent 对话。三套只改变视觉叙事，不改变自然语言主链、后台自动门控、外部一次授权、结果保留或 Trace 可见性边界。产品负责人选择前，任何候选都不是最终 UI 规范。</span>
+
+<span style="color:#C00000"><strong>交付入口。</strong>候选评审页为 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`；风格原则为 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`；PNG 只作 Image 2 材质/比例方向稿，分层 SVG 才是可编辑/Figma 导入源。候选选择后才运行 Critical/Audit、WCAG/UI Gate 和 Streamlit 映射。</span>
+
 ## 2026-09-02｜Tencent Effect Web 真实成功后的产品边界
 
 <span style="color:#C00000"><strong>最新事实。</strong>Canvas 生命周期修复后，Cloud page 6 已完成一次真实 Web SDK 静态图处理：回执 `web_receipt_effect_web_4d58ea15a0794370`，耗时 2601ms，`status=succeeded`，结果哈希已保存，结果图仅保留在当前浏览器会话。</span>
@@ -728,3 +736,27 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 <span style="color:#C00000"><strong>Web 与 REST 的合同隔离。</strong>Web 使用独立的浏览器参数和 `EffectWebBrowserReceipt`；本轮不把 `lift/shave/eye/chin` 塞入 BeautifyPic 的 `FaceLifting/EyeEnlarging` 字段，也不把一次浏览器成功回执解释为母版一致性达标。当前 Web Card 仍为 `candidate`，不进入真实主流程执行。</span>
 
 <span style="color:#C00000"><strong>真实调用边界。</strong>page 6 的一次成功 Browser Receipt 仍可作为独立候选证据；Meta-Agent 集成 smoke 只验证“Card → Proposal → 阻断/兜底”且 `network_called=false`。要让 Web 结果进入 8A/8B/8C，必须先冻结结果交接 A（浏览器端复测）、B（一次性受限回 Python）或 C（只展示/下载）中的一个方案，不能在代码里暗自改变图片留存边界。</span>
+
+## 2026-09-02｜Tencent Effect Web B 结果交接与 E1/E2/E3 当前规则（覆盖上一段 A/B/C 待决状态）
+
+<span style="color:#C00000"><strong>产品负责人已冻结 B。</strong>浏览器 Web SDK 的结果图通过一次性 `result` 触发器回 Python；服务端必须校验当前 `request_ref`、输入 hash、Receipt 输出 hash、宽高、PNG/JPEG/WebP MIME 和大小上限。通过后只在当前 Streamlit 会话内存保留 bytes，立即交给共同 8C `VerificationResult`；data URL、图片 bytes、License Token 不进入 SQLite、JSONL、Trace、RAG 或 Git。</span>
+
+<span style="color:#C00000"><strong>工具和 Agent 边界。</strong>Web Card 仍为 `candidate`。Meta-Agent 可以在 Registry 白名单内提出 Web，并给出已审核 BeautifyPic fallback，但 `execution_authorized=false` 固定不变。只有显式候选试验入口允许接收 Web 结果；状态机/Policy 仍负责同意、scope、预算、轮次、幂等和 fail-closed。SDK 返回成功不是母版一致或用户满意的证据。</span>
+
+<span style="color:#C00000"><strong>E1/E2/E3。</strong>E1 将 Web 结果接入共同 `ProviderRun → VerificationResult`，无总分/概率；E2 要求成功、失败、请求/哈希/尺寸/MIME/大小异常和批量失败隔离均有回归，坏样本不能阻塞其他样本；E3 只有在真实更广样本、批量视觉、供应商隐私/区域/留存/费用、License/权限和产品负责人批准全部齐全后，才允许人工把 Card 改为 `verified`。在 E3 前 BeautifyPic 是唯一正式主流程 Provider。</span>
+
+### 本轮实现状态
+
+| 规则 | 状态 | 当前事实 |
+|---|---|---|
+| Web 参数进入 EditPlan | implemented/verified | Web `0—1` 参数与 BeautifyPic `0—100` 参数分离校验 |
+| Web 结果 handoff | implemented/verified | request/hash/尺寸/MIME/大小校验；只返回当前会话 bytes |
+| 共同 VerificationResult | implemented/verified（E1） | fixture 证明 handoff → ProviderRun → 复测；真实视觉效果仍需样本 |
+| 多样本/异常/批量隔离 | implemented/verified（E2 合同层） | 离线 8 案例 `8/8`；覆盖输入哈希与大小上限；不是视觉泛化结论 |
+| Web Card promotion | candidate | 缺真实准入证据和负责人批准 |
+
+本轮全量回归为 `214 passed, 4 warnings`；Web E2 报告为 `reports/tencent_effect_web_regression_v1.json/.html`。
+
+## 2026-09-02｜Web 纵向绑定测试与 E2 指标口径修正
+
+新增一条 Meta-Agent proposal→Web `EditPlan` provider/Card 绑定测试，确保提议层和计划层不会静默选用不同工具；同时将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 分开计算：坏样本必须被拦截，是否有后续样本证明批量继续是独立字段。随后补齐输入哈希错位与结果大小上限样例。最新全量 QA=`216 passed, 4 warnings`，Web E2 为 8/8；Web Card 继续 `candidate`，不改变正式主流程或 E3 准入规则。

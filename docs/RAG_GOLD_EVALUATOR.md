@@ -112,6 +112,24 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 
 这组数仍只是**公开开发/挑战集回归**，不是泛化或产品发布结论。此次修复的是明确可复现的桥接缺口：Provider scope、内容安全/同人/不支持能力的组合、批量/多脸约束、生命周期/索引 fixture、Policy direct/reference 关系与既有 P0-B/P0-C advisory 投影。它没有新增工具权限，也没有让 RAG 变成执行器。
 
+## 2026-09-02 公平评测过程监督合同
+
+前面的 Gold scorer 只能在“预测已经公平产生”的前提下计算质量。本轮新增独立过程监督考官，把评测分成两条轨道：自然语言→结构化 `RagQuery`/路由，以及结构化 `RagQuery`→真实知识召回/排序/证据关系。过程考官先于 Gold scorer 运行，避免把“题目没被编译”“投影预先写入证据”误判为检索质量。
+
+它逐题要求：无重复/缺失；无答案键、标注、照片、向量、密钥或网络/LLM/Provider 调用；原题只在内存使用且只保存哈希；无论理解成功与否都创建合法查询；每题存在 query contract、检索步骤、route 和 finalized Trace；Prediction 的 route/evidence 来源必须明确为 `retrieval_result`，并且引用属于实际召回/采用列表。出现 `projection`、`route_override`、`evidence_aliases`、Gold 字段或原始题干，过程门直接 FAIL。
+
+过程报告的 `process_gate=PASS` 不是质量通过，只代表当前新考试完整且没有泄露/注入。`quality_scoring_gate` 只有在新运行过程门通过后才可进入单独的 Gold join；旧快照过程 FAIL 时不可补写为 PASS，其 `historical_quality_scoring_gate` 继续锁定。新版重放使用已有 V3/V4 answerless 输入，不新建题目、不读答案、不修改历史盲测；它可以作为验证 Gold 的输入，但不是新的泛化 Holdout。
+
+运行：
+
+```bash
+uv run python scripts/run_rag_fair_process_audit.py
+```
+
+产物为 `reports/rag_fair_process_audit_v1.json/.html`，并通过 page 5 的只读看板展示；另封存 `reports/rag_fair_v3_answerless_*_v1.json` 与 `reports/rag_fair_v4_answerless_*_v1.json` 脱敏运行包，后续可按哈希连接 Gold。V3 36/36、V4 48/48 的新版过程重放可完整留下检索 Trace；旧 V4 正式快照仍因缺阶段和投影注入而保持历史 FAIL，不能解锁其旧质量分数。
+
+过程监督代码加入运行包封存后，当前全量工程回归为 `196 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 和公平过程脚本均通过。4 条 warning 为既有 Pillow 弃用提示；该 QA 只证明评测过程可复现，不代表 RAG 质量 Gate 通过。
+
 ## 2026-08-30 私有隐藏集的实际聚合结果
 
 产品负责人已将 20 条无答案 holdout prediction 与项目工作区外、仅所有者可访问的私有 Markdown 答案键在本机内存中比对。该命令没有调用 LLM、Provider、网络、图片或人脸向量；生成的 [聚合 JSON](../reports/rag_gold_v2_holdout_private_aggregate.json) 与 [可视化汇总](../reports/rag_gold_v2_holdout_private_aggregate.html) 不含题目、case ID、Gold、原始文本、照片或私有路径。
@@ -211,3 +229,23 @@ V2 的分数是开发集工程证据，不是正式 Gate；annotations 尚待产
 产品负责人已明确把 V3 的后续用途改为 validation，因此 evaluator 新增独立的 `load_validation_cases` 边界和 `rag_v3_validation_diagnostics` 报告。原始 Holdout-A answerless 运行不变、不重跑；本轮只在派生验证副本中读取已审核题目与 Gold，输出 H01–H36 的逐题结论、失败模式、查询投影、检索步骤和完整安全 Trace。
 
 G0→G5 的最终保守候选将 validation Route 从 30.56% 提升至 100%、Evidence relation 从 23.61% 提升至 97.22%、Recall@5 从 59.72% 提升至 100%；G2 的 100% 因公开回归退化而拒绝，G3 保住公开 baseline，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`。本轮是 owner-authorized validation diagnosis，不是新的正式 Holdout，不改变 RAG `execution_authorized=false`；推广前必须新建 V4。
+## 2026-09-02｜V4 Holdout 评测回执
+
+V4 运行器在答案键隔离状态下完成一次 48 题 baseline：`predictions=48`、`missing_predictions=0`、`hidden_answer_key_read=false`、`annotations_read=false`、`llm_called=false`、`network_called=false`、`external_provider_called=false`、`photo_or_face_vector_read=false`。预测和 Trace 已在工作区外封存；私有评分只输出聚合结果。
+
+正式 blind aggregate：Route=12.50%、Evidence exact=35.42%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%、hard-safety=0/48（PASS）、project quality Gate=FAIL。fixed Precision@3=28.47%，effective/returned Precision 另列用于解释 Gold 稀疏。
+
+快照封存后，产品负责人授权生成 V4 validation 诊断。诊断器确认 `blind_snapshot_match=true`，候选 G2–G5 的语义指标达到 100%，但 `active_baseline_changed=false`、`proposal_only=true`，不能将 validation 成绩写成新的 Holdout 泛化成绩。详细逐题 Trace 在 `reports/rag_v4_validation_diagnostics_v1.json/.html`，题集和边界在 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+评测结论：安全硬门通过，质量项目门未通过；固定门槛和答案隔离规则保持不变，下一次 promotion 需要未参与诊断的新 Holdout。
+
+本轮工程交叉校验：全量 pytest=`189 passed, 4 warnings`，V4 专项=`8 passed`，Ruff、format、compileall、`git diff --check` 和 diagnostics runner 均通过；该结果只证明评测链可复核，不改变 V4 project Gate=`FAIL`。
+
+## 2026-09-02｜Gold 连接前的公平过程门（当前）
+
+上述 189 条属于历史快照；当前全量工程回归为 `196 passed, 4 warnings`。在连接任何答案键之前，
+独立过程监督考官已经对新版无答案运行完成检查：V3 `36/36`、V4 `48/48` 有完整检索 Trace，
+`hidden_answer_key_read=false`、`annotations_read=false`、`quality_score_joined=false`，且没有网络、
+LLM、照片、向量或 Provider 副作用。新运行的质量状态为 `READY_AFTER_SEPARATE_GOLD_JOIN`，旧 V4
+历史快照为 `LOCKED_HISTORICAL_PROCESS_AUDIT`。后续评分只能按题目哈希连接这四份脱敏运行包；不得
+把旧快照改写成通过，也不得把过程门 PASS 当作 RAG 质量或产品化通过。

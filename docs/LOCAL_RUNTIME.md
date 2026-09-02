@@ -208,3 +208,18 @@ page 5「RAG 优化看板」现在同时提供 V4 盲测聚合和 owner-unlocked
 本轮新增的 `ToolRegistry`/`MetaAgentToolSelector` 可在本地离线运行：读取 Web candidate Card 和 BeautifyPic baseline，输出结构化 `ToolProposal` 与脱敏 Trace；不加载浏览器 SDK、不读图片、不读 Secret、不发网络、不创建 `ProviderRun`。本地 smoke 的 `network_called=false`、`image_bytes_read=false`、`provider_run_created=false` 已通过测试。Web 的真实浏览器处理仍只在 Cloud page 6 产生过一次成功回执，Card 继续 `candidate`；主流程结果交接 A/B/C 尚未冻结。
 
 本轮新增代码后的最终 QA：全量 `.venv/bin/pytest -q`=`205 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 和相关离线 smoke 均通过。文档中的 196/189/178 条是历史快照，不覆盖本节当前回执。
+
+## 2026-09-02｜Web B handoff 与共同复测（当前）
+
+Web 现在有一条本地可回放的纵向链路：`MetaAgentToolSelector` 提议 Web candidate → `diagnose_and_plan(provider_id="tencent_effect_web")` 生成 Web `EditPlan` → 浏览器回传 result/Receipt → `accept_effect_web_browser_result()` 校验并生成共同 `ProviderRun` → `verify_result()` 生成 `VerificationResult`。proposal 仍 `execution_authorized=false`；只有显式 candidate trial 才能接收 Web 结果。
+
+可运行命令：
+
+```bash
+uv run python scripts/smoke_effect_web_b_handoff.py
+uv run python scripts/run_effect_web_regression.py
+```
+
+当前 E1 smoke 为 fixture-only、`network_called=false`、`result_bytes_persisted=false`；E2 报告为 8/8，通过成功/失败/请求/输入/输出哈希错位/非法 MIME/尺寸/大小和批量失败隔离。两者不证明真实视觉改善或 Provider promotion；结果图不写入数据库、Trace、RAG 或 Git。
+
+新增 Meta-Agent→Web EditPlan 绑定测试、输入哈希/大小异常样例，并修正“安全拦截”和“批量继续”分开统计后，最新全量 `.venv/bin/pytest -q`=`216 passed, 4 warnings`；其余静态检查和离线 smoke 均通过。此前的 205/196/189 等数字均为历史快照。

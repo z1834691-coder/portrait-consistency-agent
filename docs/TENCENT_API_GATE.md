@@ -179,3 +179,13 @@ TENCENT_EFFECT_LICENSE_TOKEN
 ```
 
 补齐后只运行官方示例图一次；回执只记录脱敏字段。即使成功，也还需补齐图片出站/地区/留存、成本、Gold 回归和产品负责人 promotion，不能因 License 正常或离线 smoke 通过而放行主流程。
+
+## 2026-09-02 最新回执覆盖
+
+上述“尚未产生 Browser Receipt”是历史状态。Canvas 修复部署后，page 6 已取得一次真实成功回执：`web_receipt_effect_web_4d58ea15a0794370`（`status=succeeded`、2601ms、输出哈希已保存）。这只闭合了 SDK 运行证据；Card 仍 `candidate`，其余准入检查仍按本文件执行。
+
+## 2026-09-02｜Web B / E1 / E2 当前准入覆盖
+
+产品负责人已冻结 B：Web 结果一次性回 Python 当前会话内存，再进入共同 `VerificationResult`。`EditPlan`/`ProviderRun` 采用独立 Web 参数模型；Adapter 校验 request_ref、输入/输出 hash、尺寸、PNG/JPEG/WebP MIME 和 8MB 编码/6MB 解码上限。结果 bytes 和 data URL 不进入数据库或 Trace；Meta-Agent/RAG 仍不能授权候选工具。
+
+E1 的 handoff→ProviderRun→VerificationResult 与 E2 的 8/8 合同回归均已实现，但都不是视觉效果或供应商准入证据。Web Card 继续 `candidate`；必须在真实多样本/批量视觉回归、供应商图片出站/地区/留存/费用和产品负责人批准齐全后，才可人工更新 Card。正式主流程仍以 BeautifyPic 为唯一 verified 图片编辑 Provider。

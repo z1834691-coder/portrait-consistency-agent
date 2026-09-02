@@ -471,3 +471,35 @@ Web 结果捕获规则：SDK 初始化后不得再次调整其输出 Canvas 的�
 Meta-Agent 的当前 Prompt/合同只允许它在 Registry 的工具白名单内提出结构化 `ToolProposal`。上下文可以包含请求功能、当前阶段、已审核 RAG evidence refs、Provider Card 版本和安全错误码；禁止包含图片、脸向量、License Token、完整用户原话或隐藏思维链。输出可以说明“Web candidate 相关、需要哪些准入检查、是否有 BeautifyPic baseline fallback”，但不得生成腾讯绝对参数、签名、RequestId、ProviderRun 或 `execution_authorized=true`。
 
 当前真实演示路径为：`Provider Card → Tool Registry → Meta-Agent proposal → 状态机/Policy →（若获准）Adapter`。Registry/Meta-Agent 本身无网络和图片副作用；Web Card 仍 `candidate`，因此 proposal 只能是 `candidate_proposal_only` 或 fail-closed，不能替代真实 page 6 Smoke，也不能把一次浏览器回执解释为效果通过。结果图要接入 8A/8B/8C，必须先完成独立的 A/B/C 结果交接决策。
+
+## 2026-09-02｜Web Card 接入后的 Prompt 覆盖（B/E1/E2/E3）
+
+<span style="color:#C00000"><strong>当前决策。</strong>产品负责人已经选择 B：Web 结果可以通过一次性、受限、哈希绑定的 handoff 进入 Python 当前会话内存，再交给共同 8C `VerificationResult`。因此此前“结果只能停留浏览器、A/B/C 尚未冻结”的文字只代表历史状态；新的 Prompt 必须执行下述边界。</span>
+
+```text
+IntentFrame
+→ RAG（工具知识建议，不授权）
+→ Meta-Agent ToolProposal（Web candidate / Beautify baseline）
+→ 状态机 Policy（scope、同意、Card、预算、轮次、幂等）
+→ Web EditPlan（产品 0—100，SDK 0—1）
+→ 浏览器 SDK
+→ request_ref + hash + 尺寸 + MIME + 大小验证
+→ Web ProviderRun（事实回执）
+→ 共同 VerificationResult（只报告证据支持的趋势）
+```
+
+Prompt 必须要求：
+
+- Web Card 仍是 `candidate`，只能在显式候选试验入口使用；不得让 LLM/RAG 写 `execution_authorized=true` 或自动 promotion。
+- LLM 不看照片、不看脸向量、不生成绝对参数、签名、RequestId、ProviderRun 或“已达标”结论；参数和权限由确定性 Adapter/Policy 产生。
+- `EffectWebBrowserResult` 的 data URL 只作为临时输入，服务端验证后立即转 bytes；不得进入 SQLite、JSONL、Trace、RAG、Git、错误文本或长期缓存。
+- SDK 成功只能说明返回了结果。`VerificationResult` 必须重新观察结果图，按既有无总分/无概率规则决定改善、无变化、变差或无法判断。
+- E2 的多样本、异常和批量隔离报告只证明合同与故障隔离可靠；未具备供应商区域/留存/费用和负责人审核前，BeautifyPic 是唯一正式主流程 Provider。
+
+Meta-Agent 的“智能”定义为在已审核、已登记、权限受控的工具中提出最合适路线并解释证据；不是自由搜索和自由调用任意 API。RAG miss/conflict、结果错位或验证证据不足时必须 fail-closed 或给 baseline/人工复核，不得补写事实。
+
+本轮全量工程回归为 `214 passed, 4 warnings`；新增 E1 handoff smoke 为 fixture-only，`network_called=false`、结果不落盘；E2 6 个案例全部通过。该回执不构成 Web Card promotion。
+
+## 2026-09-02｜Web B/E1/E2 Prompt 执行回执覆盖
+
+当前 Prompt 的可回放链路已增加 Meta-Agent proposal→Web EditPlan 绑定断言，并明确 E2 的 hard-safety 与批量失败隔离是独立验收项；回归样例已补齐输入哈希错位和结果大小上限。最新全量 QA=`216 passed, 4 warnings`；E1/E2 仍只证明合同、Trace 和失败隔离，不把 candidate 变成可执行 Provider。

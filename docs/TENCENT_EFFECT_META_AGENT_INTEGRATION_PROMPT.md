@@ -141,3 +141,63 @@ Meta-Agent 只能输出结构化 `ToolProposal`：`tool_id`、`reason_codes`、`
 * **C：Web 只做展示/下载。** 主 Agent 继续调用已验证的 BeautifyPic；最安全、最快，但不能称 Web 已完成主流程接入。
 
 在该 Gate 冻结前，本 Prompt 要求继续完成 Card/Registry/Proposal/Trace 和离线回归，但禁止把 candidate 工具自动放入真实图片主链。
+
+## 10. 本轮新执行 Prompt：Web Card → EditPlan → Meta-Agent → E1/E2（2026-09-02）
+
+你是本项目的高级 Agent/图像工具集成工程师。请在不破坏已验证的
+BeautifyPic 主链、RAG proposal-only 边界和现有隐私承诺的前提下，把
+`tencent_effect_web` 作为一个**可被统一计划合同表达、可被 Meta-Agent 提议、可被独立候选试验执行、可被共同复测器消费**的工具卡接入。不要因为一次浏览器成功就把 Card 自动升级为 `verified`。
+
+### 必须先读的真相源
+
+1. `docs/母版人像一致性Agent-执行版PRD.md`；
+2. `docs/PRODUCT_RULES.md`、`docs/CONTRACTS.md`、`docs/AGENT_PROMPTS.md`；
+3. `docs/TENCENT_EFFECT_WEB_ADAPTER.md`、本文件和探索树；
+4. 现有 Web Adapter、Provider Card、Tool Registry、Meta-Agent、8A/8B/8C、测试和真实回执。
+
+代码和真实回执优先于过时文字；历史记录不得被覆盖，只能追加当前状态修正。
+
+### 目标纵向链路
+
+```text
+用户自然语言/结构化 IntentFrame
+  → RAG 检索已审核工具能力（只提议，不授权）
+  → Meta-Agent 输出 ToolProposal（Web candidate 或 Beautify baseline）
+  → 状态机/Policy 校验 scope、同意、Card、预算、轮次、幂等
+  → EditPlan 用 provider 联合类型表达 Web 参数（产品 0—100，SDK 0—1）
+  → 浏览器 Web SDK 执行候选试验
+  → request_ref/input hash/receipt/result hash/尺寸/大小校验
+  → 只在当前会话内存取得结果 bytes
+  → 共同 VerificationResult/8C 复测
+  → E2 多样本、异常、批量隔离回归
+  → 所有非安全准入证据齐全后，才由产品负责人批准 E3 promotion
+```
+
+### 强制边界
+
+- Web Card 初始状态仍为 `candidate`；Registry 和 Meta-Agent 可以提出它，但不得自行授权；候选试验必须有明确的 `allow_candidate_trial` 入口。
+- `EditPlan` 必须同时承认 `tencent_beautify_pic` 与 `tencent_effect_web`，但两个 Provider 的参数模型不可混用；产品层强度为 0—100，Web Adapter 负责确定性换算到 0—1。
+- Browser Receipt 只记录脱敏事实；结果图只通过一次性受限 handoff 进入 Python 当前会话内存，必须通过请求代次、输入哈希、输出哈希、尺寸、MIME 和大小校验；data URL/bytes 不得进入 SQLite、JSONL、Trace、RAG、Git 或错误信息。
+- 8C 不能把“SDK 返回结果”当作“母版一致”。只能由结构化 `VerificationResult`、真实结果观察和版本化策略决定改善/无变化/变差/无法判断。
+- RAG/LLM 只能提出工具、复测策略和解释；不得生成视觉事实、参数、权限、回执或成功结论。状态机、安全策略和 Adapter 是最终放行点。
+- 候选工具未具备多样本效果、异常拒绝、批量失败隔离、供应商区域/留存/费用和产品负责人批准证据时，主流程继续使用已验证 BeautifyPic baseline。
+
+### 分阶段执行顺序（一次只完成一个可验收单元）
+
+**B1：合同桥。** 增加 Web 参数联合类型、Provider/operation/card/version 绑定和合同校验；补充 Web EditPlan 单测。通过标准：错误 Provider/参数/范围/权限会 fail-closed，历史 BeautifyPic 测试不回归。
+
+**B2：结果 handoff。** 浏览器端使用独立结果 Canvas，先发送临时结果 data URL，再发送脱敏 Receipt；服务端只解码到内存并立即交给共同复测器。通过标准：正常结果能形成 Web `ProviderRun`，哈希/请求错位、尺寸/MIME/大小异常和失败回执均安全拒绝，Trace 不含图片。
+
+**B3：Meta-Agent 纵向回放。** 让 Registry → RAG advisory → Meta-Agent → candidate proposal/fallback Trace 可回放；不得创建 ProviderRun 或绕过准入。
+
+**E1：共同 VerificationResult。** 使用与 BeautifyPic 相同的结果观察/VerificationResult；Web 结果只作为输入，不能改变“无总分、无概率、证据不足不宣称成功”的产品规则。至少有一条从 handoff 到复测的完整脱敏 Trace。
+
+**E2：多样本与异常回归。** 建立成功、Provider 失败、请求错位、输入/输出哈希错位、非法 MIME、尺寸不一致、超限和批量中一张失败等案例。每张样本独立结论；坏样本不能阻塞其他样本；报告不持久化图片。E2 通过只说明合同和隔离机制可靠，不说明视觉效果已经泛化。
+
+当前执行回执：离线套件为 8 个样例，覆盖成功、供应商失败、请求/输入/输出哈希错位、非法 MIME、尺寸不一致和结果大小超限；一个拒绝样例之后紧跟有效失败回执，用于真实验证批量继续。8/8 通过，结果 payload 不落盘，Web Card 仍为 candidate。
+
+**E3：人工准入 Gate。** 只有静态图真实回执、多样本/批量回归、精确域名、License、Provider 权限、图片出站/地区/留存、费用/预算、Adapter readiness 和负责人批准同时具备，才允许把 Card 从 `candidate` 改为 `verified`。代码不得自动 promotion。
+
+### 输出和回滚要求
+
+每个单元必须交付中文解释、输入/输出/规则表、产品决策点、3—5 个案例和一条完整 Trace；同时更新执行版 PRD 的“产品设计”、专项文档、合同、Prompt、`DECISION_LOG.md`、`DEVELOPMENT_PROGRESS.md`、README、代码和测试。若真实 SDK 或供应商证据失败，只追加失败回执并恢复到 Beautify baseline，不删除历史证据、不放宽校验、不重复无意义调用。

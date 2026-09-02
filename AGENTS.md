@@ -145,9 +145,9 @@ is 150 passed with 4 existing Pillow deprecation warnings; the RAG project quali
 still FAIL. If a future task changes RAG code or policy, rerun the lifecycle audit and the
 full consistency checklist before describing the RAG work as closed.
 
-## 2026-08-30 visual design snapshot
+## 2026-08-30 visual design snapshot (historical; superseded below)
 
-The visual interaction structure is frozen but is not implemented in Streamlit: the
+The earlier visual interaction structure is retained only as history and is not implemented in Streamlit: the
 product will use a centre-stage alignment workspace, Reference Profile, and result
 history as three spaces. The selected visual baseline is the reference image's mist
 grey-purple field, cream/peach stage, and ink navigation hierarchy, without copying
@@ -156,21 +156,22 @@ low decoration density, and a prominent natural-language Agent input. The owner 
 frozen the color family to mist purple, powder pink/cream, ink black, and peach-red;
 do not add blue, green, or yellow. The new Occam-style page candidate uses only one
 current upload action and one natural-language input on the first screen, but remains
-unimplemented until owner approval. Any UI work must preserve real consent, errors,
+unimplemented until owner approval. This historical paragraph's palette restriction is superseded by the
+latest visual override below, which explicitly permits sparse acid-green state accents. Any UI work must preserve real consent, errors,
 tool states, results, feedback, evidence visibility, and the prohibition on exposing
 hidden chain-of-thought.
 
 ## 2026-09-02 visual design override
 
 The owner has superseded the earlier exploratory palette and frozen Tweakcn Party Rock
-raw Light/Dark tokens and PingFang SC as the formal UI font. Beige (`#F2F1E6`) is the
-largest area, purple (`#A855F7` / `#C084FC`) is the second-largest visual layer, black
-is structural (rail, text, dividers), and green/coral/other colors are sparse semantic
-accents only. The screenshot contributes only the beige-canvas/black-rail/purple-
-highlight area relationship; it is not a content or asset reference. The freeze is a
-design input, not a Streamlit implementation or a change to consent, tool, result,
-Trace, or privacy behavior. See `docs/PRODUCT_RULES.md` and section 29 of the
-execution PRD for the authoritative record.
+raw Light/Dark tokens and PingFang SC as the formal UI font. For the current candidate
+round, the solid black area is limited to the far-left navigation rail; the middle and
+right surfaces remain warm ivory, with purple/lilac soft frames and paths and sparse
+acid-green active nodes. The screenshot contributes only the ivory-canvas/black-rail/
+purple-highlight relationship; it is not a content or asset reference. The token/font
+freeze is a design input, not a Streamlit implementation or a change to consent, tool,
+result, Trace, or privacy behavior. See `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`,
+`docs/PRODUCT_RULES.md` and section 29 of the execution PRD for the authoritative record.
 
 ## 2026-09-01 current truth override
 
@@ -302,16 +303,21 @@ proposal-only.
 
 ## 2026-09-02 latest visual override
 
-The owner’s latest visual feedback supersedes the earlier area hierarchy for active UI work:
-Party Rock raw token values and PingFang SC remain unchanged, but purple and ivory are now
-co-dominant with purple slightly stronger in the key visual blocks. Use dark ink for structure
-and purple-flow fields; keep coral/dark-red and any other derived colors sparse. The active
-visual package is exactly two keyframes—E01 entry and E02 Agent conversation—rather than the
-historical four-state set. The four-state files remain recoverable under
-`design/keyframes/party-rock-pingfang/archive/v1-four-state/` and are not implementation
-references. This is a visual/documentation change only; it does not alter contracts, consent,
-Provider permissions, persistence, Trace, RAG, or the claim that Streamlit UI migration is
-unfinished.
+The owner’s latest visual feedback supersedes the earlier purple-black dark-flow direction for
+active UI work. Party Rock raw token values and PingFang SC remain unchanged, but every current
+candidate uses a solid black far-left navigation rail only; the middle and right surfaces stay
+warm ivory. Purple/lilac appear as soft rounded frames, labels and provenance/alignment paths;
+fluorescent acid green is sparse and reserved for active nodes or motion; dark ink supplies
+type, rules and flexible outlines. Do not use a purple-black shadow background, dark center,
+large fluorescent-green field, or a dense dashboard. The active visual package is three
+candidates (A Archive Ribbon, B Soft Index, C Open Provenance), each exactly two keyframes—E01
+entry and E02 Agent conversation. The four-state files and previous single E01/E02 package
+remain recoverable under `design/keyframes/party-rock-pingfang/` and
+`archive/v1-four-state/`; they are historical references until the owner selects a direction.
+This is a visual/documentation change only; it does not alter contracts, consent, Provider
+permissions, persistence, Trace, RAG, or the claim that Streamlit UI migration is unfinished.
+See `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md` and
+`design/keyframes/party-rock-pingfang/candidates/candidate-review.html`.
 
 ## 2026-09-02 latest Tencent Web Meta-Agent integration override
 
@@ -325,3 +331,24 @@ until the product owner freezes the result handoff (browser-side verification,
 bounded Python handoff, or display/download only) and completes the remaining
 privacy, region, cost, regression and admission evidence. Do not change the
 BeautifyPic-only EditPlan contract silently.
+
+## 2026-09-02 current Web integration override
+
+The owner has frozen result handoff B. `EditPlan` and `ProviderRun` now support
+the Web Card through a separate `TencentEffectWebParams` contract; the browser
+returns a bounded, one-time result data URL and Python validates request/hash,
+dimensions, MIME and size before giving in-memory bytes to the common
+`VerificationResult`. The Web Card is still `candidate`: only an explicit
+candidate-trial path may receive it, and the proposal layer remains
+`execution_authorized=false`. E1 is fixture-verified and E2 is fixture-verified
+with eight isolated success/failure/tamper cases (including input-hash and size
+limits); E3 still requires live diverse
+effect evidence, vendor privacy/region/retention/cost evidence and owner
+approval. The latest implementation, rather than the historical paragraph
+above, is the current truth.
+
+The current full-suite receipt after the binding test and E2 metric correction
+is `215 passed, 4 warnings`; the four warnings are existing Pillow deprecation
+warnings. Ruff, compileall and diff checks also pass. This remains engineering
+evidence only: Web Card is `candidate`, E3 is not approved, and RAG remains
+proposal-only.

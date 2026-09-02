@@ -22,6 +22,7 @@ import hashlib
 import json
 import time
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Protocol
@@ -160,10 +161,22 @@ def user_confirmation_copy(plan: EditPlan, *, expires_at: datetime) -> str:
 
     features = "、".join(change.feature.value for change in plan.executable_changes)
     params = plan.provider_absolute_params
+    if plan.provider == "tencent_effect_web":
+        provider_name = "腾讯特效 Web SDK"
+        parameter_text = (
+            f"lift {params.lift:.2f}、shave {params.shave:.2f}、eye {params.eye:.2f}、"
+            f"chin {params.chin:.2f}、whiten {params.whiten:.2f}、"
+            f"dermabrasion {params.dermabrasion:.2f}"
+        )
+    else:
+        provider_name = "腾讯云 BeautifyPic"
+        parameter_text = (
+            f"瘦脸 {params.face_lifting}、大眼 {params.eye_enlarging}、"
+            f"美白 {params.whitening}、磨皮 {params.smoothing}"
+        )
     return (
-        "我确认：仅将当前这张目标照片发送给腾讯云 BeautifyPic，"
-        f"按本方案的 {features} 执行（瘦脸 {params.face_lifting}、"
-        f"大眼 {params.eye_enlarging}、美白 {params.whitening}、磨皮 {params.smoothing}）。"
+        f"我确认：仅将当前这张目标照片发送给{provider_name}，"
+        f"按本方案的 {features} 执行（{parameter_text}）。"
         "若修后复测显示仍可在同一受限计划族内继续，上一轮腾讯返回的结果图可能作为下一轮输入；"
         "在本次确认的照片、部位、用途、预算和轮次范围内，后续轮次可由 Agent 自动执行，"
         "不需要逐轮再次点击；若范围或授权发生变化，系统会停止并要求重新确认。"
@@ -208,8 +221,16 @@ def confirm_execution(
         allowed_features=executable_features,
         max_provider_rounds=max_provider_rounds,
         subject_match_uncertain_acknowledged=subject_match_uncertain_acknowledged,
-        whitening_allowed=proposed_plan.provider_absolute_params.whitening > 0,
-        smoothing_allowed=proposed_plan.provider_absolute_params.smoothing > 0,
+        whitening_allowed=(
+            proposed_plan.provider_absolute_params.whitening > 0
+            if proposed_plan.provider == "tencent_beautify_pic"
+            else proposed_plan.provider_absolute_params.whiten > 0
+        ),
+        smoothing_allowed=(
+            proposed_plan.provider_absolute_params.smoothing > 0
+            if proposed_plan.provider == "tencent_beautify_pic"
+            else proposed_plan.provider_absolute_params.dermabrasion > 0
+        ),
         budget_limit_cny=proposed_plan.safety_policy.max_cost_cny,
         safety_policy_id=proposed_plan.safety_policy.policy_id,
         created_at=now,
@@ -620,6 +641,265 @@ def execute_confirmed_plan(
             if not is_followup
             else "腾讯已返回计划族下一轮的结果图，且父子回执关系已保存。"
             "它仍需经过 8C 复测，系统不会把它直接称为已达到母版一致。"
+        ),
+    )
+
+
+def accept_effect_web_browser_result(
+    *,
+    confirmed_plan: EditPlan,
+    execution_intent: IntentFrame,
+    target_image_bytes: bytes,
+    target_photo_id: str,
+    profile: ReferenceProfile,
+    quality_result: PhotoQualityResult,
+    prepared_request: Mapping[str, object],
+    browser_receipt: Mapping[str, object],
+    browser_result: Mapping[str, object] | None,
+    store: LocalTraceStore | None = None,
+    now: datetime | None = None,
+    policy: ExecutionPolicy | None = None,
+    allow_candidate_trial: bool = False,
+) -> ExecutionResult:
+    """Accept one Web SDK browser result through the bounded B handoff.
+
+    The browser performs the image edit.  This function is the server-side
+    half of the contract: it validates the prepared request and receipt,
+    decodes the result once, creates the common ``ProviderRun`` and returns
+    bytes only to the current caller for 8C.  The Web Card may be used here
+    only for an explicit candidate trial; normal execution requires a later
+    ``candidate -> verified`` admission decision.
+    """
+
+    from portrait_consistency_agent.services.tencent_effect_web import (
+        EffectWebRequest,
+        TencentEffectWebAdapter,
+        TencentEffectWebConfigurationError,
+    )
+
+    policy = policy or build_v0_execution_policy()
+    now = now or utc_now()
+    trace: list[dict[str, object]] = []
+    if confirmed_plan.provider != "tencent_effect_web":
+        raise ValueError("Web browser results require a tencent_effect_web EditPlan")
+
+    try:
+        if not allow_candidate_trial:
+            raise ExecutionBlockedError(
+                ("web_card_not_promoted",),
+                "腾讯特效 Web 工具尚未完成正式准入；当前只允许独立候选试验。",
+            )
+        _ensure_execution_allowed(
+            confirmed_plan=confirmed_plan,
+            execution_intent=execution_intent,
+            target_image_bytes=target_image_bytes,
+            target_photo_id=target_photo_id,
+            profile=profile,
+            quality_result=quality_result,
+            now=now,
+        )
+        request = EffectWebRequest.model_validate(prepared_request)
+        receipt = TencentEffectWebAdapter.validate_browser_receipt(
+            browser_receipt,
+            request=request,
+        )
+        input_sha256 = hashlib.sha256(target_image_bytes).hexdigest()
+        if request.input_artifact_sha256 != input_sha256:
+            raise ValueError("prepared Web request input hash does not match target bytes")
+        idempotency_key = build_idempotency_key(confirmed_plan)
+        if store is not None and store.has_provider_run_idempotency_key(idempotency_key):
+            raise ExecutionBlockedError(
+                ("duplicate_execution_prevented",),
+                "这份 Web 计划已经入账，系统不会重复接收或保存结果。",
+            )
+    except ExecutionBlockedError as exc:
+        trace.append(
+            {
+                "step": "web_result_handoff_authorization",
+                "status": "blocked",
+                "reason_codes": list(exc.reason_codes),
+                "execution_authorized": False,
+                "candidate_trial": allow_candidate_trial,
+            }
+        )
+        return ExecutionResult(
+            route="blocked",
+            final_plan=confirmed_plan,
+            provider_run=None,
+            result_image_bytes=None,
+            trace=tuple(trace),
+            user_message=str(exc),
+        )
+    except (TypeError, ValueError, TencentEffectWebConfigurationError) as exc:
+        final_plan = _transition_plan(
+            confirmed_plan,
+            status=PlanStatus.SUPERSEDED,
+            revision=confirmed_plan.revision + 1,
+            superseded_reason="browser_result_handoff_invalid",
+        )
+        trace.append(
+            {
+                "step": "web_result_handoff_validation",
+                "status": "blocked",
+                "reason_codes": ["browser_result_handoff_invalid"],
+                "error_type": type(exc).__name__,
+                "execution_authorized": False,
+            }
+        )
+        if store is not None:
+            store.save_edit_plan(final_plan)
+            store.record_event(
+                confirmed_plan.session_id,
+                "web_result_handoff_blocked",
+                {"plan_id": confirmed_plan.plan_id, "trace": trace},
+            )
+        return ExecutionResult(
+            route="blocked",
+            final_plan=final_plan,
+            provider_run=None,
+            result_image_bytes=None,
+            trace=tuple(trace),
+            user_message="浏览器结果未通过请求、回执或权限校验；系统没有保存结果，也没有进入复测。",
+        )
+
+    if receipt.status == "failed":
+        run = TencentEffectWebAdapter.build_provider_run(
+            request=request,
+            receipt=receipt,
+            session_id=confirmed_plan.session_id,
+            plan_id=confirmed_plan.plan_id,
+            photo_id=confirmed_plan.photo_id,
+            confirmation_ref=confirmed_plan.confirmation_ref or "missing_confirmation",
+            confirmation_scope_hash=confirmed_plan.confirmation_scope_hash or "0" * 64,
+            attempt_number=1,
+            plan_revision=confirmed_plan.revision,
+        )
+        final_plan = _transition_plan(
+            confirmed_plan,
+            status=PlanStatus.SUPERSEDED,
+            revision=confirmed_plan.revision + 1,
+            superseded_reason="web_provider_attempt_failed",
+        )
+        trace.append(
+            {
+                "step": "web_browser_execute",
+                "status": "failed",
+                "provider_request_id": receipt.receipt_id,
+                "error_code": receipt.error_code,
+                "execution_mode": "candidate_trial",
+                "result_handoff": "none",
+            }
+        )
+        if store is not None:
+            store.save_provider_run(run)
+            store.save_edit_plan(final_plan)
+            store.record_event(
+                confirmed_plan.session_id,
+                "execution_trace",
+                {"plan_id": confirmed_plan.plan_id, "route": "failed", "trace": trace},
+            )
+        return ExecutionResult(
+            route="failed",
+            final_plan=final_plan,
+            provider_run=run,
+            result_image_bytes=None,
+            trace=tuple(trace),
+            user_message="腾讯特效 Web 返回失败回执；系统没有重试，也没有进入复测。",
+        )
+
+    try:
+        result_bytes = TencentEffectWebAdapter.validate_browser_result(
+            browser_result or {},
+            request=request,
+            receipt=receipt,
+        )
+    except (TypeError, ValueError, TencentEffectWebConfigurationError) as exc:
+        final_plan = _transition_plan(
+            confirmed_plan,
+            status=PlanStatus.SUPERSEDED,
+            revision=confirmed_plan.revision + 1,
+            superseded_reason="browser_result_handoff_invalid",
+        )
+        trace.append(
+            {
+                "step": "web_result_handoff_validation",
+                "status": "blocked",
+                "reason_codes": ["browser_result_handoff_invalid"],
+                "error_type": type(exc).__name__,
+                "execution_authorized": False,
+            }
+        )
+        if store is not None:
+            store.save_edit_plan(final_plan)
+            store.record_event(
+                confirmed_plan.session_id,
+                "web_result_handoff_blocked",
+                {"plan_id": confirmed_plan.plan_id, "trace": trace},
+            )
+        return ExecutionResult(
+            route="blocked",
+            final_plan=final_plan,
+            provider_run=None,
+            result_image_bytes=None,
+            trace=tuple(trace),
+            user_message="浏览器结果图没有通过哈希、尺寸或大小校验；系统没有进入复测。",
+        )
+
+    run = TencentEffectWebAdapter.build_provider_run(
+        request=request,
+        receipt=receipt,
+        session_id=confirmed_plan.session_id,
+        plan_id=confirmed_plan.plan_id,
+        photo_id=confirmed_plan.photo_id,
+        confirmation_ref=confirmed_plan.confirmation_ref or "missing_confirmation",
+        confirmation_scope_hash=confirmed_plan.confirmation_scope_hash or "0" * 64,
+        attempt_number=1,
+        plan_revision=confirmed_plan.revision,
+    )
+    final_plan = _transition_plan(
+        confirmed_plan,
+        status=PlanStatus.EXECUTED,
+        revision=confirmed_plan.revision + 1,
+    )
+    trace.extend(
+        [
+            {
+                "step": "web_result_handoff_validation",
+                "status": "passed",
+                "request_ref": request.request_ref,
+                "input_sha256": request.input_artifact_sha256,
+                "output_sha256": receipt.output_sha256,
+                "decoded_bytes_in_memory": len(result_bytes),
+                "result_persisted": False,
+            },
+            {
+                "step": "web_browser_execute",
+                "status": "succeeded",
+                "provider_request_id": receipt.receipt_id,
+                "plan_revision": confirmed_plan.revision,
+                "execution_mode": "candidate_trial",
+                "result_handoff": "python_memory_only",
+                "next_step": "verification",
+            },
+        ]
+    )
+    if store is not None:
+        store.save_provider_run(run)
+        store.save_edit_plan(final_plan)
+        store.record_event(
+            confirmed_plan.session_id,
+            "execution_trace",
+            {"plan_id": confirmed_plan.plan_id, "route": "succeeded", "trace": trace},
+        )
+    return ExecutionResult(
+        route="succeeded",
+        final_plan=final_plan,
+        provider_run=run,
+        result_image_bytes=result_bytes,
+        trace=tuple(trace),
+        user_message=(
+            "腾讯特效 Web 结果图已通过一次性回传校验，并只在当前会话内存交给复测器；"
+            "它仍是 candidate 试验，不代表 Provider 已正式准入。"
         ),
     )
 

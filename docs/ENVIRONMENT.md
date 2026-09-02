@@ -130,3 +130,11 @@ RAG 内容正确或产品化通过；下一步只能把已封存的新运行包�
 ## 2026-09-02｜Tencent Web Meta-Agent 环境增量
 
 新增的 `ToolRegistry`/`MetaAgentToolSelector` 只读取仓库内 Provider Card，不加载照片、模型、密钥或浏览器资源；离线 smoke 可在没有腾讯 Secret、License 和网络的本地环境运行。page 6 的真实 Web SDK 仍在 Cloud 浏览器组件中运行，结果留存边界不变。该环境增量只验证工具编排提议和 Trace，不能替代 Web License、隐私/区域/成本或主流程准入证据。
+
+## 2026-09-02｜Web B handoff / E1 / E2 环境覆盖
+
+当前本地运行环境已能加载 Web Card、生成 Web `EditPlan`、验证 Browser Receipt/result handoff，并用共同 8C verifier 生成 `VerificationResult`。浏览器结果只在一次 Streamlit 请求的内存中短暂存在；报告、事件账本和数据库只保留 hash、尺寸、状态、回执和原因，不保留 data URL 或图像 bytes。E2 regression runner 不联网、不读照片、不加载 SDK，8/8 只证明合同、异常拦截和批量隔离。
+
+Cloud page 6 仍是独立候选试验入口；一次历史成功回执只证明浏览器 SDK 运行，不等于 E3 promotion。Web Card 仍 `candidate`，RAG/Meta-Agent 的 proposal 不授权，正式主流程继续走 BeautifyPic。若真实回放失败，保留脱敏 Browser Receipt 并回退 baseline，不放宽 handoff 校验。
+
+本轮集成测试后的最新环境回执：全量 `pytest`=`216 passed, 4 warnings`，Ruff/format/compileall/diff check 均通过；E1/E2 仍是 fixture/合同证据，不能替代真实视觉样本或供应商准入。

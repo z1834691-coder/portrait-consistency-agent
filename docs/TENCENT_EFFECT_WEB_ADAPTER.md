@@ -241,3 +241,23 @@ result_retention=browser_session_only
 `services/tool_registry.py` 将本 Card 投影为只读 `ToolDescriptor`，并与 verified 的 BeautifyPic baseline 同时登记；`services/meta_agent.py` 输出 `ToolProposal`，允许在 8A 计划前、8C 策略选择或失败路由时解释 Web 候选及其准入检查。对于当前 `review_status=candidate`，提议路由固定为 `candidate_proposal_only`，可以记录 `tencent_beautify_pic` fallback，但不得调用浏览器或创建 `ProviderRun`。
 
 这一层不改变本 Adapter 的输入/输出边界：图片和 License Key 仍只在浏览器组件使用，Python 只接收脱敏 Browser Receipt；Web Receipt 仍不含结果图 bytes。因此它完成的是“工具卡 → 受限 Meta-Agent → 阻断/兜底 Trace”的控制面接入，不是 Web 主流程 promotion。结果交接 A/B/C 决策冻结后，才可继续修改 `EditPlan`、执行器和 8C 复测。
+
+## 16. 2026-09-02｜B 方案：结果图一次性回传并进入共同复测（当前覆盖）
+
+上一段“Web Receipt 不含结果图 bytes、A/B/C 待决”是历史状态。本轮产品负责人已选择 B，适配器增加了受限 handoff：浏览器先通过独立结果 Canvas 生成结果 data URL，再发出临时 `result` 触发器和脱敏 `completed` Receipt；Python 只在当前请求中校验后取得 bytes。
+
+服务端校验顺序固定为：
+
+```text
+prepared request
+→ request_ref 一致
+→ 输入 hash 一致
+→ Receipt 状态/输出 hash/尺寸合法
+→ result data URL 的 MIME（PNG/JPEG/WebP）和 8MB 编码/6MB 解码上限
+→ data URL 解码后重新计算输出 hash
+→ 只将 bytes 交给共同 VerificationResult
+```
+
+`EffectWebBrowserResult` 不是 `ProviderRun` 的持久化字段。`accept_effect_web_browser_result()` 只有在显式候选试验开关、执行 scope、质量/同意/幂等检查都通过时，才把真实 Receipt 转成共同 `ProviderRun`；失败或错位一律 fail-closed。Trace 只留 request/receipt/hash/尺寸/状态和原因码，不留 data URL、图片、Token 或隐藏推理。
+
+E1 已由 `tests/test_execution.py` 和 `scripts/smoke_effect_web_b_handoff.py` 验证 handoff → Web ProviderRun → 共同 `verify_result`；E2 由 `scripts/run_effect_web_regression.py` 覆盖 8 个成功/失败/异常案例，报告见 `reports/tencent_effect_web_regression_v1.json/.html`。结果为 `8/8`，但均为 fixture/合同证据，不是视觉泛化或 Provider promotion。Web Card 继续 `candidate`。

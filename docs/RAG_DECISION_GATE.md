@@ -1096,3 +1096,9 @@ V3/V4、不得把旧快照改名或补写、不得把 Gold 标签注入被测 Pr
 RAG 检索到 Web Provider Card 后，只能把它作为工具能力证据交给 `ToolRegistry`/Meta-Agent。Registry 生成只读 `ToolDescriptor`，Meta-Agent 生成结构化 `ToolProposal`；提案可以指出 `tencent_effect_web` 与请求功能匹配、列出精确域名/License/出站/预算等检查，并提供已审核 BeautifyPic baseline fallback，但 `execution_authorized` 固定为 `false`。RAG 不得因“召回到工具卡”而新增权限、参数或 ProviderRun。
 
 P0-C 的 direct/reference/conflict 语义继续适用：直接证据可以辅助现有规划器，参考信息只用于解释，冲突或未知必须停止/人工复核/原样 baseline 降级。Meta-Agent 的集成 smoke 只验证“Card → Proposal → 阻断/兜底”而不触发网络和图片；完整 Web 主链仍等待结果交接 A/B/C Gate。该层让 RAG 具备工具路由价值，同时保留 fail-closed、可回放和可回滚边界。
+
+## 2026-09-02｜Web Card 接入后的 RAG 边界覆盖
+
+产品负责人已选择 B 结果交接后，RAG 的工具知识可以被 8A 计划前、8C 复测策略前、工具失败降级和新增 Provider 评估节点消费；但它的角色不变：只检索已审核 Card 并提出工具/策略建议。`tencent_effect_web` 被检索到不等于获得执行权限，Meta-Agent 的 `ToolProposal.execution_authorized` 固定为 `false`，状态机/Policy/Adapter 仍是唯一放行点。
+
+Web 的纵向链路现已由合同和 fixture 回放覆盖：RAG advisory → Meta-Agent Web proposal → Web `EditPlan` → candidate trial → Browser Receipt/result handoff → 共同 `VerificationResult`。E1/E2 通过只证明模块耦合、回执校验和批量失败隔离；RAG 质量 Gate、真实视觉泛化和 Web Card promotion 仍未通过，不能因为链路变长就改写 RAG 的 `proposal-only` 边界。

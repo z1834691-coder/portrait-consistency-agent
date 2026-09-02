@@ -66,3 +66,18 @@
 ### 当前解释（2026-09-02）
 
 “答案键不回流开发”仍适用于原始 answerless Holdout-A 运行和在线 RAG；本轮负责人明确授权的 validation 副本是一个不同用途的诊断材料，因此其 annotations 可被离线诊断器读取。两者不能混称：原始盲测结果仍是一次性历史证据，validation 结果只能指导失败分析和候选回归，不能作为新的泛化通过或 promotion 依据。任何 promotion 都需要与 V3 不重叠的新 V4 Holdout。
+## 2026-09-02｜V4 独立 Holdout 保管与诊断边界
+
+V3 已在负责人授权后改作 validation，因此本轮新建与 V3 不重叠的 V4。V4 runtime 在工作区只保存 48 个 `case_id + query`，私有答案键、盲测快照和负责人审阅材料位于工作区外受限目录。答案键不进入代码、测试、在线 RAG、Prompt 或公开报告。
+
+### V4 正式盲测回执
+
+盲测最多运行一次，实际 48/48 题完成；运行时未读取答案/annotations、照片/向量、网络、LLM 或 Provider。快照先封存，再由负责人授权的私有 scorer 输出聚合：Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%、MRR=81.25%、nDCG@5=63.22%、hard-safety=0/48 PASS、project Gate=FAIL。
+
+### V4 解冻验证
+
+负责人授权后，答案键只供离线诊断器读取，用于逐题 Trace、失败模式和候选查询编译；这份副本不再是独立 Holdout。`blind_snapshot_match=true` 保证诊断没有偷偷换题，`active_baseline_changed=false` 保证候选没有进入现役系统。G2–G5 语义诊断指标达到 100% 不能替代独立泛化证据，RAG 仍 proposal-only。
+
+### 复核入口
+
+完整说明见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)；盲测聚合与 validation 逐题报告分别见 `reports/rag_v4_holdout_blind_aggregate.json/.html` 和 `reports/rag_v4_validation_diagnostics_v1.json/.html`。若要 promotion，必须另建未参与诊断的新 Holdout，而不是重跑 V4。

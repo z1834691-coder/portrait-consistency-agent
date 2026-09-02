@@ -253,7 +253,10 @@ def main() -> None:
         return
 
     st.subheader("3. 在浏览器中执行一次")
-    st.caption("点击组件内按钮后，浏览器才会加载 SDK 并处理图片；Python 不会上传或保存输出图。")
+    st.caption(
+        "点击组件内按钮后，浏览器才会加载 SDK 并处理图片；本次 B 方案会把结果图一次性、"
+        "限大小地交给 Python 做复测，Python 只在当前 Streamlit 会话内存保留，不写数据库或 Trace。"
+    )
     result = render_tencent_effect_web(payload, key="effect_web_spike_component")
     receipt_value = _component_result_value(result, "completed")
     if not isinstance(receipt_value, dict):
@@ -262,6 +265,16 @@ def main() -> None:
 
     try:
         receipt = adapter.validate_browser_receipt(receipt_value, request=request)
+        result_value = _component_result_value(result, "result")
+        result_bytes: bytes | None = None
+        if receipt.status == "succeeded":
+            if not isinstance(result_value, dict):
+                raise ValueError("成功回执缺少一次性结果图交接")
+            result_bytes = adapter.validate_browser_result(
+                result_value,
+                request=request,
+                receipt=receipt,
+            )
         scope_hash = _scope_hash(
             input_hash=input_hash,
             request_ref=request.request_ref,
@@ -292,10 +305,21 @@ def main() -> None:
                     "anonymous_user_id": anonymous_user_id,
                     "meta_agent_proposal_id": meta_proposal.proposal_id,
                     "meta_agent_route": meta_proposal.route.value,
+                    "result_handoff": (
+                        "python_memory_only" if result_bytes is not None else "none"
+                    ),
                 },
             )
             st.session_state.effect_web_saved_receipt = run.run_id
+            if result_bytes is not None:
+                st.session_state.effect_web_result_bytes = result_bytes
         st.success("已收到浏览器回执，并保存了脱敏 ProviderRun。")
+        if result_bytes is not None:
+            st.image(result_bytes, caption="Web SDK 结果图（仅当前会话内存）", width=360)
+            st.caption(
+                "结果图已经通过 request_ref、输入哈希、输出哈希、尺寸和 6MB 大小校验；"
+                "页面关闭或会话过期后不会从数据库恢复。"
+            )
         st.json(
             {
                 "status": run.status.value,

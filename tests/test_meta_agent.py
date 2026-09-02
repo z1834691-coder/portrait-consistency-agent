@@ -4,17 +4,24 @@ from datetime import datetime, timezone
 
 import pytest
 
-from portrait_consistency_agent.core.contracts import EditableFeature
+from portrait_consistency_agent.core.contracts import EditableFeature, PhotoRole
 from portrait_consistency_agent.core.rag_contracts import (
     RagAdvisoryDecision,
     RagAdvisoryRoute,
     RagStage,
     RetrievalRoute,
 )
+from portrait_consistency_agent.services.edit_planner import diagnose_and_plan
 from portrait_consistency_agent.services.meta_agent import (
     MetaAgentRoute,
     MetaAgentStage,
     MetaAgentToolSelector,
+)
+from tests.test_edit_planner import (
+    make_intent,
+    make_observation,
+    make_profile,
+    make_target_quality,
 )
 
 
@@ -53,6 +60,38 @@ def test_explicit_web_route_is_proposal_only_with_baseline_fallback() -> None:
     assert all(
         "image" not in str(item).lower() or "bytes_read" in str(item) for item in proposal.trace
     )
+
+
+def test_web_proposal_binds_to_web_edit_plan_without_authorizing_execution() -> None:
+    proposal = MetaAgentToolSelector().propose(
+        stage=MetaAgentStage.PLAN_EDIT,
+        requested_features=[EditableFeature.FACE_LIFTING, EditableFeature.EYE_ENLARGING],
+        preferred_tool_id="tencent_effect_web",
+        proposal_id="tool_proposal_web_plan_binding_001",
+    )
+    assert proposal.selected_tool_id == "tencent_effect_web"
+    assert proposal.execution_authorized is False
+
+    profile = make_profile()
+    target = make_observation(
+        "photo_target",
+        PhotoRole.TARGET,
+        face_width=540,
+        eye_boxes=((0.28, 0.36, 0.11, 0.07), (0.60, 0.37, 0.11, 0.07)),
+    )
+    planned = diagnose_and_plan(
+        profile=profile,
+        target_observation=target,
+        quality_result=make_target_quality(target),
+        intent=make_intent(),
+        provider_id=proposal.selected_tool_id,
+        plan_id="plan_web_proposal_binding_001",
+    )
+
+    assert planned.plan is not None
+    assert planned.plan.provider == proposal.selected_tool_id
+    assert planned.plan.provider_card_id == proposal.selected_card_id
+    assert "candidate" in " ".join(planned.plan.risk_notes)
 
 
 def test_default_route_selects_reviewed_baseline_without_network() -> None:

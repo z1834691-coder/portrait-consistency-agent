@@ -29,7 +29,7 @@
 
 | 层 | 当前选择 | 边界 |
 |---|---|---|
-| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；设计已冻结为“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”三空间信息分组，桌面壳为全局导航、项目/母版上下文、中央对齐工作区、右侧 Agent 对话轻量四区；正式视觉为 Tweakcn Party Rock 原始 Light/Dark token 与 PingFang SC：紫色与米白共同主导、紫色略强，黑色为结构色、其他颜色少量点缀；活跃关键帧仅 E01 入口与 E02 Agent 对话；[前端与交互设计需求文档](前端与交互设计需求文档.md)与 [关键帧 Prompt](FRONTEND_UI_KEYFRAME_PROMPT.md) 已写成执行规格；HTML/SVG/PNG 关键帧源见 `design/keyframes/party-rock-pingfang/`；Streamlit 视觉迁移待 UI Gate；暂不做公网开放 |
+| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；设计已冻结为“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”三空间信息分组，桌面壳为全局导航、项目/母版上下文、中央对齐工作区、右侧 Agent 对话轻量四区；正式视觉 token 为 Tweakcn Party Rock 原始 Light/Dark、字体为 PingFang SC；当前候选统一为最左侧黑色导航、中央/右侧米白、紫色柔性框/轨迹、荧光绿少量节点和黑色线框结构，上一版紫黑暗流仅作历史；A/B/C 每套各 E01 入口 + E02 Agent 对话两帧，方向待选择；[前端与交互设计需求文档](前端与交互设计需求文档.md)、[关键帧 Prompt](FRONTEND_UI_KEYFRAME_PROMPT.md) 与 [风格说明](UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md) 已写成执行/评审规格；候选源见 `design/keyframes/party-rock-pingfang/candidates/`；Streamlit 视觉迁移待 UI Gate；暂不做公网开放 |
 | 状态/编排 | Python 状态机 + 受限 ReAct 工具提议 | 状态机拥有权限与迁移最终权；不要求 LangGraph，LLM 只能在当前状态白名单内提议下一工具 |
 | 数据 | SQLite + JSONL trace + 匿名 `product_events`（本地）；部署后按平台存储方案扩展 | Demo 仍不做多租户；主体锚点需加密、可删除、受限访问、183 天到期；当前只是合同/Policy，真实加密/worker 未实现 |
 | 几何与质量视觉 | OpenCV Haar + Pillow V0 基线（可替换 CV Adapter） | 已实现真实图片解码、质量/可编辑性指标和粗粒度脸框/眼睛几何；不承担同一人物判断，后续可替换为关键点模型 |
@@ -143,3 +143,11 @@ smoke 均通过。新版 V3 `36/36`、V4 `48/48` 的无答案过程重放均完�
 ## 2026-09-02 当前事实覆盖｜Tencent Web 工具编排
 
 新增 `ToolRegistry` 与 `MetaAgentToolSelector`，将已审核的 BeautifyPic baseline 和 candidate Web Card 纳入统一只读目录。Meta-Agent 输出 `ToolProposal`，可解释候选工具、准入检查、RAG 证据和 baseline fallback；proposal 永远不授权执行，不读图片、不持有密钥、不创建 ProviderRun、不调用网络。8A 和 page 6 已接入该提议/Trace 展示，真实 Web 结果仍仅作为独立候选 Browser Receipt。因为 `EditPlan` 仍是 BeautifyPic 专用且 Browser Receipt 不含结果图 bytes，Web 主流程接入等待 A/B/C 结果交接决策，Card 继续 `candidate`。
+
+## 2026-09-02 当前事实覆盖｜Web B handoff 与 E1/E2
+
+上一段关于“BeautifyPic 专用 EditPlan、Browser Receipt 无结果图和 A/B/C 待决”的文字是历史状态。产品负责人已冻结 B：`EditPlan`/`ProviderRun` 采用 Web 专用参数模型，浏览器通过独立 `result` 触发器将一次性结果 data URL 回传；服务端校验 request_ref、输入/输出 hash、尺寸、MIME 和大小后，只在内存中交给共同 `VerificationResult`。RAG/Meta-Agent 仍只提议，Web candidate 不能自行获得执行权限。
+
+E1 已由 `accept_effect_web_browser_result()` 与共同 `verify_result()` 的 fixture 链路验证；E2 已由 8 个成功、失败、请求/输入/输出哈希错位、MIME/尺寸/大小异常和批量隔离样本验证，坏样本不阻塞后续样本，结果 payload 不持久化。新增的纵向 smoke/test 还验证 Meta-Agent 的 Web proposal 与 Web EditPlan provider/Card 绑定。E3 仍等待真实多样本视觉、供应商数据/费用证据和负责人批准；在 E3 前 BeautifyPic 继续是唯一正式主流程 Provider。
+
+本轮最新全量工程 QA 为 `216 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。该回执只证明代码/合同/fixture 一致，不改变 Web Card `candidate`、RAG `proposal-only` 或 E3 准入要求。

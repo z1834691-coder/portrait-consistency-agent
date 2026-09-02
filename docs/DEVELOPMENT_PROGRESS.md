@@ -2092,6 +2092,38 @@ fixed Precision@3 的理论上限在 V4 Gold 分布下约为 `0.513889`（公开
 
 本轮只完成设计规范、Image 2 方向稿和可编辑源，没有修改 Streamlit 应用代码，也没有取得真实用户照片、多轮 UI 回执、Provider 视觉效果或生产级 Figma 云文件。下一步按 UI Gate 做浏览器回归、Frontend 组件映射、Critical/Audit、可访问性和真实用户走查；若必须改变已冻结语义，需新增带原因、影响和回滚点的变更请求。
 
+## 2026-09-02｜视觉方向重开：Getty × Party Rock 三套候选（无应用代码变更）
+
+### 本轮目标
+
+产品负责人否定上一版中间工作区的紫黑暗流/暗影，要求参考 Party Rock 示意图的黑色左导航、米白工作纸、柔性紫色框和荧光绿动感，并以 Getty `Tracing Art` 的关系/轨迹叙事提升高级感。本轮只重新探索视觉构图，不改变两条路由、四区语义、自然语言主链、授权与结果边界。
+
+### 已完成
+
+- 新增 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`：抽象 Getty 的“先路径后数据、关系轨迹、编辑式留白、混合媒介证据、序列节奏”，并翻译成产品视觉规则、反模式和下一 Gate。
+- 新增 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html` 与 `candidates/README.md`：可切换 A「档案游线」、B「柔性索引」、C「开放谱系」以及 E01/E02，支持写入评审备注。
+- 为 A/B/C 每套制作 E01 入口和 E02 Agent 对话两张 Image 2 方向稿（共 6 张），保存同名 Prompt sidecar；所有 PNG 已嵌入 `impeccable:prompt`。
+- 为每套生成两张可导入 Figma 的分层 SVG，并从同源 SVG 导出 1280×800 与 1440×900 渲染帧。SVG 以 `nav/context/workspace/agent/trajectory` 等语义图层组织，未嵌入真实照片、结果图、密钥或 Trace。
+- 将 `docs/前端与交互设计需求文档.md` 升级为 `UI/UX-SPEC-v2.1`：产品语义与 token/字体继续冻结，上一版紫黑暗流改为历史基线，最新视觉硬约束统一为左侧黑色导航、中央/右侧米白、紫色柔性框/轨迹、荧光绿少量节点；候选选择前不冻结具体构图。
+- 同步更新 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md` 与关键帧包 README，明确“每套严格两帧、共三套候选、PNG 与 SVG/HTML 的精确性边界”。
+
+### 静态回执
+
+- 6 张 Image 2 PNG：`impeccable:prompt` 扫描 `6 raster, 0 missing`（只扫描源 raster；SVG-derived renders 不重复计入模型资产）。
+- 6 张 SVG：`rsvg-convert` 导出 12 张 1280/1440 渲染帧；待继续执行 XML/浏览器/WCAG 正式 Gate。
+- 已人工检查 A/B/C 六张 1440×900 渲染帧：黑色只在左导航/结构，中央/右侧为米白；紫色通过柔性框/轨迹呈现；荧光绿为少量节点；未出现中间紫黑暗影。
+- `ui-ux-pro-max` 安装命令曾尝试运行，但 GitHub clone 长时间无可用结果后已安全取消；没有把未安装的 skill 写成已使用。本轮继续使用已加载的 Impeccable 能力完成候选方向和静态资产。
+
+### 当前边界与下一步
+
+本轮仍是视觉候选，不是 Streamlit 迁移、生产 Figma 云文件、真实用户照片结果或 Provider 效果证明。下一步由产品负责人在候选评审页选择 A/B/C 或混合方向；选择后再运行 Impeccable Critical/Audit、浏览器/WCAG UI Gate，并把最终方向映射到 Streamlit。方向未选择前不修改应用代码、不改业务合同、不新增关键帧。
+
+### 收尾复核补充
+
+- 针对 A/B/C 的 E02 Image 2 源图完成一次定向重生成并覆盖旧源：移除真实人物/照片、伪造百分比与分数、日期/ID、雷达图和密集仪表盘痕迹；保留黑色左导航、米白工作面、紫色柔性框/轨迹和少量荧光绿节点。
+- 重新扫描 6 张源 PNG：`impeccable:prompt`=`6 raster, 0 missing`；6 张 SVG XML、候选评审页内联脚本、禁用 UI 文案扫描与 `git diff --check` 均通过。源图尺寸为 `1586×992`，作为 1440×900 方向稿的材质参考；精确排版仍以 SVG 为准。
+- 当前工作区全量 `.venv/bin/pytest -q` 为 `213 passed, 1 failed, 4 warnings`。唯一失败来自既有 Tencent Effect Web 回归测试对末尾拒绝样本的 `hard_safety_passed` 断言，和本轮设计文档/静态资产无关；没有修改该业务代码或测试来掩盖它。Impeccable detector 仍因本机缺少 HTML parser 依赖而是 degraded regex 提示，不能替代浏览器/WCAG Gate。
+
 ## 2026-09-02｜反思审计后公平评测的最终同步回执
 
 本轮任务按公平评测 Prompt 完成并封存：新版 V3 `36/36`、V4 `48/48` 均有完整的“自然语言理解/未知降级
@@ -2139,3 +2171,48 @@ provider_run_created=false
 ### 当前状态与下一道 Gate
 
 这一步已完成“工具卡 → Registry → Meta-Agent → proposal-only Trace”的控制面接入；它不表示 Web Provider promotion，也不表示 Web 结果图可直接进入当前 Python `VerificationResult`。当前 `EditPlan` 仍是 BeautifyPic 专用，Browser Receipt 仍只有浏览器元数据。要进入主流程，需由产品负责人冻结 A 浏览器端复测、B 一次性受限回传 Python 或 C Web 只展示/下载之一；冻结前不改现有图片留存边界。
+
+## 2026-09-02｜Web Card → EditPlan → Meta-Agent → E1/E2 当前进展（B 已冻结）
+
+### 本轮已完成
+
+1. **执行 Prompt**：新增 `docs/TENCENT_EFFECT_WEB_FULL_INTEGRATION_PROMPT.md`，明确 Web Card、合同桥、结果 handoff、共同复测、E2 回归、E3 准入和回滚顺序。
+2. **合同桥**：`EditPlan`/`ProviderRun` 支持 `tencent_effect_web/WebARImage`，Web 的 0—1 参数与产品 0—100 参数独立校验；错配/越界 fail-closed。
+3. **E1 handoff**：浏览器使用独立结果 Canvas；`EffectWebBrowserResult` 和 `accept_effect_web_browser_result()` 校验请求代次、输入/输出 hash、尺寸、MIME、大小和 candidate trial 开关，再将 bytes 只交给当前会话内存中的共同 `VerificationResult`。
+4. **Meta-Agent 纵向链路**：Registry 同时读取 verified BeautifyPic baseline 与 Web candidate；Meta-Agent 可提出 Web 或 fallback，但不授权、不创建 ProviderRun、不发网络。
+5. **E2 回归/看板**：新增 Web 多样本、异常、批量失败隔离 harness、JSON/HTML 报告和 page 7 回归看板；8 个离线样本全部通过，覆盖输入哈希错位和结果大小上限，坏样本不阻塞后续样本，报告不保存图片。
+
+### 当前工程回执
+
+```text
+全量 pytest: 214 passed, 4 warnings
+Ruff check/format: PASS
+compileall: PASS
+git diff --check: PASS
+E1 handoff smoke: fixture_only=true, network_called=false, result_bytes_persisted=false
+E2 regression: 8/8 passed, hard_safety_passed=true, batch_failure_isolation_passed=true
+```
+
+上面是工程/fixture 证据，不是视觉效果、用户满意度或 Provider 泛化 KPI。Web 真实成功回执
+`web_receipt_effect_web_4d58ea15a0794370` 仍只证明一次浏览器处理；Web Card 继续 `candidate`。
+
+### E3 前仍需完成
+
+- 使用明确授权的多张不同角度/表情照片采集真实 Web 回执和脱敏 Trace；
+- 补齐批量真实视觉结果、失败隔离和供应商图片出站/地区/留存/费用证据；
+- 由产品负责人审核准入函数全部字段后，人工决定是否把 Card 从 `candidate` 改为 `verified`；
+- 在 E3 前，正式主流程继续使用 verified BeautifyPic，RAG 继续 proposal-only。真实 Web 证据失败时保留失败回执并回退 baseline。
+
+### 回滚点
+
+移除 Web 试验入口、联合合同和 E2 harness 不影响 BeautifyPic 主链、ReferenceProfile、IntentFrame、RAG 或 8C 基线；历史 Web 失败/成功回执只保留脱敏事实，不通过回滚删除。
+
+## 2026-09-02｜Web 纵向绑定与最新 QA 覆盖
+
+在 B/E1/E2 实现后补充一条纵向回归：Meta-Agent 明确提出 `tencent_effect_web` 后，`diagnose_and_plan` 只能生成同一 provider/Card 的 Web `EditPlan`，且 proposal 仍 `execution_authorized=false`。同时修正 E2 报告：`hard_safety_passed` 只回答恶意/损坏样本是否全部被拒绝，`batch_failure_isolation_passed` 单独回答坏样本后是否仍处理后续样本；避免测试排列导致错误结论。
+
+最新回执：`.venv/bin/pytest -q`=`216 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、E1 handoff smoke 和 E2 regression 均通过。当前 E1/E2 仍为 fixture/合同层证据，Web Card 继续 `candidate`，E3 尚需真实多样本视觉、供应商条款/区域/费用和负责人批准。
+
+## 2026-09-02｜E2 回归覆盖补齐
+
+复跑时发现原 6 个样例没有覆盖“输入哈希错位”和“结果大小上限”，且批量隔离字段容易被样例顺序误读。本轮一次只补这两个异常样例，并把一个有效失败回执放在拒绝样例之后，确保套件实际验证“坏样例不阻塞后续样例”。最终 8/8 通过：1 个成功、1 个供应商失败、6 个拒绝（请求/输入/输出哈希、尺寸、MIME、大小），`hard_safety_passed=true`、`batch_failure_isolation_passed=true`，结果 payload 不落盘。该修复只加强测试覆盖和指标口径，不放宽 Web Card 的 candidate 边界。

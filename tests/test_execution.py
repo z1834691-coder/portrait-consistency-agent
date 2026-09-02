@@ -21,8 +21,10 @@ from portrait_consistency_agent.core.policies import (
     build_v0_execution_policy,
     build_v0_safety_policy,
 )
+from portrait_consistency_agent.core.settings import AppSettings
 from portrait_consistency_agent.services.edit_planner import diagnose_and_plan
 from portrait_consistency_agent.services.execution import (
+    accept_effect_web_browser_result,
     cancel_execution_plan,
     confirm_execution,
     execute_confirmed_plan,
@@ -31,6 +33,11 @@ from portrait_consistency_agent.services.tencent_beautify import (
     TencentBeautifyApiError,
     TencentBeautifyResponse,
 )
+from portrait_consistency_agent.services.tencent_effect_web import (
+    EffectWebBrowserReceipt,
+    TencentEffectWebAdapter,
+)
+from portrait_consistency_agent.services.verification import verify_result
 from portrait_consistency_agent.storage.local_store import LocalTraceStore
 from tests.test_edit_planner import (
     make_intent,
@@ -205,6 +212,151 @@ def test_successful_execution_saves_only_redacted_receipt_and_keeps_result_bytes
     assert repeated.route == "blocked"
     assert repeated.provider_run is None
     assert len(client.calls) == 1
+
+
+def _web_bundle(*, session_id: str = "session_web_001"):
+    target_bytes = b"authorized-web-target-image-bytes"
+    target = replace(
+        make_observation(
+            "photo_web_target",
+            PhotoRole.TARGET,
+            face_width=540,
+            eye_boxes=((0.28, 0.36, 0.11, 0.07), (0.60, 0.37, 0.11, 0.07)),
+        ),
+        photo_sha256=hashlib.sha256(target_bytes).hexdigest(),
+    )
+    quality = make_target_quality(target, session_id=session_id)
+    intent = make_intent(
+        session_id=session_id,
+        target_refs=[target.photo_id],
+    )
+    profile = make_profile()
+    planned = diagnose_and_plan(
+        profile=profile,
+        target_observation=target,
+        quality_result=quality,
+        intent=intent,
+        provider_id="tencent_effect_web",
+        plan_id="plan_web_execution_001",
+    )
+    assert planned.plan is not None
+    now = planned.plan.created_at + timedelta(seconds=1)
+    confirmation = confirm_execution(
+        source_intent=intent,
+        proposed_plan=planned.plan,
+        next_turn=2,
+        now=now,
+    )
+    adapter = TencentEffectWebAdapter(AppSettings(_env_file=None))
+    web_params = confirmation.confirmed_plan.provider_absolute_params
+    request = adapter.prepare_request(
+        request_ref="effect_web_execution_request_001",
+        input_artifact_ref="upload_photo_web_target",
+        input_artifact_sha256=hashlib.sha256(target_bytes).hexdigest(),
+        parameters={
+            "face_lifting": web_params.lift * 100,
+            "eye_enlarging": web_params.eye * 100,
+        },
+        input_source="data_url",
+    )
+    output_hash = hashlib.sha256(TINY_PNG).hexdigest()
+    receipt = EffectWebBrowserReceipt(
+        status="succeeded",
+        receipt_id="web_execution_receipt_001",
+        request_ref=request.request_ref,
+        sdk_version="fixture-web-sdk",
+        input_sha256=request.input_artifact_sha256,
+        output_sha256=output_hash,
+        input_width=640,
+        input_height=480,
+        output_width=1,
+        output_height=1,
+        elapsed_ms=23,
+        created_at="2026-09-02T00:00:00+00:00",
+    )
+    result_payload = {
+        "request_ref": request.request_ref,
+        "input_sha256": request.input_artifact_sha256,
+        "output_sha256": output_hash,
+        "output_data_url": "data:image/png;base64," + base64.b64encode(TINY_PNG).decode(),
+        "output_width": 1,
+        "output_height": 1,
+        "result_retention": "python_memory_only",
+        "created_at": "2026-09-02T00:00:00+00:00",
+    }
+    return {
+        "target_bytes": target_bytes,
+        "target": target,
+        "quality": quality,
+        "profile": profile,
+        "intent": intent,
+        "confirmation": confirmation,
+        "request": request,
+        "receipt": receipt,
+        "result_payload": result_payload,
+        "now": now,
+    }
+
+
+def test_web_b_result_enters_common_provider_run_and_verification_in_memory(
+    tmp_path: Path,
+) -> None:
+    store, session_id = _store(tmp_path)
+    bundle = _web_bundle(session_id=session_id)
+    confirmation = bundle["confirmation"]
+
+    result = accept_effect_web_browser_result(
+        confirmed_plan=confirmation.confirmed_plan,
+        execution_intent=confirmation.execution_intent,
+        target_image_bytes=bundle["target_bytes"],
+        target_photo_id=bundle["target"].photo_id,
+        profile=bundle["profile"],
+        quality_result=bundle["quality"],
+        prepared_request=bundle["request"].model_dump(mode="json"),
+        browser_receipt=bundle["receipt"].model_dump(mode="json"),
+        browser_result=bundle["result_payload"],
+        store=store,
+        now=bundle["now"],
+        allow_candidate_trial=True,
+    )
+
+    assert result.route == "succeeded"
+    assert result.provider_run is not None
+    assert result.provider_run.provider == "tencent_effect_web"
+    assert result.provider_run.plan_revision == confirmation.confirmed_plan.revision
+    assert result.result_image_bytes == TINY_PNG
+    verification = verify_result(
+        profile=bundle["profile"],
+        plan=confirmation.confirmed_plan,
+        provider_run=result.provider_run,
+        result_image_bytes=result.result_image_bytes,
+    )
+    assert verification.verification.decision.value == "reshoot"
+    trace_text = (tmp_path / "events.jsonl").read_text(encoding="utf-8")
+    assert "output_data_url" not in trace_text
+    assert "python_memory_only" in trace_text
+
+
+def test_web_candidate_trial_is_blocked_without_explicit_trial_flag() -> None:
+    bundle = _web_bundle()
+    confirmation = bundle["confirmation"]
+
+    result = accept_effect_web_browser_result(
+        confirmed_plan=confirmation.confirmed_plan,
+        execution_intent=confirmation.execution_intent,
+        target_image_bytes=bundle["target_bytes"],
+        target_photo_id=bundle["target"].photo_id,
+        profile=bundle["profile"],
+        quality_result=bundle["quality"],
+        prepared_request=bundle["request"].model_dump(mode="json"),
+        browser_receipt=bundle["receipt"].model_dump(mode="json"),
+        browser_result=bundle["result_payload"],
+        allow_candidate_trial=False,
+    )
+
+    assert result.route == "blocked"
+    assert result.provider_run is None
+    assert result.trace[0]["reason_codes"] == ["web_card_not_promoted"]
 
 
 def test_uncertain_subject_ack_is_carried_by_scope_and_allows_one_execution(

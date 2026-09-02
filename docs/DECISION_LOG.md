@@ -348,3 +348,28 @@
 | D-PROD-120 | 2026-09-02 | 产品负责人将活跃视觉交付收敛为两张关键帧：E01「入口」与 E02「Agent 对话」。此前四张 K01—K04 只保留为历史资产，不再作为实现依据；底层上传、自动门控、授权、结果与停止状态仍由同一 Agent 对话空间承载。 | 已冻结；UI 实现待 Gate | 设计评审只需确认入口与对话两种空间，避免把状态机误拆成多页面；不改变合同、权限、Provider、结果保留或 Trace 边界。 | UI Gate 复核两帧的状态诚实、可访问性、响应式和自然语言主控制面；重大语义变化须重新确认。 |
 | D-PROD-121 | 2026-09-02 | 产品负责人覆盖旧的“米白最大、紫色第二”描述：Party Rock 原始 token 和苹方保持不变，页面面积改为紫色与米白共同主导、紫色在暗流/对齐舞台/关键操作中略强；黑色负责结构，其他颜色稀疏点缀。 | 已冻结；UI 实现待 Gate | 不改主题色值，只改使用层级；关键帧以紫色暗流与米白行动/对话面形成高级、直接的对比，避免米白铺满造成土感。 | 在 1440×900 与 1280×800 帧中用 QA 带宽复核：紫色约 40—45%、米白 35—40%、黑色 15—20%、其他≤5%。 |
 | D-TECH-122 | 2026-09-02 | 用 Image 2 生成 E01/E02 视觉方向稿；建立无依赖 HTML 原型、分层 SVG/Figma 导入源、1280/1440 同源渲染和 prompt sidecar。旧 K01—K04 已安全移入 `design/keyframes/party-rock-pingfang/archive/v1-four-state/`。 | 已生成并静态验证；待 UI Gate | HTML/SVG 提供精确中文、颜色与可编辑图层；PNG 只作材质/比例参考，不声称原生 Figma `.fig`、Streamlit 迁移或真实用户结果。 | 完成浏览器正式视觉回归、WCAG 2.2 AA、Frontend 映射、Impeccable Critical/Audit 后再进入代码实现。 |
+
+## 2026-09-02 追加记录｜Getty × Party Rock 视觉候选重开
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-125 | 2026-09-02 | 产品负责人否定上一版中间工作区的紫黑暗影/暗流，明确最新候选统一为“最左侧黑色导航 + 中央/右侧米白工作面 + 紫色柔性圆角框/编辑式黑框 + 荧光绿少量动感”。Party Rock 原始 token 与苹方不变；业务主链、路由、授权、隐私和结果边界不变。 | 候选硬约束已冻结；具体方向待选择 | 防止视觉实现回到沉重、僵硬的 AI 工具箱；不改变任何合同、Provider、RAG 或存储能力 | 在 A/B/C 方向选择后用 Impeccable Critical/Audit、浏览器和 WCAG Gate 复核；方向选择前不得写成最终视觉规范 |
+| D-PROD-126 | 2026-09-02 | 基于 Getty `Tracing Art` 抽象“先路径后数据、关系轨迹、编辑式留白、混合媒介证据和序列节奏”，形成三套候选：A「档案游线」、B「柔性索引」、C「开放谱系」。每套严格两张关键帧：E01 入口 + E02 Agent 对话。 | 候选探索，不冻结 | 让用户能在同一套 Agent 语义下选择不同视觉叙事，而不增加业务页面或状态分叉 | 产品负责人在 `candidate-review.html` 选择单一方向或明确混合方向；选择结果单独记录为下一条冻结决策 |
+| D-TECH-127 | 2026-09-02 | 新增三套候选的 6 张 Image 2 PNG、6 张分层 SVG、12 张同源 1280/1440 渲染帧、Prompt sidecar、候选评审 HTML 与 README；源 PNG 的 `impeccable:prompt` 扫描为 `6 raster, 0 missing`。 | 已生成并静态验证；待 UI Gate | PNG 仅是材质/比例方向稿，SVG/HTML 是精确文案与可编辑布局源；不声称原生 Figma `.fig`、Streamlit 已迁移、真实照片结果或 Provider 效果 | 完成浏览器正式回归、WCAG、Critical/Audit、Frontend 映射后再实现；候选未选前不改 Streamlit |
+| D-TECH-128 | 2026-09-02 | 按用户指令尝试 `npx skills add nextlevelbuilder/ui-ux-pro-max-skill@ui-ux-pro-max -g -y`；GitHub clone 长时间无可用结果，已安全取消，未把该 skill 写成已安装或已使用。 | 安装未完成 | 本轮使用已加载的 Impeccable Shape/视觉工作流和 Image 2 完成候选；不影响项目代码和业务合同 | 若后续需要该 skill，需重新安装并先验证其文件与说明真实存在 |
+
+| D-TECH-134 | 2026-09-02 | 对 A/B/C 三套候选的 E02 Image 2 源图做一次定向清理重生成，并重新嵌入 `impeccable:prompt`；源图不再包含真实人物/照片、伪造指标、日期/ID、雷达图或密集仪表盘。6 张源 PNG 扫描 `6 raster, 0 missing`；SVG、评审页脚本和禁用 UI 文案静态检查通过。 | 已完成；方向待选择 | 只更新视觉候选材质，不改变产品语义、合同、Provider、权限、结果或 Trace；候选评审仍以 SVG 精确文案和布局为准 | 当前全量测试 `213 passed, 1 failed, 4 warnings`；失败为既有 Tencent Effect Web 回归断言，与本轮设计资产无关。候选选择后再运行 Critical/Audit、浏览器/WCAG/UI Gate |
+
+## 2026-09-02 追加记录｜Web Card 接入统一计划与共同复测（B 冻结）
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-129 | 2026-09-02 | 产品负责人选择 B：Web SDK 结果通过一次性受限 handoff 回 Python 当前会话内存，再进入共同 `VerificationResult`；不采用浏览器端另建复测（A），也不把 Web 限制为只展示/下载（C）。 | 已冻结 | 能复用现有 8C 观察器，新增图片交接和大小/哈希校验；结果 data URL/bytes 不得落盘，Web Card 仍 candidate | E1 真实结果复测、E2 多样本/批量隔离、供应商条款/区域/费用及负责人准入完成后，才讨论 promotion |
+| D-PROD-130 | 2026-09-02 | E1/E2/E3 采用顺序冻结：E1 先接共同 `ProviderRun → VerificationResult`；E2 再做成功/失败/错位/超限/批量隔离回归；E3 最后在全部准入证据齐全时由负责人批准 candidate→verified。 | 已冻结 | 防止单次 SDK 成功被误写为效果或泛化通过；BeautifyPic 继续是正式主链 baseline | E3 只允许人工变更 Card，代码和 LLM 不得自动 promotion |
+| D-TECH-131 | 2026-09-02 | `EditPlan`/`ProviderRun` 增加 Web 联合参数模型与 Provider 校验；新增 `EffectWebBrowserResult` 和 `accept_effect_web_browser_result()`，校验 request_ref、输入/输出 hash、尺寸、MIME、大小及 candidate trial 开关。 | 已实现并验证 | Web 产品强度 0—100 与 SDK 0—1 分离；正常 handoff 可形成共同 ProviderRun，异常 fail-closed，Trace 不含图片 | 真实 Cloud 结果需继续按当前请求代次回放；不能通过修改合同放宽鉴权/准入 |
+| D-TECH-132 | 2026-09-02 | 新增 Web E2 回归套件和 page 7 看板。6 个离线样本覆盖成功、Provider 失败、request_ref/输出 hash/尺寸/MIME 错位；`6/6` 通过，坏样本不阻塞后续样本，结果 payload 不持久化。 | 已验证（fixture-only） | 证明合同、异常拒绝和批量隔离；不证明真实视觉效果或供应商泛化 | 增加真实多样本/批量视觉证据后才进入 E3 |
+
+| D-TECH-136 | 2026-09-02 | 交叉复核发现 E2 套件虽然 6/6 正确，但没有覆盖输入哈希错位和结果大小上限，且样例排列不能证明拒绝样例之后仍会继续处理。仅补充这两个异常样例，并把一个有效失败回执放在拒绝样例之后；最终 8/8 通过，`hard_safety_passed=true` 与 `batch_failure_isolation_passed=true` 分开统计。 | 已验证（fixture-only） | 强化 Web 结果交接的完整性和批量故障隔离证据，不放宽 candidate、RAG proposal-only 或任何执行权限；报告仍不保存结果 payload | E3 仍需真实多样本视觉、供应商条款/区域/留存/费用和产品负责人批准 |
+| D-TECH-133 | 2026-09-02 | 新增 `docs/TENCENT_EFFECT_WEB_FULL_INTEGRATION_PROMPT.md`，并将当前 B/E1/E2/E3 顺序、回滚和输出要求同步到执行 Prompt、PRD、合同、产品规则、进展与 README。当前全量 QA=`214 passed, 4 warnings`。 | 已完成并验证 | 项目可由下一次会话按同一 Prompt 继续，历史 A/B/C 未决文字保留为时间线并由当前冻结覆盖 | 若 Web Card promotion 或隐私/供应商事实改变，追加新决策记录，不改写本条历史 |
+
+| D-TECH-135 | 2026-09-02 | 补充 Meta-Agent→Web EditPlan provider/Card 绑定回归，并将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 拆成两个独立事实；安全拦截不再受坏样本排列位置影响。最新全量 QA=`215 passed, 4 warnings`。 | 已完成并验证 | 提议、计划和回归指标的耦合更紧；不改变 Web Card candidate、RAG proposal-only 或 E3 准入 | 后续真实 Web 多样本/批量和供应商证据仍须独立进入 E3，不能用本条 fixture 回执 promotion |

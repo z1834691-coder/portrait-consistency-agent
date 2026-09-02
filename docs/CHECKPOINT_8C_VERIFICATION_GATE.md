@@ -90,3 +90,9 @@ parent_run_succeeded
 ```
 
 这条 Trace 证明代码的控制边界和血缘记录，不证明真实腾讯调用或视觉效果改善。
+
+## 2026-09-02｜Web B 结果接入 8C（当前覆盖）
+
+产品负责人冻结 B 后，Web 结果不再停留在浏览器展示层：一次性 result data URL 经过服务端 request/hash/尺寸/MIME/大小校验，解码 bytes 只在当前会话内存中进入既有 `observe_result_bytes()`/`verify_result()`。`VerificationResult` 仍按逐特征趋势和质量事实路由，不接受 SDK 成功或 LLM 判断作为达标事实，也不产生总分/概率。
+
+这条接入的 E1 证据是 `tests/test_execution.py` 与 `scripts/smoke_effect_web_b_handoff.py`；E2 证据是 `tests/test_tencent_effect_web_regression.py` 与 `scripts/run_effect_web_regression.py` 的 8 个离线样例。当前结果只能证明合同和失败隔离，不能证明 Web 视觉效果已经泛化。Web Card 仍 `candidate`，E3 需要真实多样本/批量视觉证据和准入审核。

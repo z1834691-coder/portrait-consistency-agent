@@ -135,3 +135,9 @@
 参数效果、性能或供应商图片留存。补齐配置后先用官方示例图做单次 smoke；Card、Adapter、
 隐私/区域、成本、真实 receipt、Gold 回归和负责人批准仍需全部闭合，才可从 `candidate` 进入
 `reviewed_active`。
+
+## 2026-09-02｜Web B/E1/E2 当前候选状态覆盖
+
+上述“真实 Web smoke 未运行”是历史快照。Canvas 修复后已取得一次成功 Browser Receipt；在本轮 B 冻结下，Web 结果还可经一次性 handoff 进入共同 `ProviderRun → VerificationResult`，E2 合同/隔离回归为 8/8。该证据只证明浏览器链和统一控制面的工程可行性，不能证明细项参数视觉效果、供应商条款、成本或批量泛化。
+
+因此 `tencent_effect_web` Card 继续保持 `candidate`，Meta-Agent/RAG 只能 proposal-only；E3 promotion 仍需要真实多样本/批量视觉证据、License/权限、出站/区域/留存、费用和产品负责人批准。火山候选不因 Web 接入而改变，仍保持独立 candidate shell。

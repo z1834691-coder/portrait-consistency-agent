@@ -845,6 +845,18 @@ def render_checkpoint8b(
         st.info("这份计划没有当前腾讯可执行的改动；保留诊断或手动建议即可，无需调用腾讯。")
         return
 
+    if plan.provider == "tencent_effect_web":
+        st.warning(
+            "这是一份腾讯特效 Web candidate 试验计划。主流程不会把 candidate 当成已准入工具；"
+            "请到“腾讯特效 Web 试验”页面执行 B 方案，结果会先经过一次性回传校验，"
+            "再交给共同的 8C 复测器。"
+        )
+        st.caption(
+            "在多样本回归、批量隔离、供应商隐私/区域/成本证据和产品准入完成前，"
+            "BeautifyPic 仍是主流程的唯一正式执行 Provider。"
+        )
+        return
+
     existing_result = st.session_state.get("cp8b_execution_result")
     if isinstance(existing_result, dict):
         _render_checkpoint8b_result(existing_result)

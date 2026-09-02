@@ -18,6 +18,8 @@ be promoted to an executable RAG provider.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
 import time
@@ -49,6 +51,13 @@ EFFECT_WEB_SDK_DEFAULT_URL = (
     "https://webar-static.tencent-cloud.com/ar-sdk/resources/latest/webar-sdk.umd.js"
 )
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
+# Browser → Python handoff is intentionally bounded.  The encoded data URL is
+# allowed to be a little larger than the decoded image because of Base64
+# overhead, while the decoded bytes remain small enough for one Streamlit
+# request and are never written to disk or to the trace store.
+MAX_RESULT_DATA_URL_BYTES = 8 * 1024 * 1024
+MAX_RESULT_IMAGE_BYTES = 6 * 1024 * 1024
+_RESULT_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 
 class TencentEffectWebCredentialsMissingError(RuntimeError):
@@ -129,6 +138,63 @@ class EffectWebBrowserReceipt(BaseModel):
         return self
 
 
+class EffectWebBrowserResult(BaseModel):
+    """Ephemeral result bytes for the approved B handoff path.
+
+    This is deliberately *not* a ``ProviderRun`` field.  The browser sends a
+    short-lived data URL only so Python can run the existing verifier in the
+    same Streamlit request.  Callers must immediately convert it to bytes and
+    keep it in session memory; the data URL must never be persisted or placed
+    in a trace/event payload.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, frozen=True)
+
+    request_ref: str = Field(
+        min_length=3,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
+    )
+    input_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    output_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    output_data_url: str = Field(
+        min_length=32,
+        max_length=MAX_RESULT_DATA_URL_BYTES,
+    )
+    output_width: int = Field(ge=1, le=20000)
+    output_height: int = Field(ge=1, le=20000)
+    result_retention: Literal["python_memory_only"] = "python_memory_only"
+    created_at: str = Field(min_length=20, max_length=40)
+
+
+def _decode_result_data_url(value: str) -> bytes:
+    """Decode one browser result under the B handoff size and MIME policy."""
+
+    if len(value.encode("utf-8")) > MAX_RESULT_DATA_URL_BYTES:
+        raise TencentEffectWebConfigurationError(
+            "browser result data URL exceeds the 8MB handoff limit"
+        )
+    header, separator, encoded = value.partition(",")
+    if not separator or not header.startswith("data:") or ";base64" not in header:
+        raise TencentEffectWebConfigurationError("browser result must be a Base64 image data URL")
+    mime = header[5:].split(";", 1)[0].lower()
+    if mime not in _RESULT_MIME_TYPES:
+        raise TencentEffectWebConfigurationError(
+            "browser result MIME type must be PNG, JPEG or WebP"
+        )
+    try:
+        decoded = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise TencentEffectWebConfigurationError("browser result Base64 is invalid") from exc
+    if not decoded:
+        raise TencentEffectWebConfigurationError("browser result image is empty")
+    if len(decoded) > MAX_RESULT_IMAGE_BYTES:
+        raise TencentEffectWebConfigurationError(
+            "decoded browser result exceeds the 6MB handoff limit"
+        )
+    return decoded
+
+
 @dataclass(frozen=True)
 class EffectWebComponentPayload:
     """Ephemeral data passed to the browser component; never persist this object."""
@@ -157,6 +223,8 @@ class EffectWebAdmissionInput(BaseModel):
     adapter_ready: bool = False
     static_image_smoke_succeeded: bool = False
     smoke_receipt_ref: str | None = Field(default=None, max_length=128)
+    multi_sample_regression_succeeded: bool = False
+    batch_failure_isolation_verified: bool = False
     product_owner_approved: bool = False
 
 
@@ -193,6 +261,14 @@ def evaluate_effect_web_admission(
         (evidence.adapter_ready, "adapter_not_ready"),
         (evidence.static_image_smoke_succeeded, "static_image_smoke_not_passed"),
         (bool(evidence.smoke_receipt_ref), "smoke_receipt_missing"),
+        (
+            evidence.multi_sample_regression_succeeded,
+            "multi_sample_regression_not_passed",
+        ),
+        (
+            evidence.batch_failure_isolation_verified,
+            "batch_failure_isolation_not_verified",
+        ),
         (evidence.product_owner_approved, "product_owner_approval_missing"),
     )
     reasons.extend(code for passed, code in checks if not passed)
@@ -363,6 +439,41 @@ class TencentEffectWebAdapter:
         return validated
 
     @staticmethod
+    def validate_browser_result(
+        result: Mapping[str, object],
+        *,
+        request: EffectWebRequest,
+        receipt: EffectWebBrowserReceipt,
+    ) -> bytes:
+        """Validate and decode the one-time B-path result handoff.
+
+        The method returns bytes to the current caller only.  It checks the
+        request generation, input hash, output hash and dimensions against the
+        already validated receipt before any verifier can consume the bytes.
+        No caller may persist the returned payload.
+        """
+
+        if receipt.status != "succeeded":
+            raise ValueError("a failed browser receipt cannot hand off result bytes")
+        validated = EffectWebBrowserResult.model_validate(result)
+        if validated.request_ref != request.request_ref:
+            raise ValueError("browser result request_ref does not match the prepared request")
+        if validated.input_sha256 != request.input_artifact_sha256:
+            raise ValueError("browser result input hash does not match the prepared request")
+        if validated.output_sha256 != receipt.output_sha256:
+            raise ValueError("browser result output hash does not match the browser receipt")
+        if (
+            validated.output_width != receipt.output_width
+            or validated.output_height != receipt.output_height
+        ):
+            raise ValueError("browser result dimensions do not match the browser receipt")
+        output_bytes = _decode_result_data_url(validated.output_data_url)
+        actual_hash = hashlib.sha256(output_bytes).hexdigest()
+        if actual_hash != validated.output_sha256:
+            raise ValueError("browser result bytes do not match the declared output hash")
+        return output_bytes
+
+    @staticmethod
     def build_provider_run(
         *,
         request: EffectWebRequest,
@@ -373,6 +484,7 @@ class TencentEffectWebAdapter:
         confirmation_ref: str,
         confirmation_scope_hash: str,
         attempt_number: int = 1,
+        plan_revision: int = 1,
     ) -> ProviderRun:
         """Turn a browser receipt into the common immutable ProviderRun contract."""
 
@@ -401,7 +513,7 @@ class TencentEffectWebAdapter:
                 run_id=f"run_{receipt.receipt_id}",
                 trace_id=f"trace_{receipt.receipt_id}",
                 plan_id=plan_id,
-                plan_revision=1,
+                plan_revision=plan_revision,
                 session_id=session_id,
                 photo_id=photo_id,
                 attempt_number=attempt_number,
@@ -439,7 +551,7 @@ class TencentEffectWebAdapter:
             run_id=f"run_{receipt.receipt_id}",
             trace_id=f"trace_{receipt.receipt_id}",
             plan_id=plan_id,
-            plan_revision=1,
+            plan_revision=plan_revision,
             session_id=session_id,
             photo_id=photo_id,
             attempt_number=attempt_number,
@@ -730,6 +842,9 @@ def render_tencent_effect_web(
                   if (!context) throw new Error("CANVAS_CONTEXT_MISSING");
                   context.putImageData(imageData, 0, 0);
                   const outputUrl = resultCanvas.toDataURL("image/png");
+                  if (new TextEncoder().encode(outputUrl).byteLength > 8 * 1024 * 1024) {
+                    throw new Error("RESULT_DATA_URL_TOO_LARGE");
+                  }
                   const outputHash = await hashDataUrl(outputUrl);
                   result.src = outputUrl;
                   result.style.display = "block";
@@ -758,6 +873,20 @@ def render_tencent_effect_web(
                   state.running = false;
                   runButton.disabled = false;
                   setStateValue("status", "succeeded");
+                  // B-path handoff: the result data URL is emitted through a
+                  // separate ephemeral trigger so the metadata receipt remains
+                  // safe to persist. Python must validate it against this
+                  // receipt and immediately keep only in-memory bytes.
+                  setTriggerValue("result", {
+                    request_ref: data.request_ref,
+                    input_sha256: data.input_sha256 || null,
+                    output_sha256: outputHash,
+                    output_data_url: outputUrl,
+                    output_width: resultCanvas.width,
+                    output_height: resultCanvas.height,
+                    result_retention: "python_memory_only",
+                    created_at: new Date().toISOString(),
+                  });
                   setTriggerValue("completed", receipt);
                 } catch (error) {
                   emitFailure("OUTPUT_CAPTURE_FAILED", error, performance.now() - started);

@@ -116,3 +116,15 @@ P0-D 在 P0-C 之前提供知识安全元数据快照：当前 3 张审核 Tence
 V3 原始 answerless Holdout-A 快照仍只保留一次性 aggregate；产品负责人明确授权的 validation 副本用于离线逐题诊断，不改变 P0-C 的在线行为。`rag_v3_validation_diagnostics` 仅消费审核标注来比较 G0–G5 查询编译候选，输出逐题证据关系、根因、SOP 和完整安全 Trace；它不调用 P0-C 生产入口，不生成 `RagAdvisoryDecision` 以外的权限，也不写 `ProviderRun`。
 
 最终 G3 validation Route=100%、Relation=97.22%、Recall@5=100%，但固定 Precision/project Gate 仍 `FAIL`；G2 因 public regression 退化而拒绝，G4/G5 无增益。该结果只能作为验证集工程证据，RAG `execution_authorized=false`、Provider 白名单和六个业务合同不变；正式 promotion 必须另建独立 V4 Holdout。
+
+## 2026-09-02｜V4 当前边界覆盖
+
+V4 已作为新的独立 Holdout 完成一次 answerless baseline（48 题），随后在快照封存且得到负责人授权后才生成 validation 逐题诊断。blind baseline 的 Route=12.50%、Evidence relation=18.75%、Recall@5=57.99%，hard-safety=0/48 PASS，project quality Gate=FAIL。解冻候选的 100% 只用于失败驱动诊断，不能改变 P0-C 的 advisory-only 状态。
+
+P0-C 可以把审核过的工具能力、限制、生命周期和复测规则作为证据建议交给 8A/8C；它不能生成参数、增加 Provider、授予权限、写 ProviderRun 或发送图片。V4 的 `active_baseline_changed=false`、`proposal_only=true` 和 fixed project Gate 继续是 Promotion 前的硬边界。完整题目、Trace、失败模式和命令见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+## 2026-09-02｜Web Card 消费边界覆盖
+
+P0-C 现在也可以为 Web `EditPlan` 和 8C 复测策略提供已审核工具证据，但仍只负责 advisory：它不能把 Web candidate 变成授权，也不能生成 Web 参数、签名、ProviderRun 或图片出站。Meta-Agent 读取同一份 advisory 后输出 `ToolProposal.execution_authorized=false`；状态机/Policy 和 Web Adapter 继续独立校验候选试验、同意、scope、预算、幂等与 Browser Receipt。
+
+在 B handoff 路径中，RAG 的证据只影响“可提议哪种工具/复测方案”，不影响结果 data URL 的留存边界。Web handoff 通过共同 `VerificationResult` 后，仍需 E2 真实样本和 E3 准入才可 promotion；RAG `proposal-only` 与 Web Card `candidate` 两条硬边界保持不变。

@@ -13,6 +13,7 @@ import hashlib
 import json
 import sqlite3
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from portrait_consistency_agent.core.contracts import EditableFeature, PreserveAttribute
@@ -32,6 +33,7 @@ from portrait_consistency_agent.services.local_rag_models import (
     RerankerBackend,
 )
 from portrait_consistency_agent.services.rag_p0a import (
+    _SAFE_FTS_TERM,
     _candidate_relation,
     _eligibility_reason,
     _evidence,
@@ -167,7 +169,11 @@ def _dense_documents(store: LocalKnowledgeStore) -> list[DenseIndexDocument]:
     return documents
 
 
-def _rrf_rank(candidates: dict[str, _Candidate]) -> list[_Candidate]:
+def _rrf_rank(
+    candidates: dict[str, _Candidate],
+    *,
+    output_limit: int = P0B_RRF_OUTPUT_LIMIT,
+) -> list[_Candidate]:
     fused: list[_Candidate] = []
     for candidate in candidates.values():
         score = 0.0
@@ -189,7 +195,7 @@ def _rrf_rank(candidates: dict[str, _Candidate]) -> list[_Candidate]:
     return sorted(
         fused,
         key=lambda candidate: (-candidate.rrf_score, candidate.chunk.chunk_id),
-    )[:P0B_RRF_OUTPUT_LIMIT]
+    )[:output_limit]
 
 
 class RagP0BHybridRetriever:
@@ -202,11 +208,20 @@ class RagP0BHybridRetriever:
         dense_index: LocalDenseIndex,
         embedding_backend: EmbeddingBackend,
         reranker_backend: RerankerBackend,
+        relation_resolver: Callable[[RagQuery, KnowledgeItem, KnowledgeChunk], EvidenceRelation]
+        | None = None,
+        query_term_expander: Callable[[RagQuery], Iterable[str]] | None = None,
+        operation_coverage: bool = False,
     ) -> None:
         self.store = store
         self.dense_index = dense_index
         self.embedding_backend = embedding_backend
         self.reranker_backend = reranker_backend
+        self.relation_resolver = relation_resolver
+        self.query_term_expander = query_term_expander
+        # Candidate-only experiment. The active runtime keeps the default
+        # False, so this cannot silently change production ranking behavior.
+        self.operation_coverage = operation_coverage
 
     def retrieve(self, query: RagQuery) -> RagP0BRun:
         """Run P0-B with sparse-only degradation when local weights are unavailable."""
@@ -232,6 +247,19 @@ class RagP0BHybridRetriever:
         counts = {"metadata": 0, "sparse": 0, "dense": 0, "fused": 0}
         dense_mode = "not_started"
         reranker_mode = "not_started"
+        operation_count = len(tuple(dict.fromkeys(query.operation_candidates)))
+        coverage_enabled = self.operation_coverage and operation_count > 1
+        retrieval_candidate_limit = (
+            max(P0B_SPARSE_LIMIT, operation_count * 4) if coverage_enabled else P0B_SPARSE_LIMIT
+        )
+        fusion_limit = (
+            max(P0B_RRF_OUTPUT_LIMIT, operation_count * 4)
+            if coverage_enabled
+            else P0B_RRF_OUTPUT_LIMIT
+        )
+        rerank_limit = (
+            max(P0B_RERANK_LIMIT, operation_count * 4) if coverage_enabled else P0B_RERANK_LIMIT
+        )
 
         if query.missing_critical_slots:
             result = self._result(
@@ -322,19 +350,30 @@ class RagP0BHybridRetriever:
                 )
 
             terms = _fts_terms(query)
+            expanded_terms = (
+                {
+                    str(term)
+                    for term in self.query_term_expander(query)
+                    if _SAFE_FTS_TERM.fullmatch(str(term))
+                }
+                if self.query_term_expander is not None
+                else set()
+            )
+            terms = sorted(set(terms).union(expanded_terms))
             sparse_candidates = []
             if terms:
                 sparse_candidates = self.store.fts_candidates(
                     query,
                     fts_expression=_fts_expression(terms),
-                    limit=P0B_SPARSE_LIMIT,
+                    limit=retrieval_candidate_limit,
                 )
             counts["sparse"] = len(sparse_candidates)
             trace.append(
                 {
                     "step": "sparse_retrieval",
                     "term_count": len(terms),
-                    "candidate_limit": P0B_SPARSE_LIMIT,
+                    "expanded_term_count": len(expanded_terms),
+                    "candidate_limit": retrieval_candidate_limit,
                     "returned_candidate_count": len(sparse_candidates),
                     "index_version": self.store.INDEX_VERSION,
                 }
@@ -376,7 +415,7 @@ class RagP0BHybridRetriever:
                 backend=self.embedding_backend,
                 query_text=dense_query,
                 allowed_chunk_ids=sorted(metadata_by_chunk),
-                limit=P0B_DENSE_LIMIT,
+                limit=retrieval_candidate_limit,
             )
             dense_mode = "local_bge_dense"
             counts["dense"] = len(dense_hits)
@@ -396,7 +435,7 @@ class RagP0BHybridRetriever:
                     },
                     {
                         "step": "dense_retrieval",
-                        "candidate_limit": P0B_DENSE_LIMIT,
+                        "candidate_limit": retrieval_candidate_limit,
                         "returned_candidate_count": len(dense_hits),
                         "model_id": self.embedding_backend.model_id,
                         "actual_revision": self.embedding_backend.actual_revision,
@@ -426,13 +465,44 @@ class RagP0BHybridRetriever:
                 }
             )
 
-        fused = _rrf_rank(candidate_by_chunk)
+        if coverage_enabled:
+            # For compound questions, a requested operation/provider pair is
+            # eligible for consideration even when its wording does not share
+            # a token with the query (for example, a card explaining that
+            # lip-thickness editing is unsupported).  Add only already-active
+            # metadata candidates from the requested namespaces; they still
+            # pass the same reranker, relation resolver and safety policy.
+            requested_operations = tuple(dict.fromkeys(query.operation_candidates))
+            requested_providers = tuple(dict.fromkeys(query.provider_candidates))
+            coverage_added: list[str] = []
+            for item, chunk in metadata_candidates:
+                if item.operation not in requested_operations:
+                    continue
+                if requested_providers and item.provider not in requested_providers:
+                    continue
+                if chunk.chunk_id not in candidate_by_chunk:
+                    candidate_by_chunk[chunk.chunk_id] = _Candidate(item=item, chunk=chunk)
+                    coverage_added.append(self._knowledge_ref(candidate_by_chunk[chunk.chunk_id]))
+            fusion_limit = max(fusion_limit, len(candidate_by_chunk))
+            rerank_limit = max(rerank_limit, len(candidate_by_chunk))
+            trace.append(
+                {
+                    "step": "operation_coverage_pool",
+                    "requested_operations": list(requested_operations),
+                    "requested_providers": list(requested_providers),
+                    "added_active_metadata_candidates": coverage_added,
+                    "added_count": len(coverage_added),
+                    "does_not_bypass_lifecycle_or_permission": True,
+                }
+            )
+
+        fused = _rrf_rank(candidate_by_chunk, output_limit=fusion_limit)
         counts["fused"] = len(fused)
         trace.append(
             {
                 "step": "rrf_fusion",
                 "rrf_constant": P0B_RRF_CONSTANT,
-                "output_limit": P0B_RRF_OUTPUT_LIMIT,
+                "output_limit": fusion_limit,
                 "sparse_candidate_count": len(sparse_candidates),
                 "dense_candidate_count": counts["dense"],
                 "fused_candidate_count": len(fused),
@@ -466,7 +536,7 @@ class RagP0BHybridRetriever:
             )
             return self._finish(query, result, trace, counts, rejected, dense_mode, reranker_mode)
 
-        reranked = fused[:P0B_RERANK_LIMIT]
+        reranked = fused[:rerank_limit]
         try:
             scores = self.reranker_backend.score(
                 dense_query,
@@ -505,7 +575,7 @@ class RagP0BHybridRetriever:
                     "requested_revision": self.reranker_backend.requested_revision,
                     "actual_revision": self.reranker_backend.actual_revision,
                     "candidate_count": len(reranked),
-                    "output_limit": P0B_RERANK_LIMIT,
+                    "output_limit": rerank_limit,
                     "score_not_an_execution_threshold": True,
                     "candidate_rank_records": [
                         {"knowledge_ref": self._knowledge_ref(candidate), "rerank_rank": rank}
@@ -525,11 +595,73 @@ class RagP0BHybridRetriever:
                 }
             )
 
+        if coverage_enabled and reranked:
+            # A compound request should not lose an entire operation merely
+            # because one namespace has weaker lexical/dense scores. We do
+            # not invent evidence: this only reorders already retrieved and
+            # already reranked candidates, one representative per requested
+            # operation, then keeps the remaining order stable.
+            requested_operations = tuple(dict.fromkeys(query.operation_candidates))
+            requested_providers = tuple(dict.fromkeys(query.provider_candidates))
+            selected_ids: set[str] = set()
+            selected: list[_Candidate] = []
+            found_operations: list[str] = []
+            selected_operation_providers: list[dict[str, str]] = []
+            coverage_groups = [
+                (operation, provider)
+                for operation in requested_operations
+                for provider in requested_providers
+            ]
+            if not coverage_groups:
+                coverage_groups = [(operation, "") for operation in requested_operations]
+            for operation, provider in coverage_groups:
+                for candidate in reranked:
+                    if candidate.chunk.chunk_id in selected_ids:
+                        continue
+                    if candidate.item.operation != operation:
+                        continue
+                    if provider and candidate.item.provider != provider:
+                        continue
+                    selected.append(candidate)
+                    selected_ids.add(candidate.chunk.chunk_id)
+                    found_operations.append(operation)
+                    selected_operation_providers.append(
+                        {"operation": operation, "provider": candidate.item.provider}
+                    )
+                    break
+            reranked = selected + [
+                candidate for candidate in reranked if candidate.chunk.chunk_id not in selected_ids
+            ]
+            reranked = reranked[:P0B_RRF_OUTPUT_LIMIT]
+            trace.append(
+                {
+                    "step": "operation_coverage",
+                    "enabled": True,
+                    "requested_operations": list(requested_operations),
+                    "requested_providers": list(requested_providers),
+                    "found_operations": found_operations,
+                    "selected_operation_providers": selected_operation_providers,
+                    "missing_operations": [
+                        operation
+                        for operation in requested_operations
+                        if operation not in found_operations
+                    ],
+                    "representatives_added": len(selected),
+                    "candidate_count_after_reorder": len(reranked),
+                    "output_limit": P0B_RRF_OUTPUT_LIMIT,
+                    "does_not_create_evidence": True,
+                }
+            )
+
         evidences: list[KnowledgeEvidence] = []
         adopted_direct_executable = False
         adopted_direct_nonexecutable = False
         for rank, candidate in enumerate(reranked, start=1):
-            relation = _candidate_relation(query, candidate.chunk)
+            relation = (
+                self.relation_resolver(query, candidate.item, candidate.chunk)
+                if self.relation_resolver is not None
+                else _candidate_relation(query, candidate.chunk)
+            )
             rejection = _eligibility_reason(query, candidate.item, candidate.chunk, relation)
             adopted = rejection is None and relation == EvidenceRelation.DIRECT_EVIDENCE
             if rejection is not None:

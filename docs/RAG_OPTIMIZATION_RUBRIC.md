@@ -56,6 +56,8 @@ Route 20% + Evidence exact 15% + Evidence relation 20%
 
 ## 6. 当前结果的正确表述
 
+> **2026-09-02 当前覆盖：**V4 已替代“待新建 v4”的历史状态，正式 blind baseline 已完成一次；V4 的详细结果和后续 owner-unlocked validation 见本文件末尾及 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。本节中提到“需要新建独立 Holdout v4”的句子属于 V4 创建前的历史快照；现在若要再次 promotion，必须新建未参与 V4 诊断的新 Holdout（可命名 V5），不能重跑或复用 V4 validation。
+
 - public 52 题：route、evidence exact、relation、Recall@5、MRR、nDCG@5 均为 `100%`；固定 Precision@3=`47.44%`，覆盖式/返回式=`100%`，project Gate=`FAIL`；逐题唯一异常是 51 题的 Gold 稀疏分母。
 - v3 private holdout：只回流 aggregate，Route=`30.56%`、Recall@5=`59.72%`、MRR=`77.78%`、nDCG@5=`63.81%`、hard-safety=`PASS`，主要错误类型为 relation/set/route。不能从聚合结果推断每道题具体错因，也不能把 v3 逐题答案拿来调规则。
 - v3 的三类聚合错误会在看板中显示“事实/假设/下一份证据”三列：假设只用于设计新 Holdout，不用于 case-specific patch；三类计数允许重叠。
@@ -88,3 +90,41 @@ V2 的增益是开发集事实，不是产品质量 Gate：该数据集和 annot
 V3 已经从一次性 Holdout-A 盲测派生为负责人授权的 `validation` 副本，故本节分数只用于逐题失败分析和候选比较，不替代独立 Holdout。G0 baseline 为 Route 30.56%、Evidence relation 23.61%、Recall@5 59.72%；G2 policy-first 候选在 V3 达到 100% 但造成 public regression，G3 guard 后保留 Route 100%、Relation 97.22%、Recall@5 100%，G4/G5 0 改变。固定 Precision/project Gate 仍为 `FAIL`，hard-safety 为 `PASS`。
 
 验证集中的 `metric_sparse_gold_denominator` 只作为统计层诊断，必须同时查看 effective/returned Precision；不得通过补无关证据、改变固定分母或只展示 Composite 来宣称通过。候选 promotion 的必要条件仍是：public regression 不回退、hard-safety 零违规且无未知事件、完整 Trace 无网络/LLM/Provider/照片/向量读取、产品负责人批准，并由全新不重叠 V4 Holdout 验收。
+## 2026-09-02｜V4 口径补充与 Gate 解释
+
+V4 继续使用已冻结的项目门槛：Recall@5≥90%、Precision@3≥80%、MRR≥80%、nDCG@5≥85%、Route accuracy≥90%、Evidence relation accuracy≥90%，并要求 hard-safety 0 违规、0 未知事件。Composite 只用于比较代次，不覆盖 project Gate。
+
+V4 Gold 中 47/48 道题只有 1–2 条正确证据。若固定以 K=3 做 Precision，正确证据即使全部找回，也会因为没有“第三条 Gold”而被固定分母拉低。因此报告同时展示：
+
+- **fixed Precision@3**：严格沿用历史冻结口径，是 project Gate 的权威指标；
+- **effective Precision@3**：分母按实际 Gold 条数截断，用于判断检索质量本身；
+- **returned Precision@3**：只看返回结果中有多少是正确证据，用于识别是否塞入了无关资料。
+
+这三个数字不能互相替代，也不能因为 Gold 稀疏就擅自把 project Gate 改成通过。V4 baseline 的 fixed Precision@3=28.47%；解冻候选为 51.39%，而 effective/returned 达到 100%，所以语义诊断有改善，但冻结项目 Gate 仍为 FAIL。
+
+### V4 验收状态
+
+| 层级 | 结果 | 是否可称通过 |
+|---|---|---|
+| Hard-safety | 0/48 违规，0 未知 | 可以称安全硬门通过 |
+| V4 baseline 泛化 | Route 12.50%、Relation 18.75%、Recall@5 57.99% | 不通过 |
+| 解冻 validation 候选 | 语义指标 100%，fixed Precision 51.39% | 只作诊断，不是泛化通过 |
+| Project quality Gate | FAIL | 不得 promotion/产品化 |
+
+V4 的答案在盲测封存后才被负责人授权用于诊断；因此 validation 的高分只能证明失败驱动修正机制有效，不能替代下一套全新 Holdout。
+
+## 9. 2026-09-02 反思审计补充：当前分数不能直接当作单一 RAG 成功率
+
+本轮审计确认，当前 Route、Evidence relation、Recall 和 Precision 并不都在测同一段链路。V4 48 道题中只有 8 道真正生成结构化检索请求；40 道在进入检索前结束。因此 Route 低分首先是自然语言到查询投影的信号，不能直接归因于 embedding、RRF 或 reranker。Gold runner 又会把 projection 的路由/证据别名合并到 Prediction，故必须在下一份评测合同中分开“编译正确”和“真实检索命中”。
+
+固定 Precision@3 仍作为历史冻结指标保留，但 V4 Gold 的稀疏分布使理论最高值约为 `0.513889`，低于 `0.80` 门槛；这属于口径可达性问题，不能通过塞无关证据或悄悄改分母解决。effective/returned Precision 只能作为诊断，不能覆盖 project Gate。下一轮若要改变任何指标定义，必须先由产品负责人确认新的 Rubric，再建立独立 Holdout。
+
+因此本 Rubric 的新增使用顺序是：先报告每层是否真的被测到，再报告各层指标，最后才计算代际 Composite；Composite、validation 100% 或安全硬门 PASS 均不能单独宣布 RAG 产品化。
+
+## 2026-09-02｜两轨指标与过程门补充
+
+本轮产品负责人冻结了新的评测顺序：先由独立过程考官确认每道题完整走过“自然语言理解→结构化查询→RAG 检索→Prediction”，再分别评估两条轨道。轨道 A 评估自然语言是否生成正确的结构化任务；轨道 B 只评估真实 chunk 的召回、排序和 direct/reference/conflict 关系。轨道 B 的 Prediction 不得包含上游 projection、题目标签或答案键。
+
+固定 Precision@3 继续保留，保证历史可比性；另外增加一个不受 Gold 条数过少影响的诊断带，便于产品负责人看“这轮是否真的有一定效果”：低于三分之一为弱，达到三分之一为已有一定效果，达到三分之二为较强。诊断带不是新的发布门槛，也不能覆盖 Recall、Route、Relation 或 hard-safety 的冻结 Gate。
+
+过程监督回执的关键字段是：`structured/unknown_fallback`、`query_contract`、实际 retrieval Trace、`route_source=retrieval_result`、`evidence_source=retrieval_result`、证据引用血缘、答案键/外部调用布尔事实和 `finalized=true`。过程门失败时，所有质量指标只显示“锁定”，不能继续调参或连接 Gold。

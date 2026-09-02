@@ -54,6 +54,7 @@ from portrait_consistency_agent.core.contracts import (
     SuggestionOnlyChange,
     TargetScope,
     TencentBeautifyParams,
+    TencentEffectWebParams,
     UserFeedback,
     VerificationDecision,
     VerificationResult,
@@ -498,6 +499,53 @@ def test_current_tencent_plan_cannot_execute_an_unsupported_future_feature() -> 
                 allowed_features=[EditableFeature.LIPS_THICKNESS],
                 adjustment_mode=AdjustmentMode.BALANCED,
             ),
+        )
+
+
+def test_edit_plan_can_snapshot_a_tencent_effect_web_provider() -> None:
+    plan = make_plan(
+        provider="tencent_effect_web",
+        provider_api_version="web_sdk_current",
+        provider_card_id="tencent-effect-web",
+        provider_card_version="web_candidate_2026-09-01",
+        executable_changes=[
+            ExecutableChange(
+                feature=EditableFeature.FACE_LIFTING,
+                provider_parameter="lift",
+                user_delta=8,
+                current_absolute=0,
+                proposed_absolute=8,
+                expected_direction=ChangeDirection.INCREASE,
+                rationale_codes=["face_width_gap"],
+            )
+        ],
+        provider_absolute_params=TencentEffectWebParams(lift=0.08),
+    )
+
+    assert plan.provider == "tencent_effect_web"
+    assert isinstance(plan.provider_absolute_params, TencentEffectWebParams)
+    assert plan.provider_absolute_params.lift == 0.08
+
+
+def test_edit_plan_rejects_web_product_strength_scale_mismatch() -> None:
+    with pytest.raises(ValidationError, match="planned absolute value"):
+        make_plan(
+            provider="tencent_effect_web",
+            provider_api_version="web_sdk_current",
+            provider_card_id="tencent-effect-web",
+            provider_card_version="web_candidate_2026-09-01",
+            executable_changes=[
+                ExecutableChange(
+                    feature=EditableFeature.FACE_LIFTING,
+                    provider_parameter="lift",
+                    user_delta=8,
+                    current_absolute=0,
+                    proposed_absolute=8,
+                    expected_direction=ChangeDirection.INCREASE,
+                    rationale_codes=["face_width_gap"],
+                )
+            ],
+            provider_absolute_params=TencentEffectWebParams(lift=0.1),
         )
 
 

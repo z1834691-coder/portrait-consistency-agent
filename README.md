@@ -42,7 +42,7 @@
 - <span style="color:#C00000"><strong>部署包：已补齐 Community Cloud 可直接读取的 `uv.lock` 环境声明、`src/` 入口兼容、云端配置和部署说明，并已推送到私有 GitHub 仓库 [`z1834691-coder/portrait-consistency-agent`](https://github.com/z1834691-coder/portrait-consistency-agent)。Streamlit Cloud Private App 已创建，URL 为 [`portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app`](https://portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app)，页面已在浏览器打开待第一位用户操作；腾讯 Web License 已以纯主机名提交并在控制台显示“正常”（2026-08-30 至 2026-09-13）。仓库发布边界仍排除密钥、照片、SQLite/JSONL、模型缓存、隐藏答案和本机评测报告。</strong></span>
 - <span style="color:#C00000"><strong>Cloud 凭据入口：本机 `.env` 不会随部署进入 Cloud；要触发真实腾讯安全/同人/修图请求，必须在该 App 的 Settings → Secrets 以根级变量配置 `TENCENT_SECRET_ID` 与 `TENCENT_SECRET_KEY`，保存后重启。缺少任一项时系统 fail-closed，不发送照片。</strong></span>
 - <span style="color:#C00000"><strong>Cloud 腾讯错误回执：如果 ImageModeration 已读到密钥但请求失败，页面现在会安全显示腾讯 `error_code` 与 `RequestId`，并将同样的非敏感字段写入脱敏 Trace；不会显示原图、密钥或腾讯原始错误全文。没有 `RequestId` 时明确显示“未返回”，不能把失败误写成内容安全通过。</strong></span>
-- <span style="color:#C00000"><strong>视觉交互设计已冻结、尚未实现：</strong>产品采用“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”的三空间信息分组，桌面壳固定为“全局导航 + 项目/母版上下文 + 中央对齐工作区 + 右侧 Agent 对话”轻量四区；Agent 只在澄清、真实进度、边界与结果时用人话发声，参数/回执/脱敏执行记录位于第二层。正式视觉采用 Tweakcn Party Rock 原始 Light/Dark token 与苹方（PingFang SC）；紫色与米白共同主导面积、紫色在关键视觉块中略强，黑色承担侧栏/暗流底/文字/分隔等结构，珊瑚红、暗红及其他颜色只作少量语义点缀。活跃关键帧已收敛为 E01 入口与 E02 Agent 对话；关键帧 Prompt 与可编辑 HTML/SVG 见 [`docs/FRONTEND_UI_KEYFRAME_PROMPT.md`](docs/FRONTEND_UI_KEYFRAME_PROMPT.md) 和 [`design/keyframes/party-rock-pingfang/`](design/keyframes/party-rock-pingfang/)。样张不等于已部署 UI，不改变照片权限、工具调用或数据边界。</span>
+- <span style="color:#C00000"><strong>视觉交互设计正在候选评审、尚未实现：</strong>产品采用“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”的三空间信息分组，桌面壳固定为“全局导航 + 项目/母版上下文 + 中央对齐工作区 + 右侧 Agent 对话”轻量四区；Agent 只在澄清、真实进度、边界与结果时用人话发声，参数/回执/脱敏执行记录位于第二层。正式视觉 token 为 Tweakcn Party Rock 原始 Light/Dark，字体为苹方（PingFang SC）；当前候选统一为最左侧黑色导航、中央/右侧米白、紫色柔性框/轨迹、荧光绿少量节点和黑色线框结构，上一版紫黑暗流仅作历史。A/B/C 每套各 E01 入口与 E02 Agent 对话两帧；风格说明、关键帧 Prompt、候选评审页与可编辑 SVG 见 [`docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`](docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md)、[`docs/FRONTEND_UI_KEYFRAME_PROMPT.md`](docs/FRONTEND_UI_KEYFRAME_PROMPT.md) 和 [`design/keyframes/party-rock-pingfang/candidates/`](design/keyframes/party-rock-pingfang/candidates/)。样张不等于已部署 UI，不改变照片权限、工具调用或数据边界。</span>
 - <span style="color:#C00000"><strong>第一位用户 UX 反馈（待 UI Gate）：</strong>上传等待过长；首屏不应展示脱敏 JSON；A/B/C 检查点和按钮过多；自然语言入口被 GUI 挤压；视觉偏工程文档。当前只记录为事实反馈，尚未擅自改 UI 或删除必要权限门。</span>
 - <span style="color:#C00000"><strong>Web 回执关联与结果捕获修复（2026-09-02）：</strong>修复 Streamlit 重跑导致的 `request_ref` 错位，并修复 SDK Canvas 不可调整尺寸导致的结果捕获错误；同一输入/参数代次复用请求引用，签名可刷新，旧代次回执安全忽略。该修复通过 Web 专项回归，且 page 6 已取得一次真实成功回执；Card 仍为 `candidate`，不代表正式准入。</span>
 - <span style="color:#C00000"><strong>Tencent Web → Meta-Agent 控制面（2026-09-02）：</strong>新增只读 `ToolRegistry` 与结构化 `ToolProposal`，将 verified BeautifyPic baseline 和 candidate Web Card 放入同一工具目录；Meta-Agent 能提出 WebARImage 候选、列出准入检查并提供 baseline fallback，但 `execution_authorized=false`，不读图片、不发网络、不创建 ProviderRun。该切片已由专项测试和离线 smoke 验证，不等于 Web Card promotion 或主流程结果复测已完成。</span>
@@ -108,7 +108,7 @@ portrait-consistency-agent/
 
 当前全量 `.venv/bin/pytest -q` 为 `196 passed, 4 warnings`；Ruff check、`ruff format --check`、compileall、`git diff --check`、RAG failure-driven loop、过程监督、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。这个 QA 结果证明代码和治理产物一致，不改变 public/project Gate=`FAIL`，也不把候选升级为 active。
 ├── logs/                          # 本地 JSONL trace（Git 忽略）
-└── tests/                         # 当前 196 个自动化测试（另有 4 条 Pillow 已知弃用警告）
+└── tests/                         # 当前 216 个自动化测试（另有 4 条 Pillow 已知弃用警告）
 ```
 
 ## 本地命令
@@ -206,3 +206,13 @@ uv run python scripts/audit_rag_low_success.py
 过程报告：[公平评测过程监督](reports/rag_fair_process_audit_v1.html)；可复用规则：[RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md](docs/RAG_FAIR_EVALUATION_SUPERVISOR_PROMPT.md)。新运行过程门通过只说明考试流程完整，不说明 RAG 内容正确；新运行可以进入单独 Gold 验证，但历史 V4 快照质量继续锁定，RAG 仍 `proposal-only`，active baseline 未改变。脱敏运行包见 `reports/rag_fair_v3_answerless_*.json` 与 `reports/rag_fair_v4_answerless_*.json`。
 
 本轮新增过程考官和脱敏运行包后，全量 `.venv/bin/pytest -q` 为 `196 passed, 4 warnings`；`ruff check`、`ruff format --check`、compileall、`git diff --check` 和公平评测脚本均通过。4 条 warning 仍为既有 Pillow 弃用提示；工程通过不等于 RAG 质量或产品化通过。
+
+## 2026-09-02｜Tencent Effect Web 已接入统一计划/复测合同（当前）
+
+<span style="color:#C00000"><strong>当前能力。</strong>Web Card 已进入只读 Tool Registry 和受限 Meta-Agent 提议；产品负责人选择 B 后，Web 参数可以进入独立的 `EditPlan`/`ProviderRun`，浏览器结果可以通过一次性 handoff 进入共同 `VerificationResult`。服务端校验请求代次、输入/输出 hash、尺寸、MIME 与大小，结果 bytes 只在当前会话内存中使用，不写 SQLite、JSONL、Trace、RAG 或 Git。</span>
+
+E1 handoff→共同复测和 E2 多样本/异常/批量隔离均已通过离线合同回归（8/8）；样例覆盖成功、失败、请求/输入/输出哈希错位、非法 MIME、尺寸和大小上限，且坏样例之后仍会继续处理。另有一条 Meta-Agent→Web EditPlan 绑定测试。结果是可验证的工程/fixture 证据，不是视觉效果、用户满意度、批量泛化或 Provider promotion。Web Card 继续 `candidate`，正式主流程仍使用已审核的 BeautifyPic baseline，RAG 仍 `proposal-only`。
+
+可回放入口：[Web 全链路执行 Prompt](docs/TENCENT_EFFECT_WEB_FULL_INTEGRATION_PROMPT.md)、[Web E2 回归报告](reports/tencent_effect_web_regression_v1.html)、[Web 回归看板](pages/7_腾讯特效Web回归看板.py)。E3 的人工准入仍须补齐真实多样本、供应商条款/区域/费用和产品负责人批准；代码不会自动 promotion。
+
+本次新增 Meta-Agent→Web EditPlan 绑定回归、补齐输入哈希/大小异常并修正 E2 安全/隔离指标口径后的最新工程 QA：`.venv/bin/pytest -q`=`216 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。4 条 warning 仍为既有 Pillow 弃用提示。

@@ -67,6 +67,89 @@ def _load_v3_validation_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_v4_validation_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v4_validation_diagnostics_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_v4_blind_aggregate() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v4_holdout_blind_aggregate.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_fair_process_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_fair_process_audit_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_fair_gold_join_report() -> dict[str, Any] | None:
+    # v2 corrects the historical metric-scope bug; v1 remains a read-only
+    # artifact for comparison and is never silently preferred.
+    for path in (
+        PROJECT_ROOT / "reports/rag_fair_gold_join_v2.json",
+        PROJECT_ROOT / "reports/rag_fair_gold_join_v1.json",
+    ):
+        if not path.is_file():
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        return value if isinstance(value, dict) else None
+    return None
+
+
+def _load_policy_coverage_candidate_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_policy_coverage_candidate_v2.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_candidate_diagnostics_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_candidate_diagnostics_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_v5_process_audit_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v5_holdout_process_audit.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -134,6 +217,13 @@ def main() -> None:
     optimization = _load_optimization_report()
     failure_driven = _load_failure_driven_report()
     v3_validation = _load_v3_validation_report()
+    v4_validation = _load_v4_validation_report()
+    v4_blind = _load_v4_blind_aggregate()
+    fair_process = _load_fair_process_report()
+    fair_gold_join = _load_fair_gold_join_report()
+    policy_candidate = _load_policy_coverage_candidate_report()
+    candidate_diagnostics = _load_candidate_diagnostics_report()
+    v5_process = _load_v5_process_audit_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -143,6 +233,206 @@ def main() -> None:
         "当前 RAG baseline 尚未通过项目 Gate。隐藏集只回流聚合统计；本页不读隐藏答案键、"
         "不展示隐藏题干/编号，也不把聚合结果当作逐题调参标签。"
     )
+    if fair_process is not None:
+        st.subheader("公平评测过程监督（独立考官）")
+        st.caption(
+            "先看考试是否完整、是否泄露答案或上游投影；只有过程门通过后，质量分数才有资格连接。"
+        )
+        process_cards = st.columns(5)
+        process_cards[0].metric("新重放过程门", fair_process.get("fresh_replay_process_gate", "—"))
+        process_cards[1].metric(
+            "历史快照过程门", fair_process.get("historical_snapshot_process_gate", "—")
+        )
+        process_cards[2].metric("当前新运行过程门", fair_process.get("process_gate", "—"))
+        process_cards[3].metric("新运行质量状态", fair_process.get("quality_scoring_gate", "—"))
+        process_cards[4].metric(
+            "历史质量状态", fair_process.get("historical_quality_scoring_gate", "—")
+        )
+        dataset_rows: list[dict[str, object]] = []
+        datasets = fair_process.get("datasets", [])
+        if isinstance(datasets, list):
+            for dataset in datasets:
+                if not isinstance(dataset, dict):
+                    continue
+                audit = dataset.get("audit", {})
+                audit = audit if isinstance(audit, dict) else {}
+                counts = audit.get("counts", {})
+                counts = counts if isinstance(counts, dict) else {}
+                dataset_rows.append(
+                    {
+                        "数据集": dataset.get("name", "—"),
+                        "题目数": audit.get("case_count", 0),
+                        "理解成功": counts.get("compiler_structured", 0),
+                        "未知但继续检索": counts.get("compiler_unknown_fallback", 0),
+                        "完整检索 Trace": counts.get("retrieval_complete", 0),
+                        "过程失败": counts.get("case_fail", 0),
+                        "过程门": audit.get("process_gate", "—"),
+                    }
+                )
+        st.dataframe(dataset_rows, use_container_width=True, hide_index=True)
+        historical = fair_process.get("historical_v4_snapshot", {})
+        historical = historical if isinstance(historical, dict) else {}
+        st.info(
+            "新版重放通过后可进入独立 Gold 验证，但不改写旧正式考试；旧 V4 快照因缺阶段和投影注入，"
+            "其历史质量状态继续锁定。"
+            f"历史问题计数：{historical.get('violations_by_code', {}) or '无'}。"
+        )
+        fair_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "fair_process_audit"), None
+        )
+        if fair_artifact is not None:
+            fair_path = fair_artifact.path(PROJECT_ROOT)
+            if fair_path.is_file():
+                st.download_button(
+                    "下载公平过程审计 HTML",
+                    data=fair_path.read_bytes(),
+                    file_name=fair_path.name,
+                    mime="text/html",
+                    key="download_fair_process_audit_html",
+                )
+                render_component(
+                    read_rag_report(fair_artifact, PROJECT_ROOT), height=560, scrolling=True
+                )
+        artifact_columns = st.columns(4)
+        artifact_index = 0
+        for dataset in datasets if isinstance(datasets, list) else []:
+            if not isinstance(dataset, dict):
+                continue
+            artifacts = dataset.get("answerless_artifacts", {})
+            if not isinstance(artifacts, dict):
+                continue
+            for artifact_kind in ("predictions", "trace"):
+                raw_path = artifacts.get(artifact_kind)
+                if not isinstance(raw_path, str):
+                    continue
+                artifact_path = Path(raw_path)
+                if not artifact_path.is_file():
+                    continue
+                label = f"下载{dataset.get('name', '数据集')}脱敏{artifact_kind}"
+                artifact_columns[artifact_index % len(artifact_columns)].download_button(
+                    label,
+                    data=artifact_path.read_bytes(),
+                    file_name=artifact_path.name,
+                    mime="application/json",
+                    key=f"download_fair_{artifact_kind}_{artifact_index}",
+                )
+                artifact_index += 1
+    if fair_gold_join is not None:
+        st.subheader("公平 Gold 连接：自然语言理解与真实检索分轨")
+        st.caption(
+            "过程门通过后才允许一次性连接负责人 Gold；本区只展示聚合指标和失败类型，"
+            "不显示题目、答案或私有路径。检索轨道只评证据，不把下游路由混入检索分数。"
+        )
+        join_cards = st.columns(3)
+        join_cards[0].metric("质量连接状态", fair_gold_join.get("quality_scoring_gate", "—"))
+        join_cards[1].metric("Promotion 状态", fair_gold_join.get("project_promotion_gate", "—"))
+        join_cards[2].metric("下一步", fair_gold_join.get("next_step", "—"))
+        join_rows: list[dict[str, object]] = []
+        joined_datasets = fair_gold_join.get("datasets", [])
+        for dataset in joined_datasets if isinstance(joined_datasets, list) else []:
+            if not isinstance(dataset, dict):
+                continue
+            for track_key in ("compiler_track", "retrieval_track"):
+                track = dataset.get(track_key, {})
+                if not isinstance(track, dict):
+                    continue
+                metrics = track.get("metrics", {})
+                metrics = metrics if isinstance(metrics, dict) else {}
+                join_rows.append(
+                    {
+                        "数据集": dataset.get("name", "—"),
+                        "轨道": track.get("track", track_key),
+                        "题数": dataset.get("case_count", "—"),
+                        "Route（编译轨道）": _percent(metrics.get("route_accuracy")),
+                        "Recall@5": _percent(metrics.get("recall_at_5")),
+                        "关系": _percent(metrics.get("evidence_relation_accuracy")),
+                        "安全门": metrics.get("hard_safety_gate", "—"),
+                        "失败类型": track.get("error_type_counts", {}),
+                    }
+                )
+        st.dataframe(join_rows, use_container_width=True, hide_index=True)
+        join_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "fair_gold_join"), None
+        )
+        if join_artifact is not None:
+            join_path = join_artifact.path(PROJECT_ROOT)
+            if join_path.is_file():
+                st.download_button(
+                    "下载公平 Gold 连接聚合 HTML",
+                    data=join_path.read_bytes(),
+                    file_name=join_path.name,
+                    mime="text/html",
+                    key="download_fair_gold_join_html",
+                )
+                render_component(
+                    read_rag_report(join_artifact, PROJECT_ROOT), height=640, scrolling=True
+                )
+    if policy_candidate is not None:
+        st.subheader("RAG 候选：检索能力与操作覆盖")
+        st.caption(
+            "这是公开开发/回归候选实验；它只比较真实检索结果，不改现役 baseline，"
+            "也没有读取 Holdout 答案。"
+        )
+        candidate_rows: list[dict[str, object]] = []
+        for dataset_name, dataset in (policy_candidate.get("datasets", {}) or {}).items():
+            if not isinstance(dataset, dict):
+                continue
+            for track in ("retrieval_semantic_candidate", "retrieval_operation_coverage_candidate"):
+                metrics = dataset.get(track, {})
+                if not isinstance(metrics, dict):
+                    continue
+                candidate_rows.append(
+                    {
+                        "数据集": dataset_name,
+                        "轨道": track.removeprefix("retrieval_"),
+                        "题数": metrics.get("cases", "—"),
+                        "关系": _percent(metrics.get("evidence_relation_accuracy")),
+                        "Recall@5": _percent(metrics.get("recall_at_5")),
+                        "MRR": _percent(metrics.get("mrr")),
+                        "nDCG@5": _percent(metrics.get("ndcg_at_5")),
+                    }
+                )
+        st.dataframe(candidate_rows, use_container_width=True, hide_index=True)
+        st.write(
+            "候选改变预测数（公开开发 / 回归）：",
+            policy_candidate.get("changed_prediction_count", "—"),
+            "/",
+            policy_candidate.get("regression_changed_prediction_count", "—"),
+        )
+        st.info(
+            "操作覆盖策略只重排已检索或已通过 active metadata 过滤的候选，"
+            "不会制造证据、不会授予工具权限；正式推广仍需独立 V5 Holdout。"
+        )
+        candidate_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "policy_coverage_candidate"),
+            None,
+        )
+        if candidate_artifact is not None and candidate_artifact.path(PROJECT_ROOT).is_file():
+            render_component(
+                read_rag_report(candidate_artifact, PROJECT_ROOT), height=600, scrolling=True
+            )
+    if candidate_diagnostics is not None:
+        st.subheader("候选逐题失败模式")
+        st.caption("逐题诊断只使用公开开发/回归答案，不包含 V3/V4/V5 私有答案。")
+        st.write("根因计数：", candidate_diagnostics.get("aggregate_root_cause_counts", {}))
+        st.write("候选轨道：", candidate_diagnostics.get("candidate_track", {}))
+    if v5_process is not None:
+        st.subheader("V5 独立 Holdout：过程监督状态")
+        st.warning(
+            "V5 已完成答案盲运行和过程门检查；质量分数必须在负责人审核答案键后，"
+            "通过独立授权命令生成。"
+        )
+        v5_cards = st.columns(4)
+        v5_cards[0].metric("题数", v5_process.get("case_count", "—"))
+        v5_cards[1].metric("Trace 数", v5_process.get("trace_count", "—"))
+        v5_cards[2].metric("过程门", v5_process.get("process_gate", "—"))
+        v5_cards[3].metric("质量状态", v5_process.get("quality_scoring_gate", "—"))
+        v5_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "v5_holdout_process_audit"),
+            None,
+        )
+        if v5_artifact is not None and v5_artifact.path(PROJECT_ROOT).is_file():
+            render_component(read_rag_report(v5_artifact, PROJECT_ROOT), height=360, scrolling=True)
     if failure_driven is not None:
         st.subheader("失败驱动迭代（查询理解层）")
         st.caption(
@@ -304,6 +594,105 @@ def main() -> None:
                 render_component(
                     read_rag_report(v3_artifact, PROJECT_ROOT), height=720, scrolling=True
                 )
+    if v4_blind is not None or v4_validation is not None:
+        st.subheader("V4 独立 Holdout：盲测与解冻诊断")
+        st.warning(
+            "V4 盲测先在不读答案的情况下封存；下面的逐题区是之后经负责人授权的验证副本。"
+            "盲测成绩和诊断成绩分开显示，候选仍不改变正式 baseline。"
+        )
+        if v4_blind is not None:
+            blind_metrics = v4_blind.get("metrics", {})
+            blind_metrics = blind_metrics if isinstance(blind_metrics, dict) else {}
+            blind_cards = st.columns(5)
+            blind_cards[0].metric("盲测题数", v4_blind.get("case_count", "—"))
+            blind_cards[1].metric("盲测 Route", _percent(blind_metrics.get("route_accuracy")))
+            blind_cards[2].metric("盲测 Recall@5", _percent(blind_metrics.get("recall_at_5")))
+            blind_cards[3].metric("盲测安全门", blind_metrics.get("hard_safety_gate", "—"))
+            blind_cards[4].metric("盲测项目 Gate", blind_metrics.get("project_threshold_gate", "—"))
+            st.caption("盲测聚合不含题目、案例编号、Gold 或答案键路径。")
+        if v4_validation is not None:
+            v4_generations = v4_validation.get("generations", [])
+            v4_generations = v4_generations if isinstance(v4_generations, list) else []
+            v4_table: list[dict[str, object]] = []
+            v4_chart: list[dict[str, object]] = []
+            for generation in v4_generations:
+                if not isinstance(generation, dict):
+                    continue
+                metrics = generation.get("metrics", {})
+                metrics = metrics if isinstance(metrics, dict) else {}
+                v4_table.append(
+                    {
+                        "代次": generation.get("generation_id", "—"),
+                        "候选": generation.get("version", "—"),
+                        "改变预测数": generation.get("changed_prediction_count", "—"),
+                        "Composite": generation.get("composite_score", "—"),
+                        "Route": _percent(metrics.get("route_accuracy")),
+                        "Relation": _percent(metrics.get("evidence_relation_accuracy")),
+                        "有效 Recall@5": _percent(metrics.get("recall_at_5")),
+                        "公开回归 Gate": generation.get("regression_gate", "—"),
+                    }
+                )
+                if isinstance(generation.get("composite_score"), (int, float)):
+                    v4_chart.append(
+                        {
+                            "代次": str(generation.get("generation_id", "—")),
+                            "Composite": float(generation["composite_score"]),
+                        }
+                    )
+            st.dataframe(v4_table, use_container_width=True, hide_index=True)
+            if v4_chart:
+                st.line_chart(v4_chart, x="代次", y="Composite")
+            v4_improvement = v4_validation.get("improvement_summary", {})
+            v4_improvement = v4_improvement if isinstance(v4_improvement, dict) else {}
+            v4_cards = st.columns(3)
+            v4_cards[0].metric("语义诊断门", v4_improvement.get("semantic_diagnostic_gate", "—"))
+            v4_cards[1].metric("固定项目门", v4_improvement.get("frozen_project_gate", "—"))
+            v4_cards[2].metric(
+                "G0→最终改变题数", v4_improvement.get("changed_prediction_count_g0_to_final", "—")
+            )
+            st.write("V4 基线失败模式：", v4_validation.get("baseline_failure_counts", {}))
+            st.write("V4 最终失败模式：", v4_validation.get("final_failure_counts", {}))
+            st.write("停止原因：", v4_validation.get("stop_reason", "—"))
+            final_generation = v4_generations[-1] if v4_generations else {}
+            final_cases = (
+                final_generation.get("case_diagnostics", [])
+                if isinstance(final_generation, dict)
+                else []
+            )
+            final_cases = final_cases if isinstance(final_cases, list) else []
+            with st.expander("查看 V4 逐题结论、根因与修正 SOP"):
+                st.dataframe(
+                    [
+                        {
+                            "Case": row.get("case_id"),
+                            "题目": row.get("query"),
+                            "状态": row.get("status"),
+                            "失败码": "、".join(str(item) for item in row.get("failure_codes", [])),
+                            "根因": row.get("failure_analysis", {}).get("root_cause", "—"),
+                            "修正": row.get("failure_analysis", {}).get("correction", "—"),
+                        }
+                        for row in final_cases
+                        if isinstance(row, dict)
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            v4_artifact = next(
+                (item for item in RAG_REPORT_ARTIFACTS if item.key == "v4_validation_diagnostics"),
+                None,
+            )
+            if v4_artifact is not None:
+                v4_path = v4_artifact.path(PROJECT_ROOT)
+                if v4_path.is_file():
+                    st.download_button(
+                        "下载 V4 逐题诊断 HTML",
+                        data=v4_path.read_bytes(),
+                        file_name=v4_path.name,
+                        mime="text/html",
+                    )
+                    render_component(
+                        read_rag_report(v4_artifact, PROJECT_ROOT), height=720, scrolling=True
+                    )
     if optimization is not None:
         st.subheader("版本化自动优化迭代")
         st.caption(
@@ -400,7 +789,12 @@ def main() -> None:
                 )
 
     if report is None:
-        st.error("尚未找到失败分析报告。请先运行：uv run python scripts/analyze_rag_failures.py")
+        if fair_process is None:
+            st.error(
+                "尚未找到失败分析报告。请先运行：uv run python scripts/analyze_rag_failures.py"
+            )
+        else:
+            st.info("当前只有公平过程审计报告；失败模式汇总报告尚未生成。")
         return
 
     public = report.get("public", {})

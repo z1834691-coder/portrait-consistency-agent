@@ -143,3 +143,72 @@ V3 的原始 answerless Holdout-A 运行仍是不可重跑的历史快照；本�
 逐题分析顺序固定为：先看 hard-safety 和生命周期，再看查询投影/路由，再看证据集合、关系和排序，最后区分真正失败与 `metric_sparse_gold_denominator` 统计提醒。修复必须触达真实输入层；每代只改一个可解释变量，记录 `changed_prediction_count`，同时跑 validation 与 public regression；候选始终 proposal-only，G2 若造成公开回归必须回退，不能用 V3 高分覆盖回归事实。
 
 本轮最终 G3 的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G4/G5 无新增改变，说明继续在下游打补丁已到边际效益递减。固定 Precision/project Gate 仍 `FAIL`、hard-safety `PASS`，所以 SOP 的“优化完成”只表示诊断闭环已执行，不表示 RAG 已产品化通过。下一次泛化必须新建不与 V3 重叠的 V4 Holdout。
+## 2026-09-02｜V4 失败驱动 SOP 与停止规则
+
+V4 的正式 baseline 先作为一次性独立考试运行，再在快照封存且得到负责人明确授权后转成 validation 副本。这个顺序不能颠倒：如果先看答案再改规则，后面的高分只能说明“练习题做对了”，不能说明系统对新问题有效。
+
+### 逐题分析顺序
+
+1. 先看安全、隐私、出站、主体生命周期、过期、冲突和提示注入；命中 hard block 时不被能力词覆盖。
+2. 再看用户是在问能力、要建议、要求执行、要求复测，还是在要求拒绝/降级；多意图必须保留，不压成单一类别。
+3. 再看查询是否把自然语言编译成正确的领域词和任务信号，确认是否召回直接证据。
+4. 将检索结果分为直接证据、参考信息、冲突信息和不可用/过期信息；关系错误不能用“相似度高”掩盖。
+5. 最后看集合、排序和指标口径，单独标记 Gold 少于 K 的稀疏分母提醒。
+
+### V4 基线失败模式
+
+| 代码 | 题数 | SOP 处理 |
+|---|---:|---|
+| `route_mismatch` | 42 | 前移到自然语言→QuerySignals；先判任务和安全策略 |
+| `evidence_relation_mismatch` | 46 | 明确 direct/reference/conflict 三类关系，冲突优先停下 |
+| `evidence_set_mismatch` | 31 | 用能力/限制/权限/生命周期的证据 union，避免只返回一张 Card |
+| `rank_mismatch` | 9 | 双路召回后 RRF/重排，但不凭排序替代权威级别 |
+| `metric_sparse_gold_denominator` | 47 | fixed/effective/returned 并列展示，不补无关证据、不改冻结分母 |
+
+计数可重叠，不能相加当成 145 道错误题。每个 case 必须留下“观察事实→根因→修正→回归结果”，而不是只记录一个总分。
+
+### 候选修正与回滚
+
+候选必须作用于真实输入层或明确的证据整理层，每代只改一个变量，输出 `changed_prediction_count`，同时跑公开回归、V4 validation、安全硬门和 anti-overfit。候选只供诊断，不能写入 active baseline。若公开回归退化、安全出现未知/错误放行、或候选需要读取 holdout 答案，立即回滚并记录原因。
+
+V4 的 G0→G5 结果为：baseline → 既有查询编译 → 通用同义词/策略优先查询编译 → 关系归一化 → 证据打包。G2 后语义诊断达到 100%，G3–G5 连续没有新的预测改变，因此按“连续两代增益小于 0.01 且未跨 project Gate 即停止”规则结束。固定 project Gate 仍 FAIL，RAG 仍 proposal-only。
+
+### 当前可回放证据
+
+- V4 独立盲测聚合：`reports/rag_v4_holdout_blind_aggregate.json/.html`；只含聚合，不含题干、Gold 或答案键路径。
+- V4 逐题 validation：`reports/rag_v4_validation_diagnostics_v1.json/.html`；允许负责人授权后的题干/Gold/Trace，仅供诊断。
+- 完整说明：[RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
+
+这个 SOP 的“优化完成”只表示失败分析和候选迭代流程已经跑通；它不等于 RAG 质量 Gate 通过。要讨论 promotion，必须建立一套未参与诊断的新 Holdout，并再次完成 answerless 盲测。
+
+## 2026-09-02｜公平评测前置 SOP
+
+在任何失败分析、指标计算或候选修正之前，先运行独立过程监督考官：
+
+```text
+同一题目清单去重/计数
+→ 检查答案、标注、照片、向量、密钥和外部调用均为 0
+→ 检查原题只保留哈希
+→ 检查编译状态显式记录；未知也生成中性 RagQuery
+→ 检查每题完整 retrieval Trace 和 finalized 标记
+→ 检查 Prediction 只来自 retrieval_result
+→ 检查证据引用能回溯到实际候选/采用列表
+→ 过程门 PASS 后，才允许单独连接 Gold 计算质量
+```
+
+过程门失败的题不能进入质量平均分；旧 Holdout 快照不得补写 Trace 或回填 Projection。新版同题重放只能作为“评测流程修复证据”，不得改写历史质量分数。当前报告 `reports/rag_fair_process_audit_v1.json/.html` 同时展示新版重放和旧 V4 快照，避免把二者混成一场考试；新版脱敏运行包已经封存，可按题目哈希连接 Gold，不需要重新跑题。
+
+过程门通过后，继续按“根因→一次一个候选→公开回归→独立 Holdout”迭代。诊断带低于三分之一/达到三分之一/达到三分之二只用于观察边际效果；固定 Precision 和 hard-safety/project Gate 的原口径不变。RAG 仍 proposal-only，过程考官不授予工具权限。
+
+## 8. 连续低分时先做反思审计
+
+如果连续两代以上的改动没有带来可信增益，或者新的 Holdout 同时出现 Route、Evidence relation 和 Recall 下降，不能马上继续补同义词、调 Top-K 或更换重排模型。先按 [RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md](RAG_LOW_SUCCESS_REFLECTION_AUDIT_PROMPT.md) 重建实际被测链路：原话是否进入结构化查询、查询是否进入真实检索、证据是否来自可索引 chunk、路由是否由被测层产生、评测分母是否可达。
+
+反思审计必须把以下四件事分开：
+
+- **听懂问题**：自然语言是否被编译成正确任务、部位、安全和生命周期信号；
+- **找到资料**：真实检索是否返回了正确 chunk，而不是评测器预先写入的别名；
+- **整理证据**：是否正确区分直接依据、参考信息、冲突或过期信息；
+- **统计分数**：Gold 是否稀疏、固定 K 是否数学可达、多意图和额外关系是否按合同评分。
+
+只有每一层有独立证据，才能把失败转成下一条 SOP。反思期间不读取新的隐藏答案，不把解冻验证的高分写成泛化通过；候选继续保持 `proposal-only`。

@@ -868,6 +868,400 @@ def compile_generalized_projection(case: GoldCase) -> tuple[BaselineProjection, 
 QUERY_COMPILER_CANDIDATE_V2_VERSION = "rag-query-compiler-candidate-v0.2"
 
 
+GENERALIZED_QUERY_COMPILER_V2_VERSION = "rag-query-compiler-candidate-v0.2-generalized"
+
+
+GENERALIZED_QUERY_COMPILER_V3_VERSION = "rag-query-compiler-candidate-v0.3-failure-routed"
+
+
+def compile_generalized_projection_v2(
+    case: GoldCase,
+) -> tuple[BaselineProjection, QuerySignals]:
+    """Broaden the reviewed compiler without consulting Gold labels.
+
+    The first generalized candidate was intentionally conservative, but it
+    treated several common product requests as an unknown query.  This
+    version adds only ontology-level signals already present in the reviewed
+    policy: broad facial-edit wording, approved Tencent scope, batch/pose
+    limits, adapter readiness, and lifecycle conflict markers.  It never
+    invents a provider or parameter and remains a proposal-only experiment.
+    """
+
+    projection, signals = compile_generalized_projection(case)
+    normalized = signals.normalized
+
+    def make(
+        *,
+        category: str,
+        route: str,
+        aliases: tuple[str, ...],
+        relations: dict[str, str],
+        requested: tuple[EditableFeature, ...] = (),
+        allowed: tuple[EditableFeature, ...] = (),
+        preserve: tuple[PreserveAttribute, ...] = (),
+        retriever_kind: str | None = None,
+        outbound_allowed: bool = True,
+    ) -> tuple[BaselineProjection, QuerySignals]:
+        return (
+            BaselineProjection(
+                category_codes=(category,),
+                route_override=route,
+                evidence_aliases=aliases,
+                evidence_relations=relations,
+                requested_features=requested,
+                allowed_features=allowed,
+                preserve_constraints=preserve,
+                retriever_kind=retriever_kind,
+                outbound_allowed=outbound_allowed,
+            ),
+            signals,
+        )
+
+    # Lifecycle and integrity facts must be represented before any capability
+    # word.  They are policy evidence, not a reason to run a tool.
+    if signals.not_yet_effective:
+        return make(
+            category="not_yet_effective_knowledge",
+            route="UNKNOWN",
+            aliases=("FX",),
+            relations={"FX": "conflict_evidence"},
+        )
+    if signals.hard_fact_conflict and not signals.superseded and not signals.review_due:
+        return make(
+            category="hard_fact_conflict",
+            route="BLOCK",
+            aliases=("FX",),
+            relations={"FX": "conflict_evidence"},
+        )
+
+    # “只允许腾讯” is a provider-scope decision even when the user has not
+    # named a particular slider.  The tool card is useful evidence, while the
+    # policy card explains the closed-world boundary.
+    if signals.approved_tencent_scope and not signals.unknown_provider:
+        aliases = ["B", "P"]
+        relations = {"B": "direct_evidence", "P": "reference_context"}
+        return make(
+            category="approved_provider_scope",
+            route="DIRECT",
+            aliases=tuple(aliases),
+            relations=relations,
+            requested=signals.executable_features,
+            allowed=signals.executable_features,
+            retriever_kind="beautify",
+        )
+
+    # A broad “五官” request is not permission to invent unsupported sliders;
+    # map only to the two executable geometry controls already reviewed.
+    if _has(normalized, "五官", "面部轮廓") and not signals.unsupported_features:
+        requested = (EditableFeature.FACE_LIFTING, EditableFeature.EYE_ENLARGING)
+        preserve = (
+            (PreserveAttribute.SKIN_TONE, PreserveAttribute.MAKEUP)
+            if signals.preserve_skin_or_makeup or _has(normalized, "不动皮肤", "不改肤色")
+            else ()
+        )
+        return make(
+            category="broad_facial_edit_scope",
+            route="DIRECT" if signals.explicit_execute else "REFERENCE",
+            aliases=("B", "P"),
+            relations={"B": "direct_evidence", "P": "reference_context"},
+            requested=requested,
+            allowed=requested,
+            preserve=preserve,
+            retriever_kind="beautify",
+        )
+
+    # If the user asks about a new/unverified adapter, retrieve the existing
+    # tool card plus the policy boundary instead of returning only a generic
+    # policy paragraph.  The adapter is still never executed here.
+    if signals.adapter_unready or signals.unknown_provider:
+        if _has(normalized, "未获产品准入", "未准入", "未批准", "不准入"):
+            return make(
+                category="unapproved_provider_block",
+                route="BLOCK",
+                aliases=("P",),
+                relations={"P": "direct_evidence"},
+                outbound_allowed=False,
+            )
+        return make(
+            category="provider_or_adapter_not_ready",
+            route="REFERENCE",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": "direct_evidence"},
+            retriever_kind="beautify",
+        )
+
+    # Batch, multi-face and pose requests need the existing BeautifyPic
+    # limitation card in addition to the project policy; this is why they
+    # should not fall through to a policy-only query.
+    if signals.batch_or_multiface:
+        relation = "direct_evidence" if signals.face_isolation else "reference_context"
+        return make(
+            category="batch_or_multiface_requires_scope",
+            route="SUGGEST" if signals.third_party or signals.pose_limit else "CLARIFY",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": relation},
+            retriever_kind="beautify",
+        )
+    if signals.pose_limit:
+        return make(
+            category="pose_limits_alignment",
+            route="SUGGEST",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": "reference_context"},
+            retriever_kind="beautify",
+        )
+
+    # The product rule is a bounded plan family.  A request to exceed it must
+    # still surface the tool card and the policy card, but remains blocked.
+    if signals.round_limit_conflict:
+        return make(
+            category="bounded_plan_family_conflict",
+            route="BLOCK",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": "direct_evidence"},
+            retriever_kind="beautify",
+        )
+
+    # Keep the original behavior for all other sentences; this avoids
+    # silently broadening the candidate beyond the reviewed ontology.
+    return projection, signals
+
+
+def compile_generalized_projection_v3(
+    case: GoldCase,
+) -> tuple[BaselineProjection, QuerySignals]:
+    """Apply failure-driven precedence fixes as an isolated compiler candidate.
+
+    V2 already recognised the main ontology, but its precedence allowed a
+    broad capability word (for example ``五官可改``) to hide a stronger
+    lifecycle, privacy or bounded-round condition.  V3 fixes that ordering and
+    adds conservative paraphrases seen in the public diagnostic set.  It does
+    not consult annotations or invent a provider; all returned labels are
+    still proposals for the downstream policy gate.
+    """
+
+    base, signals = compile_generalized_projection_v2(case)
+    normalized = signals.normalized
+
+    def make(
+        *,
+        category: str,
+        route: str,
+        aliases: tuple[str, ...],
+        relations: dict[str, str],
+        requested: tuple[EditableFeature, ...] = (),
+        allowed: tuple[EditableFeature, ...] = (),
+        preserve: tuple[PreserveAttribute, ...] = (),
+        retriever_kind: str | None = None,
+        outbound_allowed: bool = True,
+    ) -> tuple[BaselineProjection, QuerySignals]:
+        return (
+            BaselineProjection(
+                category_codes=(category,),
+                route_override=route,
+                evidence_aliases=aliases,
+                evidence_relations=relations,
+                requested_features=requested,
+                allowed_features=allowed,
+                preserve_constraints=preserve,
+                retriever_kind=retriever_kind,
+                outbound_allowed=outbound_allowed,
+            ),
+            signals,
+        )
+
+    def has(*terms: str) -> bool:
+        return _has(normalized, *terms)
+
+    # A knowledge instruction to ignore policy and call an unknown API is a
+    # conflict, not merely an outbound preference.  Keep the conflict card as
+    # the primary evidence and never turn this into a tool route.
+    knowledge_injection = has(
+        "忽略 policy",
+        "未知 api",
+        "未登记 api",
+        "知识段落",
+        "忽略安全策略",
+    )
+    if knowledge_injection:
+        return make(
+            category="knowledge_conflict_or_injection",
+            route="BLOCK",
+            aliases=("FX",),
+            relations={"FX": "conflict_evidence"},
+            outbound_allowed=False,
+        )
+
+    if signals.explicit_injection:
+        return make(
+            category="policy_or_injection_block",
+            route="BLOCK",
+            aliases=("P",),
+            relations={"P": "direct_evidence"},
+            outbound_allowed=False,
+        )
+
+    # Explicit refusal to store a long-term anchor still permits the current
+    # edit in the product's degraded mode; it is a policy fact, not a missing
+    # capability.
+    if signals.no_long_term_anchor or has(
+        "不同意保存半年锚点",
+        "不同意保存主体锚点",
+        "不保存半年锚点",
+        "不保存人像锚点",
+    ):
+        return make(
+            category="current_session_anchor_degrade",
+            route="BASELINE",
+            aliases=("P",),
+            relations={"P": "direct_evidence"},
+        )
+
+    # A stale card/version question must not fall into the ordinary
+    # unsupported-feature branch.  It needs the lifecycle conflict evidence.
+    if has("上次工具卡", "上次卡", "旧参数卡", "上一版") and has(
+        "今天", "现在", "目前", "能调", "可调", "支持"
+    ):
+        return make(
+            category="stale_or_unreviewed_knowledge",
+            route="BLOCK",
+            aliases=("FX",),
+            relations={"FX": "conflict_evidence"},
+            retriever_kind="beautify",
+        )
+
+    # “两个范围互相矛盾” is a hard fact conflict even when it does not use
+    # the literal word “冲突”.
+    if has("互相矛盾", "相互矛盾", "范围矛盾", "参数矛盾"):
+        return make(
+            category="hard_fact_conflict",
+            route="BLOCK",
+            aliases=("FX",),
+            relations={"FX": "conflict_evidence"},
+        )
+
+    # If the user explicitly contrasts direct and background material, retain
+    # both sides with their intended evidence roles for an authority review.
+    if has("direct", "直接") and has("背景资料", "解释型", "背景信息"):
+        return make(
+            category="direct_and_background_evidence_relation",
+            route="DIRECT",
+            aliases=("B", "FX"),
+            relations={"B": "direct_evidence", "FX": "reference_context"},
+            retriever_kind="beautify",
+        )
+
+    # A high-authority official card and a low-authority note are not the same
+    # kind of evidence.  Keep the reviewed executable card direct and the
+    # competing lifecycle/context record as background for the explanation.
+    if has("低权威", "高权威", "官方卡", "权威级别") and has("不同", "冲突"):
+        return make(
+            category="authority_priority",
+            route="DIRECT",
+            aliases=("B", "FX"),
+            relations={"B": "direct_evidence", "FX": "reference_context"},
+            retriever_kind="beautify",
+        )
+
+    # Privacy/closed-world wording must dominate an executable feature.  This
+    # keeps a multi-face, no-outbound request in suggestion mode and prevents
+    # accidental cloud calls.
+    if (signals.batch_or_multiface or has("合照", "多人", "左边是我")) and has(
+        "不要出腾讯", "不要出云", "不外发", "不上传"
+    ):
+        return make(
+            category="multiface_no_outbound_scope",
+            route="SUGGEST",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": "direct_evidence"},
+            retriever_kind="beautify",
+            outbound_allowed=False,
+        )
+
+    # An appearance-ranking request is a policy-sensitive batch request.  It
+    # should not be treated as a normal batch edit, because the product does
+    # not judge which person is “ugliest”.
+    if signals.batch_or_multiface and has("最丑", "最好看", "挑出来", "排名"):
+        return make(
+            category="batch_appearance_judgment_scope",
+            route="CLARIFY",
+            aliases=("P", "B"),
+            relations={"P": "direct_evidence", "B": "reference_context"},
+            retriever_kind="beautify",
+        )
+
+    # Compound safety/identity/edit wording needs all three provider cards,
+    # but every card is explanatory evidence; none authorises execution.
+    if (
+        signals.subject_match
+        and signals.moderation
+        and (signals.unsupported_features or signals.executable_features)
+    ):
+        return make(
+            category="information_only_compound_scope",
+            route="SUGGEST",
+            aliases=("I", "C", "B"),
+            relations={
+                "I": "reference_context",
+                "C": "reference_context",
+                "B": "reference_context",
+            },
+            requested=signals.unsupported_features or signals.executable_features,
+        )
+
+    # “成人自拍+批量” is content-safety scope plus batch scope, even when
+    # the user does not say “审核”.
+    if signals.batch_or_multiface and has("成人", "色情", "暴力", "血腥", "裸照", "裸图"):
+        return make(
+            category="batch_content_safety_scope",
+            route="CLARIFY",
+            aliases=("I", "P"),
+            relations={"I": "reference_context", "P": "reference_context"},
+            retriever_kind="moderation",
+        )
+
+    # A round-limit constraint must be evaluated before broad “five features”
+    # capability language.  The tool card remains context, and the policy card
+    # is the direct limit evidence.
+    if signals.round_limit_conflict or has("自动连续修", "多轮自动优化", "修 5 轮", "修5轮"):
+        return make(
+            category="bounded_plan_family_conflict",
+            route="BLOCK",
+            aliases=("B", "P"),
+            relations={"B": "reference_context", "P": "direct_evidence"},
+            retriever_kind="beautify",
+        )
+
+    # “眼睛显得不一样” is a reviewed paraphrase for the executable eye
+    # control, not an unknown request.
+    if has("眼睛显得不一样", "眼睛看起来不一样"):
+        requested = (EditableFeature.EYE_ENLARGING,)
+        return make(
+            category="reviewed_executable_feature",
+            route="DIRECT" if signals.explicit_execute else "REFERENCE",
+            aliases=("B",),
+            relations={"B": "direct_evidence"},
+            requested=requested,
+            allowed=requested,
+            retriever_kind="beautify",
+        )
+
+    # Unapproved provider wording should resolve to a policy block instead of
+    # an unknown/no-retrieval fallback.
+    if has("未允许该 provider", "未允许这个 provider", "用户未允许", "没有允许 provider"):
+        return make(
+            category="unapproved_provider_block",
+            route="BLOCK",
+            aliases=("P",),
+            relations={"P": "direct_evidence"},
+            outbound_allowed=False,
+        )
+
+    # The V2 projection is retained when none of the reviewed corrections is
+    # present.  This makes the candidate a narrow, reversible delta.
+    return base, signals
+
+
 def compile_validation_projection_v2(case: GoldCase) -> tuple[BaselineProjection, QuerySignals]:
     """Compile the unlocked V3 validation language with policy-first routing.
 
@@ -1246,8 +1640,12 @@ def run_failure_driven_candidate(
 __all__ = [
     "QUERY_COMPILER_CANDIDATE_VERSION",
     "QUERY_COMPILER_CANDIDATE_V2_VERSION",
+    "GENERALIZED_QUERY_COMPILER_V2_VERSION",
+    "GENERALIZED_QUERY_COMPILER_V3_VERSION",
     "QuerySignals",
     "compile_generalized_projection",
+    "compile_generalized_projection_v2",
+    "compile_generalized_projection_v3",
     "compile_validation_projection_v2",
     "extract_query_signals",
     "normalize_for_compilation",

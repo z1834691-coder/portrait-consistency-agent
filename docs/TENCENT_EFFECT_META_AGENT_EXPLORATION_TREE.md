@@ -46,3 +46,22 @@
 ## 每个分支的回滚点
 
 Registry/Meta-Agent 可整体移除而不影响现有 BeautifyPic 主链；8A 与 page 6 只读取提议和写入脱敏事件，不依赖候选 Web 结果。若后续 Gate 失败，恢复到“BeautifyPic baseline + Web 独立 Spike”即可，不需要迁移六类图片业务合同。
+
+## 2026-09-02 当前覆盖｜B / E1 / E2 已完成，E3 保持准入门
+
+历史树中的 C1—C4 与 E1/E2“待冻结/待开发”状态已被本节覆盖：
+
+```text
+Web Card → ToolRegistry → Meta-Agent ToolProposal（candidate/proposal-only）
+        → Web EditPlan（独立 0—1 provider snapshot）
+        → candidate trial policy
+        → Browser Receipt + 一次性 result handoff B
+        → 共同 ProviderRun → VerificationResult
+        → E2 多样本/异常/批量失败隔离回归
+        → E3 candidate → verified（仍待真实证据与负责人批准）
+```
+
+- B 已冻结并实现：Web result 只短暂回 Python 内存，data URL/bytes 不落账；request_ref、输入/输出 hash、尺寸、MIME 和大小均由 Adapter 校验。
+- E1 已验证：Web handoff 可以进入共同 `ProviderRun → VerificationResult`；无可测人脸时如实返回不可验证/重拍路径。
+- E2 已验证：8/8 fixture 样本通过，覆盖输入哈希/大小异常，失败样本不阻塞后续样本；该结果是合同/隔离证据，不是视觉泛化。
+- E3 仍是唯一主流程准入门：必须补真实多样本、供应商隐私/区域/留存/费用和产品负责人批准。若失败，回滚到 BeautifyPic baseline + Web 独立 Spike。
