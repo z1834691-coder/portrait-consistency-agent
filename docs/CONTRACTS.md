@@ -489,6 +489,19 @@ Loop 的不变量是：每代只改一个可解释变量；必须记录 `changed
 尺寸、SDK 版本和耗时，失败必须携带安全错误码。补齐 Secrets 后才可运行一次官方示例图并落一条
 真实 Browser Receipt。
 
+## 2026-09-02｜Browser Receipt 与 Streamlit 重跑关联合同补充
+
+page 6 的 Browser Receipt 可能在组件事件后触发一次完整 Streamlit 重跑。请求合同因此不能在每次
+脚本执行时随机生成新的 `request_ref`：同一输入图片、输入 hash、参数、输入来源和 Card 版本组成一
+个非敏感 request fingerprint，同一代次在重跑期间必须复用 `request_ref`；只有输入或参数变化才开启
+新代次。签名时间可以刷新，但 `reset_token` 只标识请求代次，不能因时间刷新而清空浏览器组件状态。
+
+后端仍以 `EffectWebBrowserReceipt.request_ref` 和 `input_sha256` 双重校验为事实边界。旧代次回执、
+换图回执或 hash 不一致的回执必须安全忽略，不得写入 `ProviderRun`；同一代次的真实回执才可进入
+ProviderRun 幂等保存。Session state 只保存脱敏 request 合同/fingerprint，不保存图片 data URL、
+输出图或 Token。这项修复解决的是组件重跑造成的关联错位，不改变 Card 仍为 `candidate`、RAG
+`execution_authorized=false` 或真实 Web 准入清单。
+
 ## 2026-09-02｜V3 validation 诊断合同补充
 
 V3 的原始 Holdout-A answerless 运行合同仍保持“一次性、不可重跑”的历史快照；产品负责人明确授权后，另建 `rag-v3-validation-unlocked-2026-09-02` 验证合同。验证合同的输入是 36 个 `case_id + query`，另有已审核 annotations；它只供离线诊断，不被在线 RAG、Prompt、Provider 或现役 baseline 读取。

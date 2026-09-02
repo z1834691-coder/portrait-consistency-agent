@@ -21,10 +21,11 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -291,8 +292,17 @@ class TencentEffectWebAdapter:
         *,
         input_value: str,
         now_epoch_seconds: int | None = None,
+        reset_token: str | None = None,
     ) -> EffectWebComponentPayload:
-        """Build an ephemeral browser payload with a five-minute signature."""
+        """Build an ephemeral browser payload with a five-minute signature.
+
+        ``reset_token`` identifies the current prepared request generation.  It
+        deliberately does not default to the signature timestamp: Streamlit
+        reruns after a component event, and changing only the timestamp must
+        not make the browser throw away the still-pending result.  The page
+        therefore keeps the request reference stable for one input/parameter
+        generation while this method refreshes the short-lived signature.
+        """
 
         if request.input_source == "sample_url":
             if not input_value.startswith("https://"):
@@ -331,7 +341,7 @@ class TencentEffectWebAdapter:
                 "input": input_value,
                 "input_sha256": request.input_artifact_sha256,
                 "beautify": request.parameters.model_dump(mode="json", exclude_none=False),
-                "reset_token": f"{request.request_ref}_{timestamp}",
+                "reset_token": reset_token or request.request_ref,
             }
         )
 
@@ -458,6 +468,80 @@ class TencentEffectWebAdapter:
                 retryable=False,
             ),
         )
+
+
+def effect_web_request_fingerprint(
+    *,
+    input_artifact_ref: str,
+    input_artifact_sha256: str,
+    parameters: Mapping[str, object],
+    input_source: Literal["sample_url", "data_url"],
+) -> str:
+    """Return the stable identity of one browser request generation.
+
+    The fingerprint contains only non-sensitive references, a hash and the
+    requested product strengths.  It is used by the Streamlit page to avoid
+    generating a new ``request_ref`` during the rerun that delivers a browser
+    receipt.  Raw image bytes, credentials and provider output never enter it.
+    """
+
+    canonical = {
+        "card_id": EFFECT_WEB_CARD_ID,
+        "card_version": EFFECT_WEB_CARD_VERSION,
+        "input_artifact_ref": input_artifact_ref,
+        "input_artifact_sha256": input_artifact_sha256,
+        "input_source": input_source,
+        "parameters": {key: parameters[key] for key in sorted(parameters)},
+    }
+    return _sha256_hex(json.dumps(canonical, sort_keys=True, separators=(",", ":")))
+
+
+def get_or_create_effect_web_request(
+    session_state: MutableMapping[str, object],
+    adapter: TencentEffectWebAdapter,
+    *,
+    input_artifact_ref: str,
+    input_artifact_sha256: str,
+    parameters: Mapping[str, object],
+    input_source: Literal["sample_url", "data_url"],
+) -> tuple[EffectWebRequest, bool]:
+    """Keep one request reference stable across Streamlit component reruns.
+
+    Returns ``(request, changed)``.  ``changed`` is true only when the input
+    or requested parameters start a new generation; the caller can then clear
+    a prior saved receipt.  The persisted value is a redacted request model,
+    never the component payload or an image.
+    """
+
+    fingerprint = effect_web_request_fingerprint(
+        input_artifact_ref=input_artifact_ref,
+        input_artifact_sha256=input_artifact_sha256,
+        parameters=parameters,
+        input_source=input_source,
+    )
+    existing = session_state.get("effect_web_prepared_request")
+    if isinstance(existing, dict) and existing.get("fingerprint") == fingerprint:
+        try:
+            return EffectWebRequest.model_validate(existing["request"]), False
+        except (KeyError, TypeError, ValueError):
+            # A malformed/stale session object is replaced below.  This is a
+            # local UI recovery path, not a reason to accept an unverified
+            # browser receipt.
+            pass
+
+    request = adapter.prepare_request(
+        request_ref=f"effect_web_{uuid4().hex[:16]}",
+        input_artifact_ref=input_artifact_ref,
+        input_artifact_sha256=input_artifact_sha256,
+        parameters=parameters,
+        input_source=input_source,
+    )
+    session_state["effect_web_prepared_request"] = {
+        "fingerprint": fingerprint,
+        "request": request.model_dump(mode="json"),
+    }
+    session_state.pop("effect_web_saved_receipt", None)
+    return request, True
 
 
 # Streamlit Custom Components v2 bridge.  The import is intentionally local so

@@ -407,3 +407,11 @@ Browser Receipt 后，系统才可记录一次候选运行证据。Token 永不�
 V3 的原始 answerless Holdout-A 运行仍是历史快照；产品负责人明确授权的 `validation` 副本才允许在离线诊断器中读取题干与人工 Gold。该读取不是在线 Prompt 行为，也不构成再次正式 Holdout。诊断器对 H01–H36 的 G0–G5 保存完整安全 Trace，候选只提出查询编译/证据整理建议，不能把任何验证集 Gold 变成线上规则。
 
 G2 的 validation 100% 因 public regression 退化被回退，G3 才作为保守候选保留；最终 Route=100%、Evidence relation=97.22%、Recall@5=100%，G4/G5 无增益。LLM 仍未参与本轮诊断，不能读取照片、向量、密钥或隐藏链路；`execution_authorized=false`、Provider 白名单与业务合同不变。推广前必须新建独立 V4 Holdout。
+
+## 2026-09-02｜Tencent Effect Web 回执关联边界
+
+Streamlit 组件回传结果会触发页面重跑，Prompt 或 LLM 不得参与回执关联。page 6 由确定性
+fingerprint 维护同一输入/参数代次的 `request_ref`，签名可刷新但 `reset_token` 不随时间改变；后端
+必须校验 `request_ref` 与 `input_sha256`。旧代次或 hash 不一致的回执只能安全忽略并提示重新运行，
+不得写入 `ProviderRun`。该修复不改变 Web Card 的 `candidate` 状态，也不改变 RAG proposal-only、
+Token 不出站和图片不落库边界。

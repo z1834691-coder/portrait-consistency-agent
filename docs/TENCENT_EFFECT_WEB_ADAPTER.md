@@ -1,6 +1,6 @@
 # 腾讯特效 Web SDK Adapter｜静态图准入切片
 
-> 当前状态：`candidate / browser-smoke-blocked-by-cloud-secrets`（2026-09-01）
+> 当前状态：`candidate / browser-smoke-ready-pending-receipt`（2026-09-02）
 > 这不是一个 Python REST API。它是浏览器 JavaScript/WebGL SDK 的受限桥接层。
 
 ## 1. 它解决什么问题
@@ -107,3 +107,28 @@ Cloud Reboot 后，page 6 已正常加载，官方示例图入口、参数控件
 用户补齐三项 Secrets 后，下一步只运行一次腾讯官方示例图；若收到回执，保存脱敏的
 `receipt_id/input_sha256/output_sha256/elapsed_ms/sdk_version/status`，再分别完成隐私、区域、
 成本、Gold 回归和产品负责人 promotion 审核。任何单次成功都不会自动改变 Card 或主流程权限。
+
+## 9. 2026-09-02｜Browser Receipt 引用错位修复
+
+### 现象与根因
+
+真实页面曾显示 `browser receipt request_ref does not match the prepared request`。这不是腾讯 SDK
+返回了错误的图片结果，而是 Streamlit 的正常重跑机制造成的：组件回传 Browser Receipt 时，整个
+Python 页面会再次执行；旧页面每次重跑都随机生成新的 `request_ref`，于是上一轮浏览器回执被拿去
+匹配下一轮新请求，合同正确地拒绝了它。
+
+### 修复后的行为
+
+- 页面按“输入图片引用 + 输入 hash + 参数 + 输入来源 + Card 版本”计算非敏感 fingerprint；同一代
+  输入/参数在 Streamlit 重跑时复用同一个 `request_ref`；输入或参数变化才开启新的请求代次。
+- `reset_token` 现在标识请求代次，而不是签名时间。页面重跑只刷新五分钟签名，不会把仍在等待回执的
+  浏览器组件误重置。
+- 旧回执若仍滞留在组件状态中，会被后端按 request/hash 合同安全忽略并提示重新点击当前请求；它不会
+  写入 `ProviderRun`，也不会覆盖有效结果。
+- Session state 只保存脱敏的请求合同和 fingerprint，不保存 data URL、License Token、输入/输出图。
+
+### 交叉验证
+
+新增测试覆盖：同一代重跑复用 request reference、参数改变时开启新代次、签名刷新不改变 reset token、
+参数顺序变化仍得到相同 fingerprint。真实 Browser Receipt 仍须在 Cloud Secrets 配齐后取得；本修复
+解决的是回执关联一致性，不等于 Web Provider 已通过准入。

@@ -108,7 +108,7 @@ offline contract path is tested, but it remains fail-closed until the bound Clou
 returns a real Browser Receipt and the admission evidence is manually reviewed. Existing Tencent IMS and
 BeautifyPic each have one newly authorized internal smoke receipt; this verifies a
 single existing-provider route, not visual effectiveness or candidate-provider readiness.
-The latest cross-check is `178 passed, 4 warnings`; Ruff, compileall and `git diff --check`
+The latest cross-check is `180 passed, 4 warnings`; Ruff, compileall and `git diff --check`
 must be rerun after each change. The hidden answer key remains outside the developer-readable
 workspace and must never be copied into tests, reports, prompts, or source control.
 
@@ -219,7 +219,7 @@ promoted. All traces are offline (`network_called=false`, `llm_called=false`,
 non-overlapping V4 Holdout is still required before any promotion discussion.
 
 After the failure-driven Loop v2 change, the current full-suite verification is
-`178 passed, 4 warnings`; Ruff check/format, compileall, `git diff --check`, the
+`180 passed, 4 warnings`; Ruff check/format, compileall, `git diff --check`, the
 failure-driven loop, P0-A/P0-B/advisory/lifecycle/8C/8C2 smokes all pass. The four
 warnings remain the existing Pillow deprecation warnings. This updates the historical
 160-test snapshot above; it does not change the RAG quality Gate (`FAIL`) or promote V2.
@@ -237,4 +237,4 @@ Cloud 在拉取 `14b692b` 后已成功重建，page 6 能正常加载；此前�
 
 ## 2026-09-02 current QA override
 
-The current repository snapshot has passed `.venv/bin/pytest -q` (`178 passed, 4 warnings`), `ruff check`, `ruff format --check` (`138 files already formatted`), `compileall`, and `git diff --check`. The V3 validation runner and P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke runs also exit 0. The four warnings are existing Pillow deprecation warnings. This is an engineering-consistency receipt only: the RAG project Gate remains `FAIL`, RAG remains proposal-only, the active baseline is unchanged, and the original answerless V3 Holdout snapshot is not reclassified as a promotion result.
+The current repository snapshot has passed `.venv/bin/pytest -q` (`180 passed, 4 warnings`), `ruff check`, `ruff format --check` (`138 files already formatted`), `compileall`, and `git diff --check`. The V3 validation runner and P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke runs also exit 0. The four warnings are existing Pillow deprecation warnings. This is an engineering-consistency receipt only: the RAG project Gate remains `FAIL`, RAG remains proposal-only, the active baseline is unchanged, and the original answerless V3 Holdout snapshot is not reclassified as a promotion result.

@@ -11,7 +11,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import sys
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +30,7 @@ from portrait_consistency_agent.services.tencent_effect_web import (
     TencentEffectWebAdapter,
     TencentEffectWebConfigurationError,
     TencentEffectWebCredentialsMissingError,
+    get_or_create_effect_web_request,
     render_tencent_effect_web,
 )
 from portrait_consistency_agent.storage.local_store import LocalTraceStore
@@ -175,13 +175,16 @@ def main() -> None:
 
     try:
         adapter = TencentEffectWebAdapter(settings)
-        request = adapter.prepare_request(
-            request_ref=f"effect_web_{uuid.uuid4().hex[:16]}",
+        request, request_changed = get_or_create_effect_web_request(
+            st.session_state,
+            adapter,
             input_artifact_ref=input_ref,
             input_artifact_sha256=input_hash,
             parameters=parameters,
             input_source=input_source,
         )
+        if request_changed:
+            st.session_state.pop("effect_web_stale_receipt_hash", None)
     except (ValueError, TencentEffectWebConfigurationError) as exc:
         st.error(f"请求合同无法建立：{exc}")
         return
@@ -266,7 +269,15 @@ def main() -> None:
             }
         )
     except (ValueError, ValidationError) as exc:
-        st.error(f"浏览器回执未通过合同校验：{exc}")
+        error_text = str(exc)
+        if "request_ref does not match" in error_text:
+            st.info(
+                "检测到上一次组件回执对应旧请求，已安全忽略；请点击当前请求的处理按钮重新运行。"
+            )
+        elif "input hash does not match" in error_text:
+            st.info("检测到回执图片不是当前输入，已安全忽略；请保持当前图片不变后重新运行。")
+        else:
+            st.error(f"浏览器回执未通过合同校验：{exc}")
 
 
 if __name__ == "__main__":

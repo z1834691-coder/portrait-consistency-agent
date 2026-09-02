@@ -276,3 +276,11 @@
 | D-TECH-094 | 2026-09-02 | V3 validation HTML 增加 H01–H36 的可展开完整 Trace；JSON 保留 G0–G5 全代 Trace。全量交叉校验以本轮实际命令为准，历史 173-test 快照只保留作时间线。 | 已实现并验证 | 产品负责人可逐题复盘“问题→根因→SOP→检索/路由事实”，不需要从代码猜测；Trace 仍脱敏、离线、proposal-only | 本轮 QA 已完成；若新增代码或文档，沿用同一套全量检查 |
 
 | D-TECH-095 | 2026-09-02 | 完成当前快照交叉校验：新增 V3 validation 诊断测试后，全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 通过，失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 与 Web 离线 smoke 均保持既定结果。 | 已验证 | 代码、合同、测试、RAG 诊断文档和 Dashboard 口径同步；4 条 warning 仍为 Pillow 弃用提示。Tencent Effect Web 仍因 Cloud 缺三项 Secrets 没有 live Browser Receipt，Card 不升级。 | 产品负责人补齐 Effect Web Secrets 后再跑一次官方示例图；不得把离线 smoke 或 Cloud 重建写成图片处理成功 |
+
+## 2026-09-02 追加记录｜Tencent Effect Web 回执 request_ref 错位修复
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-TECH-096 | 2026-09-02 | Cloud page 6 首次收到浏览器回执时出现 `request_ref does not match`。根因是 Streamlit 组件事件触发脚本重跑，而旧页面每次重跑随机生成新的 `request_ref`；后端合同拒绝了旧回执。修复为按输入 hash/引用、参数、来源和 Card 版本生成 fingerprint，并在同一代次复用 request_ref；签名时间可刷新，reset token 不再随时间变化；旧代次回执安全忽略，不写入 ProviderRun。 | 已实现并通过回归 | 解决真实 UI 回执关联错位，不放宽回执合同，不改变 Token/图片留存边界、candidate Card 或 RAG proposal-only；新增 2 条回归测试。 | Cloud 拉取该提交后重跑 page 6；真实 Browser Receipt 仍需 Secrets、域名和 License 证据 |
+
+| D-TECH-097 | 2026-09-02 | 回执关联修复后的本地全量 QA：`.venv/bin/pytest -q` 为 `180 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 通过；Web 专项 11 条回归通过。Cloud 已进入组件执行区，但本轮尚未取得新 Browser Receipt。 | 已验证 | 代码与合同一致；真实 Web Provider 仍是 candidate，不把 Cloud Secrets 已配置或页面可加载写成图片处理成功 | 用户点击当前版本组件后保存脱敏 Browser Receipt，再补 Card/准入证据 |

@@ -123,3 +123,9 @@ Cloud 已完成最新代码重建，page 6 的旧导入错误已消失；但 Eff
 最终保守 G3 相比 G0：Route `30.56%→100%`、Evidence relation `23.61%→97.22%`、Recall@5 `59.72%→100%`；G2 虽在 V3 达到 100%，但 public regression 退化而拒绝，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，RAG 仍 advisory-only、active baseline 未变。下一步不是继续在 V3 上调参，而是由新建且不重叠的 V4 Holdout 验证泛化，再决定 promotion。
 
 完整回放入口：[V3 逐题诊断报告](RAG_V3_VALIDATION_DIAGNOSTICS.md)、[JSON](../reports/rag_v3_validation_diagnostics_v1.json)、[HTML](../reports/rag_v3_validation_diagnostics_v1.html)。本轮离线 Trace 均未调用网络、LLM、Provider，也未读取照片/人脸向量；这份验证结果不能替代真实用户 UI 图片回执。
+
+## 2026-09-02｜Web 回执关联修复
+
+第一位用户反馈的 `browser receipt request_ref does not match` 已定位为 Streamlit 重跑生命周期问题：
+旧 page 6 每次重跑随机生成引用。现已按输入/参数 fingerprint 复用同代次 `request_ref`，签名刷新不重置
+组件；旧回执仍 fail-closed。Web 专项新增 2 条回归，真实 Browser Receipt 仍待 Cloud Secrets 配齐。

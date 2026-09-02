@@ -1845,3 +1845,40 @@ RAG failure-driven、P0-A、P0-B、advisory、lifecycle、8C、8C2 smoke → 全
 ```
 
 4 条 warning 是既有 Pillow 弃用提示。本回执只证明当前代码、合同、测试、报告和看板可一起运行；不把 V3 validation 当作独立 Holdout，不改变 active baseline，也不改变 RAG proposal-only 和 project Gate=`FAIL`。原始 answerless V3 盲测快照仍保留，后续推广必须另建不重叠的 V4 Holdout。
+
+## 2026-09-02｜腾讯特效 Web 回执关联错位修复
+
+### 触发问题
+
+第一位用户在 page 6 运行后看到 `browser receipt request_ref does not match the prepared request`。
+对照组件回传值、页面运行顺序和回执合同后确认：腾讯 SDK 没有被证明返回错误图片；真正问题是
+Streamlit 在组件事件后重跑整个页面，旧代码在重跑时重新随机生成了 `request_ref`，导致上一轮浏览器
+回执与新请求不再属于同一代次。
+
+### 已完成修复
+
+- 新增非敏感 request fingerprint（输入引用、输入 hash、产品参数、输入来源、Card 版本）；相同代次
+  在重跑期间复用 `request_ref`，输入或参数变化才创建新代次。
+- `reset_token` 改为只标识请求代次；签名时间仍可刷新，不会因为重跑刷新签名而重置浏览器结果。
+- 对滞留的旧代次回执或输入 hash 不一致回执，页面改为安全忽略并提示重新运行；它们不会写入
+  `ProviderRun`。
+- Session state 仅存脱敏请求合同/fingerprint，不存图片 data URL、输出图或 License Token。
+
+### 验证
+
+新增“同代次复用 request_ref、参数变化开启新代次、签名刷新不改变 reset token、参数顺序稳定”回归；
+Web 专项测试为 `11 passed`。本修复后的全量 QA 以项目最新交叉校验条目为准；真实 Browser Receipt
+仍待 Cloud 端重新运行确认，不把合同修复写成供应商成功。
+
+### 本修复后的工程校验
+
+```text
+pytest -q                         → 180 passed, 4 warnings
+ruff check / format --check       → passed / 138 files already formatted
+compileall / git diff --check     → passed / passed
+Tencent Effect Web 专项测试       → 11 passed
+```
+
+4 条 warning 仍为既有 Pillow 弃用提示；本轮只修复回执关联生命周期，没有新增网络调用或图片
+持久化。Cloud page 6 已显示三项 Effect Secrets 已配置并进入组件区，待用户点击当前版本组件后
+取得真实 Browser Receipt。

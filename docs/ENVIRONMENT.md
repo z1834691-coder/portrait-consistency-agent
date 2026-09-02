@@ -102,3 +102,9 @@ Cloud 已从最新提交完成重建，page 6 可以正常加载；旧进程缓�
 产品负责人已将 V3 的后续用途明确为离线 validation。原始一次性 answerless 盲测快照仍在工作区外，派生验证包才包含题干与已审核 Gold；运行器不读取照片、向量、密钥，不联网，不调用 LLM 或图片 Provider。当前生成物是 `reports/rag_v3_validation_diagnostics_v1.json/.html`，每代 36 条完整 Trace，页面由 page 5 只读展示。
 
 最终 G3 的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 因 public regression 退化不采纳，G4/G5 无增益。全量 QA 需同时包含 validation runner、pytest、Ruff、format、compileall、diff check；该 validation 证据不改变 active baseline 或 `execution_authorized=false`，推广仍需独立 V4 Holdout。
+
+## 2026-09-02｜Web 组件重跑修复
+
+page 6 现在将同一输入/参数代次的 `request_ref` 保存在 Streamlit session state 的脱敏请求合同中，
+并使用稳定 `reset_token`；签名只按当前时间刷新。旧组件回执若与当前 request/hash 不一致会被忽略，
+不会写入运行账本。Session state 不保存图片 data URL、输出图或 Effect Token。

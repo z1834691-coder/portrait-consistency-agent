@@ -638,3 +638,7 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 产品负责人明确授权后，V3 由“一次性 Holdout-A 盲测”派生出独立 `validation` 副本，用于逐题失败分析和候选优化；原始 answerless 盲测快照保留、不重跑。验证副本允许使用 H01–H36 的题干和人工 Gold，但不进入在线 RAG、Prompt、Provider 或现役 baseline。
 
 当前规则是：RAG 仍 proposal-only；候选只能改变自然语言→`RagQuery` 的查询编译或离线证据整理，不能生成参数、ProviderRun、权限或图片出站。G0–G5 每代记录逐题结论、失败码、SOP、完整安全 Trace、`changed_prediction_count` 和 public regression；G2 的 100% validation 结果因 public regression 退化而不采纳，G3 的保守守门候选才保留。最终 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G4/G5 无新增增益。固定 Precision/project Gate 仍 `FAIL`、hard-safety `PASS`，不得写成 RAG 产品化通过；推广前必须新建不与 V3 重叠的 V4 Holdout。
+
+## 2026-09-02｜Web 回执关联规则补充
+
+Streamlit 重跑不能导致同一浏览器请求换用新的 `request_ref`。page 6 以输入 hash/引用、参数、来源和 Card 版本形成非敏感 fingerprint，同一代次复用引用，参数或输入变化才开新代次；签名时间可刷新但不触发组件重置。旧代次或 hash 不一致回执安全忽略，不进入 `ProviderRun`。该规则只修复交互生命周期，不放宽 Web Card、图片出站或 RAG 权限。

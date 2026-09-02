@@ -42,6 +42,7 @@
 - <span style="color:#C00000"><strong>Cloud 腾讯错误回执：如果 ImageModeration 已读到密钥但请求失败，页面现在会安全显示腾讯 `error_code` 与 `RequestId`，并将同样的非敏感字段写入脱敏 Trace；不会显示原图、密钥或腾讯原始错误全文。没有 `RequestId` 时明确显示“未返回”，不能把失败误写成内容安全通过。</strong></span>
 - <span style="color:#C00000"><strong>视觉交互方向已冻结、尚未实现：</strong>产品采用“中心舞台式首页／对齐工作台 + 母版档案 + 结果记录”的三空间结构；Agent 只在澄清、真实进度、边界与结果时用人话发声，参数/回执/脱敏 Trace 位于第二层。参考图的层次语法与雾紫、肉粉／奶油粉、墨黑、桃红四色体系已冻结；页面遵守奥卡姆剃刀，只突出当前任务、一个上传动作和一个自然语言入口。当前低实体页面样张仍待产品负责人审核，不等于已部署 UI，不改变照片权限、工具调用或数据边界。</span>
 - <span style="color:#C00000"><strong>第一位用户 UX 反馈（待 UI Gate）：</strong>上传等待过长；首屏不应展示脱敏 JSON；A/B/C 检查点和按钮过多；自然语言入口被 GUI 挤压；视觉偏工程文档。当前只记录为事实反馈，尚未擅自改 UI 或删除必要权限门。</span>
+- <span style="color:#C00000"><strong>Web 回执关联修复（2026-09-02）：</strong>修复 Streamlit 重跑导致的 `request_ref` 错位；同一输入/参数代次复用请求引用，签名可刷新，旧代次回执安全忽略。该修复通过 11 条 Web 专项回归，但不等于 Web Provider 已取得真实成功回执，Card 仍为 `candidate`。</span>
 
 ## 重要边界
 
@@ -65,7 +66,7 @@ RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Go
 
 failure analyzer 已把“公开指标、隐藏聚合、错误模式、候选修正、回归差值、SOP”串成可重放链路。当前候选 `rag-correction-candidate-v0.1` 只做经审核的同义词归一化，公开回归 `regression_gate=PASS`，但 project Gate 仍为 `FAIL`，所以没有写入现役检索或权限逻辑。报告和 Dashboard 都是本机只读治理工具，不是生产监控、自动修复器、训练 Dataset 或图片编辑器。
 
-候选 Provider 当前状态为：火山 V2 `not_run`；腾讯特效 Web `candidate / browser-smoke-blocked-by-cloud-secrets`。Cloud 已完成最新代码重建，page 6 可加载；本轮尚未取得新的 Browser Receipt，不能声称 Web 图片、细项五官或批量已验证。两条路线均须按 Card → Adapter → 权限/预算/隐私 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进；只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执，火山 V0 仍不购买/接入。
+候选 Provider 当前状态为：火山 V2 `not_run`；腾讯特效 Web `candidate / browser-smoke-ready-pending-receipt`。Cloud 已完成最新代码重建，page 6 可加载且 Effect Web Secrets 已配置；本轮尚未取得新的 Browser Receipt，不能声称 Web 图片、细项五官或批量已验证。两条路线均须按 Card → Adapter → 权限/预算/隐私 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进；只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执，火山 V0 仍不购买/接入。
 
 ## 当前项目树
 
@@ -100,7 +101,7 @@ portrait-consistency-agent/
 
 ### 本轮最终工程校验
 
-当前全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff check、`ruff format --check`（138 files）、compileall、`git diff --check`、RAG failure-driven loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。这个 QA 结果证明代码和治理产物一致，不改变 public/project Gate=`FAIL`，也不把 V2 候选升级为 active。
+当前全量 `.venv/bin/pytest -q` 为 `180 passed, 4 warnings`；Ruff check、`ruff format --check`（138 files）、compileall、`git diff --check`、RAG failure-driven loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。这个 QA 结果证明代码和治理产物一致，不改变 public/project Gate=`FAIL`，也不把 V2 候选升级为 active。
 ├── logs/                          # 本地 JSONL trace（Git 忽略）
 └── tests/                         # 当前 178 个自动化测试（另有 4 条 Pillow 已知弃用警告）
 ```
@@ -137,7 +138,7 @@ uv run python scripts/smoke_rag_p0b.py --allow-model-download
 uv run python scripts/smoke_deepseek_intent.py --allow-live
 ```
 
-2026-09-01 历史收尾校验（幂等修复前）：全量 `pytest` 为 `160 passed, 4 warnings`；该快照保留用于时间线。当前 QA 以本文上方的 `178 passed, 4 warnings` 为准。v3 private scorer 只输出聚合结果和安全事实；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project quality Gate 为 `FAIL`，不得写成通过；真实 UI 照片流程尚未由 Codex 代跑。
+2026-09-01 历史收尾校验（幂等修复前）：全量 `pytest` 为 `160 passed, 4 warnings`；该快照保留用于时间线。当前 QA 以本文上方的 `180 passed, 4 warnings` 为准。v3 private scorer 只输出聚合结果和安全事实；它不调用 LLM/Provider/网络，也不输出题目、case ID、Gold、答案键路径或图片。当前 RAG project quality Gate 为 `FAIL`，不得写成通过；真实 UI 照片流程尚未由 Codex 代跑。
 
 ## 2026-08-30 评测治理冻结
 

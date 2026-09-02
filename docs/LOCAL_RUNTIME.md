@@ -176,3 +176,9 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 ```
 
 该命令离线运行 G0–G5，生成 `reports/rag_v3_validation_diagnostics_v1.json/.html`，并在 page 5 提供只读入口。每个 H01–H36 都有题目、Gold、Prediction、根因/SOP、查询投影、FTS/dense/RRF/rerank 和完整安全 Trace；没有照片、向量、密钥、网络、LLM 或 Provider。最终 G3 Route=100%、Relation=97.22%、Recall@5=100%，G4/G5 无增益；固定 Precision/project Gate=`FAIL`、hard-safety=`PASS`，候选未推广。验证副本只用于诊断，下一次正式泛化必须用独立 V4。
+
+## Web 回执错位后的页面行为
+
+若 page 6 发生 Streamlit 重跑，当前输入/参数代次会继续使用同一 `request_ref`，不会再把正常回执
+误判为“prepared request 不匹配”。如果用户换图或改参数，旧回执会被安全忽略，页面提示重新点击当前
+请求；不要把旧回执手动复制到新请求。真实 smoke 仍须在 Secrets 配齐后运行官方示例图。

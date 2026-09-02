@@ -16,7 +16,9 @@ from portrait_consistency_agent.services.tencent_effect_web import (
     TencentEffectWebAdapter,
     TencentEffectWebConfigurationError,
     TencentEffectWebCredentialsMissingError,
+    effect_web_request_fingerprint,
     evaluate_effect_web_admission,
+    get_or_create_effect_web_request,
     render_tencent_effect_web,
 )
 
@@ -116,6 +118,77 @@ def test_payload_mints_signature_without_exposing_license_token() -> None:
         "whiten": 0.0,
         "dermabrasion": 0.0,
     }
+
+
+def test_request_generation_is_stable_across_streamlit_reruns() -> None:
+    adapter = TencentEffectWebAdapter(_settings_with_effect_credentials())
+    state: dict[str, object] = {}
+    request_a, changed_a = get_or_create_effect_web_request(
+        state,
+        adapter,
+        input_artifact_ref="effect_web_input_001",
+        input_artifact_sha256="a" * 64,
+        parameters={"face_lifting": 10, "eye_enlarging": 15},
+        input_source="data_url",
+    )
+    state["effect_web_saved_receipt"] = "run_old"
+    request_b, changed_b = get_or_create_effect_web_request(
+        state,
+        adapter,
+        input_artifact_ref="effect_web_input_001",
+        input_artifact_sha256="a" * 64,
+        parameters={"eye_enlarging": 15, "face_lifting": 10},
+        input_source="data_url",
+    )
+
+    assert changed_a is True
+    assert changed_b is False
+    assert request_b.request_ref == request_a.request_ref
+    assert "effect_web_saved_receipt" in state
+    assert state["effect_web_prepared_request"]["request"]["request_ref"] == request_a.request_ref  # type: ignore[index]
+
+    request_c, changed_c = get_or_create_effect_web_request(
+        state,
+        adapter,
+        input_artifact_ref="effect_web_input_001",
+        input_artifact_sha256="a" * 64,
+        parameters={"face_lifting": 11, "eye_enlarging": 15},
+        input_source="data_url",
+    )
+    assert changed_c is True
+    assert request_c.request_ref != request_a.request_ref
+    assert "effect_web_saved_receipt" not in state
+
+
+def test_signature_refresh_does_not_reset_same_browser_generation() -> None:
+    adapter = TencentEffectWebAdapter(_settings_with_effect_credentials())
+    request, _, _ = _request(adapter)
+    encoded = base64.b64encode(b"approved-demo-image-bytes").decode("ascii")
+    data_url = "data:image/png;base64," + encoded
+    first = adapter.build_component_payload(
+        request,
+        input_value=data_url,
+        now_epoch_seconds=1_700_000_000,
+    ).data
+    refreshed = adapter.build_component_payload(
+        request,
+        input_value=data_url,
+        now_epoch_seconds=1_700_000_120,
+    ).data
+
+    assert first["reset_token"] == refreshed["reset_token"] == request.request_ref
+    assert first["signature"] != refreshed["signature"]
+    assert effect_web_request_fingerprint(
+        input_artifact_ref=request.input_artifact_ref,
+        input_artifact_sha256=request.input_artifact_sha256,
+        parameters={"eye_enlarging": 15, "face_lifting": 10},
+        input_source=request.input_source,
+    ) == effect_web_request_fingerprint(
+        input_artifact_ref=request.input_artifact_ref,
+        input_artifact_sha256=request.input_artifact_sha256,
+        parameters={"face_lifting": 10, "eye_enlarging": 15},
+        input_source=request.input_source,
+    )
 
 
 def test_missing_effect_credentials_blocks_before_component_payload() -> None:

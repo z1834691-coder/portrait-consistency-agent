@@ -119,3 +119,7 @@ Cloud 已从最新提交成功重建，page 6 能加载，旧进程缓存造成�
 产品负责人已明确授权把已审核 V3 题目/答案用于 validation 诊断。原始一次性 answerless Holdout-A 快照仍保留、不重跑；验证副本 `rag_v3_validation_cases_v1.json` / `..._annotations_v1.json` 只供离线诊断。`rag_v3_validation_diagnostics_v1.json/.html` 为 H01–H36 的 G0–G5 逐题结论、根因、SOP、查询投影、检索摘要和完整安全 Trace。
 
 最终 G3 保守候选的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 的 100% 因 public regression 退化而拒绝，G4/G5 0 改变。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，active baseline 与执行权限未改变。后续 promotion 仍必须使用不与 V3 重叠的独立 V4 Holdout；RAG 继续 advisory-only。
+
+2026-09-02 Web 试验修复：Cloud 首次回执的 `request_ref` 错位来自 Streamlit 重跑时随机重建请求，
+不是腾讯回执被放行或图片结果被篡改。page 6 已改为 fingerprint + 同代次 request 复用，签名刷新与
+组件 reset 解耦；旧回执不入账。Web Card 仍为 `candidate`，当前没有新的真实 Browser Receipt。

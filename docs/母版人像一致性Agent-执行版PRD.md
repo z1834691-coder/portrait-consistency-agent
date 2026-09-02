@@ -1595,3 +1595,18 @@ Cloud 已拉取最新代码并完成一次重建；page 6 的旧模块缓存 Imp
 下一步只需由产品负责人在 Cloud App Settings → Secrets 根级补齐这三个名称对应的值，再运行一次
 官方示例图。回执入账后仍要单独完成图片出站/地区/留存、预算、Gold 回归和负责人 promotion；
 这次部署修复和官方 License 状态都不能替代真实图片证据。
+
+## 2026-09-02｜产品设计：浏览器回执必须与当前请求同代次
+
+<span style="color:#C00000"><strong>背景与问题。</strong>首轮 Web 试验曾在真实页面收到 `browser receipt request_ref does not match the prepared request`。这暴露的不是供应商效果问题，而是交互框架的生命周期问题：Streamlit 组件回传事件后会重跑 Python 页面，如果页面在每次重跑时重新生成请求引用，用户刚刚等待的浏览器结果就会被系统误判为另一张请求的回执。</span>
+
+<span style="color:#C00000"><strong>判断与决策。</strong>产品把“同一输入/参数代次的回执关联”视为 Web Provider 能否真实使用的基础可靠性，而不是放宽合同来掩盖错位。系统按输入引用、输入 hash、参数、来源和 Card 版本生成非敏感 fingerprint；同一代次复用 `request_ref`，输入或参数改变才进入新代次。签名时间可以刷新，但 `reset_token` 只代表代次，避免浏览器组件因签名刷新而被重置。旧代次或 hash 不一致的回执仍然拒绝入账并给出可理解的重试提示。</span>
+
+<span style="color:#C00000"><strong>带来的效果。</strong>这次修复使浏览器回执、ProviderRun 和 Streamlit 重跑之间具备可追溯的父子关系，同时保留 fail-closed 合同：不会因为修复 UI 生命周期而放宽图片、Token、Provider 权限或 Card promotion。Session state 只保存脱敏请求合同/fingerprint，不保存图片或密钥；该修复本身也不等于 Web 图片处理成功，真实 Browser Receipt 仍需在 Cloud Secrets 配齐后重新取得。</span>
+
+## 2026-09-02｜Tencent Effect Web 回执关联修复（当前实现状态）
+
+`TencentEffectWebAdapter` 新增同代次 request fingerprint 和请求复用逻辑；page 6 不再在每次
+Streamlit 重跑时随机生成新的 `request_ref`。`reset_token` 与签名时间解耦，旧回执会安全忽略，不写入
+`ProviderRun`。新增回归覆盖同代次复用、参数变化开新代次、参数顺序稳定和签名刷新不重置组件。
+本轮修复后的 Web 专项测试为 `11 passed`；Cloud 尚未取得新的 Browser Receipt，Card 继续为 `candidate`。
