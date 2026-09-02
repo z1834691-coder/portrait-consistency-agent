@@ -110,3 +110,9 @@ P0-C 收尾**当时**的交叉校验：`.venv/bin/pytest -q` 实际为 `106 pass
 ## 2026-08-30 当前同步：P0-D 生命周期审计
 
 P0-D 在 P0-C 之前提供知识安全元数据快照：当前 3 张审核 Tencent Card、10 条 active chunks、`issue_counts={}`、dense `in_sync`。它只生成审计建议和 Trace，不改变 `RagAdvisoryDecision`、不自动发布/改状态/删除/重建索引，也不新增执行授权；因此 P0-C 的 `execution_authorized=false` 保持不变。
+
+## 2026-09-02｜V3 validation 诊断对 P0-C 的补充边界
+
+V3 原始 answerless Holdout-A 快照仍只保留一次性 aggregate；产品负责人明确授权的 validation 副本用于离线逐题诊断，不改变 P0-C 的在线行为。`rag_v3_validation_diagnostics` 仅消费审核标注来比较 G0–G5 查询编译候选，输出逐题证据关系、根因、SOP 和完整安全 Trace；它不调用 P0-C 生产入口，不生成 `RagAdvisoryDecision` 以外的权限，也不写 `ProviderRun`。
+
+最终 G3 validation Route=100%、Relation=97.22%、Recall@5=100%，但固定 Precision/project Gate 仍 `FAIL`；G2 因 public regression 退化而拒绝，G4/G5 无增益。该结果只能作为验证集工程证据，RAG `execution_authorized=false`、Provider 白名单和六个业务合同不变；正式 promotion 必须另建独立 V4 Holdout。

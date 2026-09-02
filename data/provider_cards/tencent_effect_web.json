@@ -119,9 +119,12 @@
   "evidence": {
     "official_static_image_doc": "https://cloud.tencent.com/document/product/616/118039",
     "official_web_quick_start": "https://intl.cloud.tencent.com/ind/document/product/1143/53939",
+    "cloud_build_status": "rebuilt_after_cached_import_error",
+    "cloud_build_checked_at": "2026-09-01",
+    "browser_smoke_blocker": "missing_effect_web_secrets",
     "live_smoke_status": "not_run",
     "live_receipt_ref": null,
-    "last_review_note": "Official Web docs reviewed; this project has not yet produced a browser SDK receipt."
+    "last_review_note": "Cloud page 6 now loads after rebuild; no Browser Receipt because APP_ID, LICENSE_KEY and LICENSE_TOKEN are not configured."
   },
   "source": {
     "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",

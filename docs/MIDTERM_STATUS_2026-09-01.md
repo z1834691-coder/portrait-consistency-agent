@@ -105,4 +105,21 @@ RAG lifecycle audit               → 3 items / 10 active chunks / issue_counts=
 
 本轮将候选移到真实查询编译边界，建立 28 题（16 dev + 12 challenge）owner-review 开发集。V0 Composite=`0.355614`；V1=`0.403233`（+0.047619、改变 2 条预测）；V2=`0.947619`（+0.544386、改变 22 条预测）；V3/V4 各改变 0 条预测，连续两代 `<0.01` 停止。V0 failure code 为 route 24、relation 23、set 18、rank 10；稀疏 Gold 分母 28 条单独记录。候选无网络/LLM/Provider/hidden-answer 访问，active baseline 未改变，anti-overfit=`PASS`。
 
-这证明“修错层”是上一轮无增益的原因，并证明 V2 在开发集上有效；它不等于 RAG 质量通过。新 annotations 需产品负责人审核，之后必须建立与 v3 不重叠的 Holdout v4；public regression/project Gate 仍 `FAIL`。本轮最终 QA 为 `173 passed, 4 warnings`，4 条 warning 是既有 Pillow 弃用提示。
+这证明“修错层”是上一轮无增益的原因，并证明 V2 在开发集上有效；它不等于 RAG 质量通过。新 annotations 需产品负责人审核，之后必须建立与 v3 不重叠的 Holdout v4；public regression/project Gate 仍 `FAIL`。本轮最终 QA 为 `178 passed, 4 warnings`，4 条 warning 是既有 Pillow 弃用提示。
+
+本轮还补齐了逐题可观测性：失败驱动报告的 `final_candidate_diagnostics` 对 28 道公开题并列保存 V0 与终态状态/错误码/路由变化；从 V0 到终态共有 24 条 Prediction 事实变化。人工复盘见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。这解决了“总分有变化但不知道哪道题被修复”的复盘缺口，仍不读取 v3 私有答案。
+
+## 2026-09-01｜腾讯特效 Web Cloud 证据更新
+
+Cloud 已完成最新代码重建，page 6 的旧导入错误已消失；但 Effect Web 三项 Secrets 尚未配置，
+所以没有加载 SDK、图片出站或 Browser Receipt。该候选仍是 `candidate`，不能写成已接入主流程。
+配置 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`
+后，先用官方示例图运行一次，再补隐私/区域/成本/Gold 和人工准入证据。
+
+## 2026-09-02｜V3 验证诊断后的中期更新
+
+产品负责人明确把 V3 从一次性 Holdout-A 盲测改作 validation：原始盲测快照不动，派生验证副本用于逐题失败分析。当前已完成 H01–H36 的题目、Gold、Prediction、根因/SOP、查询投影、检索摘要和完整 Trace，并运行 G0–G5 候选链。
+
+最终保守 G3 相比 G0：Route `30.56%→100%`、Evidence relation `23.61%→97.22%`、Recall@5 `59.72%→100%`；G2 虽在 V3 达到 100%，但 public regression 退化而拒绝，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，RAG 仍 advisory-only、active baseline 未变。下一步不是继续在 V3 上调参，而是由新建且不重叠的 V4 Holdout 验证泛化，再决定 promotion。
+
+完整回放入口：[V3 逐题诊断报告](RAG_V3_VALIDATION_DIAGNOSTICS.md)、[JSON](../reports/rag_v3_validation_diagnostics_v1.json)、[HTML](../reports/rag_v3_validation_diagnostics_v1.html)。本轮离线 Trace 均未调用网络、LLM、Provider，也未读取照片/人脸向量；这份验证结果不能替代真实用户 UI 图片回执。

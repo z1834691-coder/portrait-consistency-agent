@@ -906,7 +906,7 @@ RAG 盲测的 FAIL 不会自动改变 8A/8C、Provider 白名单或图片权限�
 
 ## 31. 2026-09-01｜失败驱动优化 v2 的真实结果与 Gate 边界
 
-上一轮 V0/V1/V2 Composite 都是 `0.947436` 的原因已经定位：候选只在已经生成的 Prediction 后处理，未改变自然语言到 `RagQuery` 的输入层。新 loop 使用 28 道 owner-review 开发/挑战题，在真实查询编译边界逐代运行：V0=`0.355614`，V1=`0.403233`（+0.047619、改变 2 条预测），V2=`0.947619`（+0.544386、改变 22 条预测），V3/V4 各改变 0 条预测并按两代 `<0.01` 停止。V2 的开发集增益不能替代正式质量 Gate。
+上一轮 V0/V1/V2 Composite 都是 `0.947436` 的原因已经定位：候选只在已经生成的 Prediction 后处理，未改变自然语言到 `RagQuery` 的输入层。新 loop 使用 28 道 owner-review 开发/挑战题，在真实查询编译边界逐代运行：V0=`0.355614`，V1=`0.403233`（+0.047619、改变 2 条预测），V2=`0.947619`（+0.544386、改变 22 条预测），V3/V4 各改变 0 条预测并按两代 `<0.01` 停止。从 V0 到终态共有 24 条 Prediction 事实变化；V2 的开发集增益不能替代正式质量 Gate。
 
 每代必须同时检查：安全硬门、route、evidence exact/relation、Recall@5、MRR、nDCG@5、三种 Precision、public regression、`changed_prediction_count`、anti-overfit 和 active baseline 是否改变。当前回执为 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`、anti-overfit=`PASS`；RAG 仍 `execution_authorized=false`。
 
@@ -914,4 +914,34 @@ RAG 盲测的 FAIL 不会自动改变 8A/8C、Provider 白名单或图片权限�
 
 ### 31.1 当前一致性校验
 
-全量 pytest=`173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该门只确认工程证据链完整；RAG quality Gate 仍为 `FAIL`，V2 不得自动 promotion。
+全量 pytest=`178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该门只确认工程证据链完整；RAG quality Gate 仍为 `FAIL`，V2 不得自动 promotion。逐题人工复盘见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。
+
+## 32. 2026-09-01｜腾讯特效 Web Cloud 证据门
+
+Cloud 已成功重建 page 6 并解决旧进程 ImportError，但本轮没有进入 Web SDK smoke：服务端在生成
+签名前发现 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`
+缺失。RAG 可以检索并解释这一候选 Card 的能力和阻塞原因，但不能把缺失配置补成事实、不能
+生成 Browser Receipt、不能授权图片出站。补齐 Secrets 后才允许用官方示例图运行一次，回执仍
+需经过隐私/区域/成本/Gold/负责人准入审核；RAG 的 `execution_authorized=false` 不变。
+
+## 33. 2026-09-02｜V3 解冻验证诊断与回归守门
+
+产品负责人明确允许读取已审核的 V3 题目与答案，用于补齐 H01–H36 的逐题结论、失败模式和完整 Trace。原始一次性 answerless 盲测快照仍在工作区外保留，本轮没有重跑；V3 新用途改为 `validation`，不能再被称为独立 Holdout。
+
+本轮新增 `RAG_V3_VALIDATION_DIAGNOSTICS.md`、`services/rag_v3_validation_diagnostics.py`、运行脚本和 JSON/HTML 报告。每个代次的每一道题都保留 query hash、结构化信号、投影、FTS/dense/RRF/rerank 摘要、证据关系、Prediction、失败码、根因、SOP 修正和安全布尔事实；没有照片、人脸向量、密钥、网络、LLM 或 Provider 调用。
+
+| 代次 | 关键改动 | V3 Route / Relation / Recall@5 | Public regression Route / Relation | 结论 |
+|---|---|---|---|---|
+| G0 | 原 baseline | 30.56% / 23.61% / 59.72% | 100% / 100% | 失败起点 |
+| G1 | v0.1 查询编译 | 58.33% / 52.78% / 77.78% | 71.15% / 70.51% | 有增益但回归 |
+| G2 | v0.2 policy-first 编译 | 100% / 100% / 100% | 61.54% / 63.14% | V3 命中但过拟合 |
+| G3 | v0.3 公开回归守门 | 100% / 97.22% / 100% | 100% / 100% | 推荐保守候选 |
+| G4/G5 | 下游 relation/evidence no-op | 100% / 97.22% / 100% | 100% / 100% | 已到边际效益递减 |
+
+这次证明了两件事：第一，上一轮无增益是因为修错了层，修正必须前移到自然语言进入 P0-B 前的查询编译；第二，V3 100% 不能单独代表产品质量，G3 的 regression guard 用“高置信显式信号才允许改变已知 baseline，否则回退”的方式保住公开集。最终 V3 固定 Precision 仍因 Gold 稀疏而为 `FAIL`，hard-safety 为 `PASS`，RAG 仍 proposal-only，active baseline 未改变。新的独立 V4 仍是推广前必需的质量证据。
+
+## 34. 2026-09-02｜V3 validation 逐题回放入口
+
+产品负责人明确授权将已审核 V3 作为 `validation` 使用；原始 Holdout-A answerless 快照仍不变。本轮报告在 [RAG_V3_VALIDATION_DIAGNOSTICS.md](RAG_V3_VALIDATION_DIAGNOSTICS.md) 和 `reports/rag_v3_validation_diagnostics_v1.json/.html` 中补齐 H01–H36 的逐题结论与完整 Trace，page 5 只读嵌入。G0–G5 的结果以 G3 为最终保守候选：Route=100%、Relation=97.22%、Recall@5=100%；G2 的 100% 因 public regression 退化不采纳，G4/G5 无新增改变。
+
+验证诊断允许读取 Gold，但只作用于离线候选；它不修改 active baseline、不调用网络/LLM/Provider、不读照片或向量，也不改变 `execution_authorized=false`。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`。下一次质量/泛化验收必须新建与 V3 不重叠的 V4 Holdout。

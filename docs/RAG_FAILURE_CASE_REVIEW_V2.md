@@ -81,3 +81,7 @@
 - 失败驱动开发题目：[rag_failure_driven_dev_v1.json](../data/evaluation/rag_failure_driven_dev_v1.json)
 - 结构化 annotations（待产品负责人审核）：[rag_failure_driven_dev_v1_annotations.json](../data/evaluation/rag_failure_driven_dev_v1_annotations.json)
 - 代码：[rag_failure_driven_loop.py](../src/portrait_consistency_agent/services/rag_failure_driven_loop.py)、[rag_query_compiler_candidate.py](../src/portrait_consistency_agent/services/rag_query_compiler_candidate.py)
+
+## 7. V3 validation 逐题复盘入口（2026-09-02）
+
+本文件保留的是公开失败驱动开发集的历史复盘；V3 在产品负责人明确解冻后另行生成了完整验证诊断。V3 H01–H36 的题干、人工 Gold、每代 Prediction、失败码、根因/SOP、查询投影和完整 Trace 请以 [RAG_V3_VALIDATION_DIAGNOSTICS.md](RAG_V3_VALIDATION_DIAGNOSTICS.md)、[逐题 JSON](../reports/rag_v3_validation_diagnostics_v1.json) 和 [可视化 HTML](../reports/rag_v3_validation_diagnostics_v1.html) 为准。原始一次性 Holdout-A 盲测快照未重跑；validation 结果不能替代独立 V4 Holdout。

@@ -1173,7 +1173,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 2026-09-01 当前验证：
 
 ```text
-.venv/bin/pytest -q                     → `160 passed, 4 warnings`（2026-09-01 RAG 失败模式自动优化 Loop 收口后的实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C/P0-D、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、优化 Loop、Provider shell 与本地账本幂等冲突回归；4 条为既有 Pillow 弃用警告）
+.venv/bin/pytest -q                     → `178 passed, 4 warnings`（2026-09-01 当前实际回执；包含检查点 7、8A、8B、8C-1、8C-2、RAG P0-A/P0-B/P0-C/P0-D、Dashboard、Gold evaluator、私有聚合 scorer、failure analyzer、失败驱动优化 Loop、Provider shell 与本地账本幂等冲突回归；4 条为既有 Pillow 弃用警告）
 DeepSeek 默认 smoke                     → offline_guarded；network_called=false（证明默认不联网）
 DeepSeek --allow-live                   → passed；parser_mode=llm；schema_validated=true；model=deepseek-v4-flash；2957 ms；1471 tokens
 Tencent CompareFace --allow-live        → succeeded，RequestId=b89e828a-8038-41d3-a598-575fdba23521
@@ -1310,7 +1310,7 @@ Gold Set v2（开发/挑战/隐藏）
 - `docs/RAG_GOLD_EVALUATOR.md`、`docs/RAG_GOLD_JUDGE_PROMPT.md`、`docs/RAG_GOLD_SET_V2_HUMAN_REVIEW.md`：分别记录一页说明、盲审输入/输出合同和人工逐题审核模板。
 - `data/evaluation/rag_gold_v2_public.json`：52 道无答案开发/挑战运行题；`rag_gold_v2_annotations.json`：仅 dev/challenge 答案键；`rag_gold_v2_holdout_runtime.json`：20 道只含 `case_id/query` 的隐藏运行包。
 - `data/provider_cards/volcengine_beauty_api_v2.json`、`data/provider_cards/tencent_effect_sdk.json` 与对应 Adapter shell：均明确 `candidate`、未接入真实 SDK/API、无图片出站、无密钥、无真实费用/License/地区确认；默认 fail-closed。腾讯 Web 另有 `tencent_effect_web.json`、浏览器 Adapter 和 page 6，但仍需真实 Browser Receipt 与准入证据，不得与移动/PC 细项混用。
-- 真实命令证据：最新全量 `pytest` 为 `160 passed, 4 warnings`；public 52 题 deterministic baseline、v3 无答案 runtime prediction 和 proposal-only 优化 Loop 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator、canonical event parser 和优化 Loop 均明确 `network_called=false`。
+- 真实命令证据：最新全量 `pytest` 为 `178 passed, 4 warnings`；public 52 题 deterministic baseline、v3 无答案 runtime prediction 和 proposal-only 优化 Loop 已运行；私有 aggregate scorer 已写出不含题目/Gold/路径的 JSON/HTML，当前 project Gate 为 `FAIL`；RAG advisory、lifecycle audit、两个 Provider shell smoke、双口径 evaluator、canonical event parser 和优化 Loop 均明确 `network_called=false`。
 
 ### 17.6 下一道产品决策门
 
@@ -1432,6 +1432,29 @@ Gold Set v2（开发/挑战/隐藏）
 
 <span style="color:#C00000"><strong>对后续开发的约束。</strong> 不用 v3 逐题答案修规则；后续 RAG 迭代只能在 public/dev/challenge 或新的独立 Holdout 上验证。真实用户事件进入匿名运行账本，用于产品迭代而不是直接训练模型；在数据量不足前不得写成留存、满意度或产品有效性结论。页面、合同、ProviderRun、VerificationResult 和 Dashboard 必须继续保留“结果图只在会话内存、Trace 脱敏、RAG 只能提议、首轮外部调用需用户确认、同 scope 子轮才可受限自动续跑”的边界。</span>
 
+### 17.19 2026-09-02 产品设计：把 V3 从独立 Holdout 明确解冻为验证集，并用失败模式驱动 RAG 修正
+
+<span style="color:#C00000"><strong>背景与问题。</strong> v3 第一次正式盲测只能合法返回聚合结果，主要指标为 Route=30.56%、Evidence relation=23.61%、Recall@5=59.72%，hard-safety=0/36；它能证明 RAG 泛化不足，却不能告诉我 H01–H36 每一道题到底是路由错、证据集合错，还是证据关系错。上一轮优化连续三代 Composite=`0.947436` 没有变化，回看 Trace 后发现候选只改了已生成 Prediction 的后处理层，而真实错误发生在自然语言进入 `RagQuery` 之前。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong> 我先保留原始一次性 answerless 盲测快照，再根据已完成的产品负责人审核，将 v3 明确改为“验证集”而不是偷偷重跑 Holdout。通过逐题 join 题目、Gold、baseline prediction 和完整安全 Trace，我把失败拆成查询编译、召回/融合、证据关系、路由和安全五层；同时保留 public regression，避免为了让 V3 好看而牺牲已有能力。评测不只看 Composite，还看 `changed_prediction_count`、Route、evidence exact/relation、Recall@5、MRR、nDCG、三种 Precision、hard-safety 和回归集。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> V3 允许在工作区内生成明确标记的 `validation` 诊断副本，答案键只因本轮产品负责人授权而读取；原始盲测不重跑，新的正式泛化证据必须来自独立 V4。RAG 继续 proposal-only，不可改变 Provider 白名单、权限、参数或 `execution_authorized=false`。每一代只改一个可解释变量：G1 查询编译、G2 policy-first 查询编译、G3 公开回归守门、G4 relation guard、G5 evidence packing。守门规则是：已知 baseline 有具体结果时，只有高置信显式信号才允许改变；否则回退 baseline 并把原因写入 Trace。</span>
+
+<span style="color:#C00000"><strong>工程处理与结果。</strong> 新增 `rag_v3_validation_diagnostics.py`、V3 验证集加载/派生脚本、运行脚本、逐题失败解释、完整 Trace、HTML 报告和 page 5 看板区。G0 为 Route 30.56%、Relation 23.61%、Recall@5 59.72%；G2 将 V3 验证集这三项提高到 100%，但 public Route 从 100% 降到 61.54%，证明单集优化会过拟合；G3 的 regression guard 把 public Route/Relation 恢复到 100%，V3 保留 Route/Evidence exact/Recall@5=100%、Relation=97.22%；G4/G5 无额外增益，达到边际效益递减。最终 hard-safety=PASS，project Gate 仍=FAIL，active baseline 未改变。</span>
+
+<span style="color:#C00000"><strong>带来的效果与面试价值。</strong> 我现在可以逐题回答“原来错在哪里、哪一层最早错、改了哪条 SOP、指标如何变化、为什么要回退、为什么还不能上线”，而不是只展示一个漂亮总分。完整 JSON/HTML 对每代保存题干、Gold、Prediction、失败码、根因、修正、检索 Trace 和安全布尔事实；报告明确区分验证集改善、公开回归和独立泛化证据。该决策把“优化 RAG”变成可证伪、可回滚、可解释的产品质量机制，但不能写成 RAG 已产品化通过。</span>
+
+### 17.19.1 实现矩阵同步
+
+| 能力 | 当前状态 | 证据与边界 |
+|---|---|---|
+| V3 逐题诊断 | **已实现** | H01–H36 每代都有 Gold、Prediction、失败分析和完整安全 Trace；V3 已重新标记为 validation |
+| 失败模式 SOP | **已实现** | route/set/relation/rank/稀疏分母计数、根因解释和修正动作写入 JSON/HTML/Markdown |
+| 查询编译候选 | **已实现为 proposal-only** | G1/G2 触达真实上游层；不改 active baseline、权限或 Provider |
+| 公开回归守门 | **已实现并通过语义回归** | G3 低置信变更回退 baseline；public Route/Relation/Recall 保持 100% |
+| V3 质量 Gate | **未通过** | 固定 Precision 与 project Gate 仍 FAIL；仅可作为验证集改善证据 |
+| 下一质量证据 | **待独立 V4** | V4 不能与 V3 重叠，且必须在不读取答案的情况下正式验收 |
+
 ## 附录 B. 2026-08-30 产品设计与工程收口：RAG 知识生命周期审计
 
 ### B.1 背景、问题与调研
@@ -1540,7 +1563,7 @@ RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来�
 
 <span style="color:#C00000"><strong>产品决策。</strong>RAG 仍只能提议，且自校正每代只改变一个可解释变量。新增 28 题（16 dev + 12 challenge）的 owner-review 开发/挑战集，将候选放在自然语言→`RagQuery` 的真实边界；V0 保留旧窄短语 baseline，V1 做已审核同义词归一化，V2 做 `QuerySignals` 查询编译并先处理动作/信息请求、安全/出站、生命周期/冲突和多意图 evidence union，V3/V4 仅验证下游 relation guard/evidence packing 是否还有边际收益。每代同时看 hard-safety、project Gate、route、证据集合/关系、Recall@5、MRR、nDCG、三种 Precision、public regression、anti-overfit 和回滚条件；连续两代增益 `<0.01` 且未过质量门就停止。</span>
 
-<span style="color:#C00000"><strong>工程处理与结果。</strong>新增 `rag_query_compiler_candidate.py`、`rag_failure_driven_loop.py`、失败驱动数据集/annotations、运行脚本、4 条回归测试、page 5 代际看板和 JSON/HTML 报告。V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，2 条预测改变）；V2=`0.947619`（+0.544386，22 条预测改变，开发集 route/relation/Recall@5=100%）；V3/V4 各改变 0 条预测，连续两代低增益后停止。所有候选均 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。</span>
+<span style="color:#C00000"><strong>工程处理与结果。</strong>新增 `rag_query_compiler_candidate.py`、`rag_failure_driven_loop.py`、失败驱动数据集/annotations、运行脚本、4 条回归测试、page 5 代际看板和 JSON/HTML 报告。V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，2 条预测改变）；V2=`0.947619`（+0.544386，22 条预测改变，开发集 route/relation/Recall@5=100%）；从 V0 到终态共 24 条 Prediction 事实改变；V3/V4 各改变 0 条预测，连续两代低增益后停止。所有候选均 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。逐题 V0/终态对照见 `docs/RAG_FAILURE_CASE_REVIEW_V2.md`。</span>
 
 <span style="color:#C00000"><strong>带来的效果与边界。</strong>这次迭代证明上一轮无增益是“候选修错层”，并证明查询编译候选在受审核开发集上确实改善了 route/evidence；V3/V4 的 0 条改变又说明不应继续堆同类后处理。它仍不是产品质量通过：开发 annotations 待产品负责人审核，public regression 的固定 Precision@3=`47.44%`、project Gate 仍 `FAIL`，v3 Holdout 不得重跑或读取逐题答案。下一次正式泛化验收必须新建独立 Holdout v4，审核通过后才能讨论 promotion。</span>
 
@@ -1551,9 +1574,24 @@ RAG 的知识不是写入一次就永久可靠：官方 API 可能更新，来�
 | 失败驱动开发集 | **已生成，待人工审核** | 28 题（16 dev/12 challenge），annotations=`owner_review_required` |
 | V0→V4 真实候选回归 | **已运行** | `reports/rag_failure_driven_loop_v1.json/.html`；V2 改变 22 条预测，V3/V4 no-op |
 | 逐题失败诊断 | **已实现** | 只保存 public/DX case ID、标签、题干 SHA、预测/Gold 数量和 failure code，不含 v3 私有答案 |
+| V0/终态逐题对照 | **已实现** | `final_candidate_diagnostics` 与 `RAG_FAILURE_CASE_REVIEW_V2.md`；保存状态、错误码、路由变化和可回放事实，不含 v3 私有答案 |
 | 失败优化看板 | **已实现** | page 5 + allow-listed HTML；只读，不自动发布候选 |
 | RAG 质量 Gate | **未通过** | public regression/project Gate=`FAIL`；需独立 Holdout v4 |
 
 ### E.2 本轮最终交叉校验
 
-<span style="color:#C00000"><strong>当前真实 QA。</strong>全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff check、`ruff format --check`（132 files）、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果证明本轮代码、合同、测试和报告可以一起运行，不代表 RAG project Gate 通过，也不改变 active baseline。</span>
+<span style="color:#C00000"><strong>当前真实 QA。</strong>全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff check、`ruff format --check`（138 files）、compileall、`git diff --check`、失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果证明本轮代码、合同、测试和报告可以一起运行，不代表 RAG project Gate 通过，也不改变 active baseline。</span>
+
+<span style="color:#C00000"><strong>2026-09-02 当前 QA 覆盖。</strong>上述 177-test 记录属于历史快照；当前全量 `.venv/bin/pytest -q` 已为 `178 passed, 4 warnings`，`ruff check`、`ruff format --check`（138 files）、`compileall`、`git diff --check`、V3 validation runner 及 P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 全部通过。V3 validation 最终 G3 为 Route=100%、Evidence relation=97.22%、Recall@5=100%，固定 Precision/project Gate 仍为 `FAIL`、hard-safety 为 `PASS`；这只证明诊断链和治理产物一致，不代表 RAG 已产品化通过，不改变 RAG proposal-only 或 active baseline。</span>
+
+## 2026-09-01 当前产品状态：腾讯特效 Web Cloud Smoke
+
+Cloud 已拉取最新代码并完成一次重建；page 6 的旧模块缓存 ImportError 已消失，页面可以正常加载
+腾讯特效 Web Card 和官方示例图入口。由于 Cloud Secrets 尚未配置
+`TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，
+流程在服务端签名前安全停止。本轮没有加载 Web SDK、没有处理图片、没有 Browser Receipt，
+因此 `tencent-effect-web` 仍是 `candidate`，不能写成 Web Provider 已接入主链路。
+
+下一步只需由产品负责人在 Cloud App Settings → Secrets 根级补齐这三个名称对应的值，再运行一次
+官方示例图。回执入账后仍要单独完成图片出站/地区/留存、预算、Gold 回归和负责人 promotion；
+这次部署修复和官方 License 状态都不能替代真实图片证据。

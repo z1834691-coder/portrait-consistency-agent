@@ -56,6 +56,17 @@ def _load_failure_driven_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_v3_validation_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v3_validation_diagnostics_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -122,6 +133,7 @@ def main() -> None:
     report = _load_json_report()
     optimization = _load_optimization_report()
     failure_driven = _load_failure_driven_report()
+    v3_validation = _load_v3_validation_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -178,9 +190,17 @@ def main() -> None:
         baseline_block = baseline_block if isinstance(baseline_block, dict) else {}
         failure_case_rows = baseline_block.get("case_diagnostics", [])
         failure_case_rows = failure_case_rows if isinstance(failure_case_rows, list) else []
+        final_block = failure_driven.get("final_candidate_diagnostics", {})
+        final_block = final_block if isinstance(final_block, dict) else {}
+        final_case_rows = final_block.get("case_change_summary", [])
+        final_case_rows = final_case_rows if isinstance(final_case_rows, list) else []
         with st.expander("查看失败驱动集逐题结论（不含 v3 私有答案）"):
-            st.caption("表格只显示本轮 owner-review 开发/挑战集的 case ID、标签和结构化错误码。")
-            st.dataframe(failure_case_rows, use_container_width=True, hide_index=True)
+            st.caption(
+                "表格只显示本轮 owner-review 开发/挑战集的 case ID、标签、V0/终态错误码和路由变化。"
+            )
+            st.dataframe(
+                final_case_rows or failure_case_rows, use_container_width=True, hide_index=True
+            )
         st.write(
             "当前结论：",
             "查询编译候选在新开发集有明显增益；仍需产品负责人审核该数据集，"
@@ -202,6 +222,87 @@ def main() -> None:
                     read_rag_report(failure_artifact, PROJECT_ROOT),
                     height=680,
                     scrolling=True,
+                )
+    if v3_validation is not None:
+        st.subheader("V3 解冻验证集：逐题失败模式与 Trace")
+        st.warning(
+            "这是产品负责人明确解冻后的验证副本，不是独立 Holdout；原始一次性盲测快照仍保留。"
+            "本区允许显示题干和逐题 Gold，仅供本机诊断，候选仍 proposal-only。"
+        )
+        v3_generations = v3_validation.get("generations", [])
+        v3_generations = v3_generations if isinstance(v3_generations, list) else []
+        v3_table: list[dict[str, object]] = []
+        v3_chart: list[dict[str, object]] = []
+        for generation in v3_generations:
+            if not isinstance(generation, dict):
+                continue
+            metrics = generation.get("metrics", {})
+            metrics = metrics if isinstance(metrics, dict) else {}
+            v3_table.append(
+                {
+                    "代次": generation.get("generation_id", "—"),
+                    "候选": generation.get("version", "—"),
+                    "改变预测数": generation.get("changed_prediction_count", "—"),
+                    "Composite": generation.get("composite_score", "—"),
+                    "增益": generation.get("composite_gain_vs_previous", "—"),
+                    "Route": _percent(metrics.get("route_accuracy")),
+                    "Relation": _percent(metrics.get("evidence_relation_accuracy")),
+                    "Recall@5": _percent(metrics.get("recall_at_5")),
+                    "公开回归 Gate": generation.get("regression_gate", "—"),
+                }
+            )
+            if isinstance(generation.get("composite_score"), (int, float)):
+                v3_chart.append(
+                    {
+                        "代次": str(generation.get("generation_id", "—")),
+                        "Composite": float(generation["composite_score"]),
+                    }
+                )
+        st.dataframe(v3_table, use_container_width=True, hide_index=True)
+        if v3_chart:
+            st.line_chart(v3_chart, x="代次", y="Composite")
+        st.write("G0 失败模式：", v3_validation.get("baseline_failure_counts", {}))
+        st.write("最终失败模式：", v3_validation.get("final_failure_counts", {}))
+        st.write("停止原因：", v3_validation.get("stop_reason", "—"))
+        final_generation = v3_generations[-1] if v3_generations else {}
+        final_cases = (
+            final_generation.get("case_diagnostics", [])
+            if isinstance(final_generation, dict)
+            else []
+        )
+        final_cases = final_cases if isinstance(final_cases, list) else []
+        with st.expander("查看 V3 逐题结论、根因与修正 SOP"):
+            st.dataframe(
+                [
+                    {
+                        "Case": row.get("case_id"),
+                        "题目": row.get("query"),
+                        "状态": row.get("status"),
+                        "失败码": "、".join(str(item) for item in row.get("failure_codes", [])),
+                        "根因": row.get("failure_analysis", {}).get("root_cause", "—"),
+                        "修正": row.get("failure_analysis", {}).get("correction", "—"),
+                    }
+                    for row in final_cases
+                    if isinstance(row, dict)
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+        v3_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "v3_validation_diagnostics"),
+            None,
+        )
+        if v3_artifact is not None:
+            v3_path = v3_artifact.path(PROJECT_ROOT)
+            if v3_path.is_file():
+                st.download_button(
+                    "下载 V3 逐题诊断 HTML",
+                    data=v3_path.read_bytes(),
+                    file_name=v3_path.name,
+                    mime="text/html",
+                )
+                render_component(
+                    read_rag_report(v3_artifact, PROJECT_ROOT), height=720, scrolling=True
                 )
     if optimization is not None:
         st.subheader("版本化自动优化迭代")

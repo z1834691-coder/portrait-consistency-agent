@@ -1,7 +1,7 @@
 # 腾讯特效 SDK 候选 Provider：官方证据核验版
 
 > 复核日期：2026-08-30
-> 当前状态：`candidate / Web adapter implemented / browser-smoke-pending`
+> 当前状态：`candidate / Web adapter implemented / browser-smoke-blocked-by-cloud-secrets`
 > 资料范围：仅腾讯官方一手文档；本轮没有使用账号、License、密钥、SDK 包、照片或网络调用。
 
 ## 1. 这次核验回答了什么
@@ -101,3 +101,17 @@ Adapter：[tencent_effect.py](../src/portrait_consistency_agent/services/tencent
 已实现 `src/portrait_consistency_agent/services/tencent_effect_web.py`：产品 0—100 参数映射为 Web 0—1 参数，服务端按官方公式生成短时签名，浏览器组件加载 UMD SDK，静态图按官方 `takePhoto()` 获取 `ImageData`，并只返回 hash/尺寸/耗时/安全错误码。`ProviderRun` 已增加 `tencent_effect_web/WebARImage` 的联合合同；`data/provider_cards/tencent_effect_web.json` 是单独的 Web Card，仍保持 `candidate`。`pages/6_腾讯特效Web试验.py` 提供官方示例图优先的实际入口，`scripts/smoke_tencent_effect_web.py` 只做离线合同 smoke。
 
 当前尚未取得新的浏览器成功回执，因此不能声称 Web 图片处理已经 live、细项五官已可用、批量已支持或隐私/区域已确认。正式准入由 `evaluate_effect_web_admission()` 按 License、精确域名、出站/区域、预算、Adapter、成功 receipt 和产品批准逐项返回；它不自动改 Card。三项运行配置名为 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，只放本机 `.env` 或 Streamlit Cloud Secrets，Token 不下发给浏览器。
+
+## 12. 2026-09-01｜Cloud 运行状态覆盖
+
+Web 静态图的独立 Adapter 与 page 6 已随最新提交在 Streamlit Cloud 重建成功；此前的旧进程
+ImportError 已通过 Reboot 消除。当前真实 Browser Receipt 仍为 `not_run`，因为 Cloud Secrets
+尚未配置 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`。
+这三个配置与 Tencent REST 的 Secret ID/Key 不同，不能混用。补齐后只能先用官方示例图做一次
+单图 smoke，拿到回执后再审计图片出站、地区、留存、预算和 Gold 回归，不能将离线 smoke 或
+License “正常”写成 Web Provider 正式准入。
+
+官方 Web 证据：
+
+- [测试 License 申请与有效期](https://cloud.tencent.com/document/product/616/80189)
+- [Web 价格和精确域名绑定](https://cloud.tencent.com/document/product/616/86942)

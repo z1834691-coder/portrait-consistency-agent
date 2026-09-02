@@ -720,6 +720,20 @@ class RagGoldDeterministicBaseline:
             "llm_called": False,
             "provider_api_called": False,
             "network_called": False,
+            "projection": {
+                "route": projection.route_override,
+                "category_codes": list(projection.category_codes),
+                "evidence_aliases": list(projection.evidence_aliases),
+                "evidence_relations": dict(projection.evidence_relations),
+                "requested_features": [feature.value for feature in projection.requested_features],
+                "allowed_features": [feature.value for feature in projection.allowed_features],
+                "preserve_constraints": [
+                    attribute.value for attribute in projection.preserve_constraints
+                ],
+                "outbound_allowed": projection.outbound_allowed,
+                "missing_critical_slots": list(projection.missing_critical_slots),
+            },
+            "retrieval_trace": list(retrieval.trace) if retrieval is not None else [],
         }
         return BaselineCaseRun(prediction=prediction, safe_trace=safe_trace)
 

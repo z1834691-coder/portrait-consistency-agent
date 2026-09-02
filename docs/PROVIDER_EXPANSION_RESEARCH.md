@@ -126,3 +126,12 @@
 ### 控制台现场状态（2026-08-30）
 
 腾讯 Web License 管理页的“正式/测试 License 均为 0”是提交前历史快照。产品负责人已提交 `portrait-consistency-agent-x7cqcqsucatfbk7mmzch3q.streamlit.app` 精确主机名的测试 License，当前控制台显示“正常”，有效期为 2026-08-30 至 2026-09-13；这只解决 Web License 资源绑定，不等于腾讯特效 SDK 细项能力或静态图 Adapter 已通过。火山候选仍按本文件的套餐/权限/真实 receipt Gate 保持 fail-closed。
+
+## 2026-09-01｜Tencent Effect Web Cloud 证据更新
+
+最新代码在 Cloud 重建后已能加载 page 6；旧进程缓存导致的导入错误已排除。真实 Web smoke
+仍未运行，原因是 Cloud Secrets 尚缺 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、
+`TENCENT_EFFECT_LICENSE_TOKEN`。因此当前只能确认“部署入口可加载”，不能确认静态图处理、细项
+参数效果、性能或供应商图片留存。补齐配置后先用官方示例图做单次 smoke；Card、Adapter、
+隐私/区域、成本、真实 receipt、Gold 回归和负责人批准仍需全部闭合，才可从 `candidate` 进入
+`reviewed_active`。

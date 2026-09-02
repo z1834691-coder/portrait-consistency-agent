@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +31,8 @@ from portrait_consistency_agent.core.rag_safety_events import (
 
 PUBLIC_CASE_FIELDS = frozenset({"case_id", "split", "query", "tags"})
 HOLDOUT_CASE_FIELDS = frozenset({"case_id", "query"})
+VALIDATION_CASE_FIELDS = frozenset({"case_id", "split", "query", "tags"})
+_VALIDATION_ID = re.compile(r"^H[0-9]{2,}$")
 PRECISION_POLICY_VERSION = "precision-dual-report-v0.1"
 PROJECT_THRESHOLDS = {
     "recall_at_5": 0.90,
@@ -297,6 +300,51 @@ def load_holdout_runtime_cases(path: Path) -> tuple[str, tuple[GoldCase, ...]]:
                 case_id=case_id,
                 split="holdout",
                 query=_string(row.get("query"), field_name="query", path=path),
+            )
+        )
+    return dataset_version, tuple(cases)
+
+
+def load_validation_cases(path: Path) -> tuple[str, tuple[GoldCase, ...]]:
+    """Read an explicitly owner-unlocked former H* set for diagnosis.
+
+    This loader is intentionally separate from both public and blind-holdout
+    loaders.  It prevents a validation copy from being mistaken for an
+    answerless Holdout-A runtime package while still enforcing H* IDs and a
+    dedicated ``validation`` split.
+    """
+
+    payload = _read_json(path)
+    dataset_version = "unknown"
+    if isinstance(payload, dict):
+        dataset_version = str(payload.get("dataset_version", dataset_version))
+    cases: list[GoldCase] = []
+    seen: set[str] = set()
+    for row in _case_rows(payload, path=path):
+        unknown = set(row) - VALIDATION_CASE_FIELDS
+        if unknown or ANSWER_FIELDS.intersection(row):
+            raise GoldSetFormatError(
+                f"{path}: validation cases cannot contain answer fields: "
+                f"{sorted(unknown | ANSWER_FIELDS.intersection(row))}"
+            )
+        case_id = _string(row.get("case_id"), field_name="case_id", path=path)
+        if not _VALIDATION_ID.fullmatch(case_id):
+            raise GoldSetFormatError(f"{path}: validation case_id must match H*; got {case_id!r}")
+        split = _string(row.get("split"), field_name="split", path=path).lower()
+        if split != "validation":
+            raise GoldSetFormatError(f"{path}: validation split must be 'validation'")
+        if case_id in seen:
+            raise GoldSetFormatError(f"{path}: duplicate case_id {case_id}")
+        seen.add(case_id)
+        tags = row.get("tags", [])
+        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+            raise GoldSetFormatError(f"{path}: tags must be a list of strings")
+        cases.append(
+            GoldCase(
+                case_id=case_id,
+                split="validation",
+                query=_string(row.get("query"), field_name="query", path=path),
+                tags=tuple(str(tag).strip() for tag in tags if str(tag).strip()),
             )
         )
     return dataset_version, tuple(cases)
@@ -1059,6 +1107,7 @@ __all__ = [
     "evaluate",
     "load_annotations",
     "load_holdout_runtime_cases",
+    "load_validation_cases",
     "load_predictions",
     "load_public_cases",
     "prediction_template",

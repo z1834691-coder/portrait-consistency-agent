@@ -1756,9 +1756,9 @@ V0 failure codes 为 `route_mismatch=24`、`evidence_relation_mismatch=23`、`ev
 ### 本轮最终交叉校验（2026-09-01）
 
 ```text
-pytest -q                         → 173 passed, 4 warnings
+pytest -q                         → 178 passed, 4 warnings
 ruff check                       → All checks passed
-ruff format --check              → 132 files already formatted
+ruff format --check              → 136 files already formatted
 python -m compileall             → passed
 git diff --check                 → passed
 failure-driven loop              → V0→V4 complete, anti-overfit=PASS
@@ -1769,3 +1769,79 @@ P0-A/P0-B/advisory/lifecycle     → smoke exit 0
 4 条 warning 均为既有 Pillow 弃用提示；它们不影响本轮 RAG 结果。该 QA 只证明代码、报告、合同和文档可一起运行，不改变 RAG project Gate=`FAIL` 或候选未推广状态。
 
 本轮补充了 `final_candidate_diagnostics`：报告对 28 道开发/挑战题同时保留 V0 与终态逐题状态；从 V0 到终态共有 24 条 Prediction 事实发生变化（其中 V2 相对 V1 改变 22 条）。人工复盘见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。
+
+## 2026-09-01｜腾讯特效 Web Cloud 重建与 smoke 阻塞
+
+最新提交在 Streamlit Cloud 已完成重建；旧进程缓存导致的 `load_tencent_effect_web_card` 导入错误
+已通过 Reboot 消除，page 6 当前能正常加载。该结果只证明部署进程恢复，并非 Web 图片处理成功。
+
+本轮真实 Browser smoke 尚未开始：Cloud Secrets 缺少
+`TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`。
+页面在服务端签名之前安全停止，未加载 SDK、未发送图片、未生成 Browser Receipt；Card 仍为
+`candidate`。已有 Tencent REST Secret ID/Key 与 Effect Web 三项配置不是同一套凭据，不能混用。
+
+下一步：产品负责人在 Cloud App Settings → Secrets 配置三项值后，进入 page 6，优先运行腾讯官方
+示例图一次。成功后只记录脱敏 receipt，再进行隐私/区域/留存、预算、Gold 回归和人工 promotion
+审核；不能因 Cloud 重建成功、License 正常或离线 smoke 通过而放行主流程。
+
+## 2026-09-02｜V3 解冻验证集：逐题 Trace、失败 SOP 与回归守门
+
+### 本轮背景
+
+产品负责人明确允许读取已经审核的 v3 题目和答案，把 v3 从“独立 Holdout”改为本轮诊断用 `validation`。原始一次性 answerless 盲测快照保留在工作区外、没有重跑；新的独立泛化证据仍必须由 V4 提供。
+
+### 本轮实现
+
+- 新增 `scripts/prepare_v3_validation_package.py`，从 owner-only 审核材料生成明确标记的 validation cases/annotations，不改原始文件；
+- 新增 `services/rag_v3_validation_diagnostics.py` 与 `scripts/run_rag_v3_validation_diagnostics.py`；
+- 每个 G0–G5、每个 H01–H36 都保存题干、Gold、Prediction、failure code、根因、修正 SOP、查询投影、FTS/dense/RRF/rerank 摘要和安全布尔 Trace；
+- 新增 `tests/test_rag_v3_validation_diagnostics.py`（5 条测试）和 page 5 的 V3 逐题诊断区/allow-list 报告；
+- 新增 `docs/RAG_V3_VALIDATION_DIAGNOSTICS.md`，同步执行版 PRD、RAG Gate、Holdout 保管、DECISION_LOG、PRODUCT_RULES、CONTRACTS、AGENT_PROMPTS、README 和项目状态说明。
+
+### 实际结果
+
+| 代次 | Route | Evidence relation | Recall@5 | Composite | Public regression Route | 解释 |
+|---|---:|---:|---:|---:|---:|---|
+| G0 baseline | 30.56% | 23.61% | 59.72% | 0.429780 | 100% | 上游查询理解失败 |
+| G1 query compiler v0.1 | 58.33% | 52.78% | 77.78% | 0.629499 | 71.15% | 有增益但回归退化 |
+| G2 policy-first v0.2 | 100% | 100% | 100% | 0.950000 | 61.54% | V3 命中但过拟合 |
+| G3 regression guard v0.3 | 100% | 97.22% | 100% | 0.944444 | 100% | 保守候选，低置信回退 |
+| G4/G5 downstream | 100% | 97.22% | 100% | 0.944444 | 100% | 无额外增益，停止 |
+
+G0 的主要失败计数为 `route_mismatch=25`、`evidence_set_mismatch=21`、`evidence_relation_mismatch=31`、`rank_mismatch=8`；`metric_sparse_gold_denominator=36` 是统计提醒，不是算法错误。G2 把修正前移到自然语言→QuerySignals→RagQuery 边界，证明了上一轮没有效果是“修错层”；G3 再用公开回归守门，避免把 V3 的高分直接当成泛化能力。
+
+### 当前边界与下一步
+
+本轮完全离线：网络、LLM、图片 Provider、人脸向量和密钥均未读取；RAG 仍 proposal-only，active baseline 未改变。最终固定 Precision/project Gate 仍为 `FAIL`，hard-safety 为 `PASS`；不能把 V3 验证集成绩写成 RAG 产品化通过。下一步是新建与 V3 不重叠的 V4 Holdout，再决定是否允许任何候选进入现役查询编译。
+
+### 本轮校验
+
+```text
+pytest tests/test_rag_v3_validation_diagnostics.py → 5 passed
+scripts/run_rag_v3_validation_diagnostics.py       → status=complete, G0–G5
+V3 final relation / Recall@5                      → 97.22% / 100%
+public regression after guard                      → Route/Relation/Recall@5=100%
+active_baseline_changed / network / LLM / Provider  → false / false / false / false
+```
+
+## 2026-09-02｜V3 validation 交付收口（当前事实）
+
+上面的 V3 解冻实现已补齐可视化报告的逐题完整 Trace：HTML 现在为 H01–H36 提供可展开的失败模式、结构化评分和安全 Trace；JSON 仍保存 G0–G5 每一代的全量 Trace。产品负责人明确授权读取验证副本的 Gold，原始一次性盲测快照仍保留、不重跑。
+
+当前诊断链已完成：G0→G2 定位并修复上游查询编译问题，G3 用 public regression guard 回退低置信变更，G4/G5 验证下游关系/打包没有边际收益。最终 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；固定 Precision/project Gate=`FAIL`、hard-safety=`PASS`，active baseline 未改变，RAG 仍 proposal-only。后续只有新建不与 V3 重叠的 V4 Holdout 并通过全量 QA，才可讨论 promotion。
+
+## 2026-09-02｜V3 validation 最终 QA 回执（当前有效）
+
+```text
+V3 validation runner                         → exit 0；G0–G5 完整生成
+最终 validation Route / Relation / Recall@5 → 100% / 97.22% / 100%
+hard-safety                                  → PASS（0/36 违规）
+固定 Precision / project quality Gate        → 50.00% / FAIL（稀疏 Gold 口径仍单列）
+全量 pytest                                  → 178 passed, 4 warnings
+ruff check                                   → All checks passed
+ruff format --check                          → 138 files already formatted
+compileall / git diff --check                → passed / passed
+RAG failure-driven、P0-A、P0-B、advisory、lifecycle、8C、8C2 smoke → 全部 exit 0
+```
+
+4 条 warning 是既有 Pillow 弃用提示。本回执只证明当前代码、合同、测试、报告和看板可一起运行；不把 V3 validation 当作独立 Holdout，不改变 active baseline，也不改变 RAG proposal-only 和 project Gate=`FAIL`。原始 answerless V3 盲测快照仍保留，后续推广必须另建不重叠的 V4 Holdout。

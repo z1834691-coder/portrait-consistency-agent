@@ -85,3 +85,20 @@ TENCENT_EFFECT_LICENSE_TOKEN
 ```
 
 本机放 `.env`，Cloud 放 App Settings → Secrets；Token 只在 Python 侧生成短时签名，不能出现在页面、Trace、仓库或聊天。`scripts/smoke_tencent_effect_web.py` 是离线 smoke，明确输出 `network_called=false`；真实 smoke 必须在绑定了腾讯测试 License 的 Cloud 域名 page 6 中点击组件按钮后取得浏览器回执。当前 Web Card 仍为 `candidate`，不能因环境变量齐全而自动放行。
+## 2026-09-01｜失败驱动 RAG Loop v2 环境回执
+
+失败驱动运行器使用项目 `.venv` 的 Python 环境，在临时 SQLite/FTS/dense 索引中完成 V0→V4；它不联网、不调用 LLM/Provider、不读取照片、向量或 hidden answer。当前报告为 `reports/rag_failure_driven_loop_v1.json/.html`，并在 page 5 只读展示；V2 查询编译候选只属于 proposal，不能替换 active baseline。全量 QA 当前为 `178 passed, 4 warnings`，4 条 warning 仍是 Pillow 弃用提示。
+
+## 2026-09-01｜腾讯特效 Web Cloud 运行状态覆盖
+
+Cloud 已从最新提交完成重建，page 6 可以正常加载；旧进程缓存造成的导入错误已通过 Reboot 消除。
+当前 Cloud Settings → Secrets 尚未配置 `TENCENT_EFFECT_APP_ID`、
+`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，所以本轮没有加载 Web SDK、
+没有图片出站、没有 Browser Receipt。补齐三项配置后才允许用官方示例图运行一次；Card 在此之前
+继续 `candidate`，不能把部署成功写成 Provider live。
+
+## 2026-09-02｜V3 validation 环境回执
+
+产品负责人已将 V3 的后续用途明确为离线 validation。原始一次性 answerless 盲测快照仍在工作区外，派生验证包才包含题干与已审核 Gold；运行器不读取照片、向量、密钥，不联网，不调用 LLM 或图片 Provider。当前生成物是 `reports/rag_v3_validation_diagnostics_v1.json/.html`，每代 36 条完整 Trace，页面由 page 5 只读展示。
+
+最终 G3 的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 因 public regression 退化不采纳，G4/G5 无增益。全量 QA 需同时包含 validation runner、pytest、Ruff、format、compileall、diff check；该 validation 证据不改变 active baseline 或 `execution_authorized=false`，推广仍需独立 V4 Holdout。

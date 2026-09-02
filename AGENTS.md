@@ -89,7 +89,8 @@ not a tool-permission or image-editing system. Gold Set v2 的范围、指标门
 holdout 的产品决策门。两条新 Provider 候选（火山美颜 API V2.0、腾讯特效 SDK）必须分别完成
 真实 schema/License/隐私/成本、live receipt、Gold 回归和产品负责人冻结。腾讯特效 Web
 目前已经有独立的浏览器 Adapter、Streamlit page 6 和 Browser Receipt 合同，但 Card 仍是
-candidate，尚未取得新的 live receipt；移动/PC 细项 shell 仍不含 SDK 或图片出站。
+candidate，尚未取得新的 live receipt；2026-09-01 Cloud 已完成最新代码重建并解决旧 ImportError，
+本轮 smoke 因三项 Effect Web Secrets 缺失而尚未运行；移动/PC 细项 shell 仍不含 SDK 或图片出站。
 
 ## 2026-08-30 implementation snapshot
 
@@ -107,7 +108,7 @@ offline contract path is tested, but it remains fail-closed until the bound Clou
 returns a real Browser Receipt and the admission evidence is manually reviewed. Existing Tencent IMS and
 BeautifyPic each have one newly authorized internal smoke receipt; this verifies a
 single existing-provider route, not visual effectiveness or candidate-provider readiness.
-The latest cross-check is `173 passed, 4 warnings`; Ruff, compileall and `git diff --check`
+The latest cross-check is `178 passed, 4 warnings`; Ruff, compileall and `git diff --check`
 must be rerun after each change. The hidden answer key remains outside the developer-readable
 workspace and must never be copied into tests, reports, prompts, or source control.
 
@@ -190,14 +191,50 @@ This is development-set engineering evidence, not a product-quality pass: annota
 are `owner_review_required`, public regression/project Gate remains `FAIL`, and a new
 independent Holdout v4 is required before promotion. Every candidate trace proves no
 network/LLM/Provider/hidden-answer access and `active_baseline_changed=false`; RAG remains
-advisory-only with `execution_authorized=false`. Do not read or rerun the private v3
-per-case answer key. The previous `160 passed` line is a historical snapshot. The
+advisory-only with `execution_authorized=false`. At the time of this historical snapshot,
+the private v3 per-case answer key was not read. On 2026-09-02 the product owner explicitly
+unlocked a derived V3 validation copy for diagnosis; that later exception is recorded below
+and does not alter this historical run. The previous `160 passed` line is a historical snapshot. The
 report also keeps V0-versus-terminal per-case diagnostics in
 `final_candidate_diagnostics`; the human-readable review is
 `docs/RAG_FAILURE_CASE_REVIEW_V2.md`.
 
+## 2026-09-02 V3 validation override and current RAG truth
+
+The product owner explicitly reclassified the reviewed V3 questions from a one-time
+Holdout-A acceptance run into a separate `validation` copy for per-case diagnosis. The
+original answerless blind snapshot remains outside the workspace and was not rerun. The
+derived files are `data/evaluation/rag_v3_validation_cases_v1.json` and
+`data/evaluation/rag_v3_validation_annotations_v1.json`; they are not read by the online
+RAG path and do not change the active baseline.
+
+The diagnostic runner records H01–H36 question, Gold, prediction, root cause, SOP,
+query projection, FTS/dense/RRF/rerank summary and full safe Trace for G0–G5. The final
+candidate improves V3 validation Route from 30.56% to 100%, Evidence relation from 23.61%
+to 97.22% and Recall@5 from 59.72% to 100%; G2's apparent 100% was rejected by public
+regression, while G3 preserves the known public baseline. G4/G5 are downstream no-ops.
+Fixed Precision/project Gate remains `FAIL`; hard-safety is `PASS`; no candidate is
+promoted. All traces are offline (`network_called=false`, `llm_called=false`,
+`provider_api_called=false`, `photo_or_face_vector_read=false`) and proposal-only. A new,
+non-overlapping V4 Holdout is still required before any promotion discussion.
+
 After the failure-driven Loop v2 change, the current full-suite verification is
-`173 passed, 4 warnings`; Ruff check/format, compileall, `git diff --check`, the
+`178 passed, 4 warnings`; Ruff check/format, compileall, `git diff --check`, the
 failure-driven loop, P0-A/P0-B/advisory/lifecycle/8C/8C2 smokes all pass. The four
 warnings remain the existing Pillow deprecation warnings. This updates the historical
 160-test snapshot above; it does not change the RAG quality Gate (`FAIL`) or promote V2.
+
+## 2026-09-01 Tencent Effect Web Cloud gate
+
+Cloud 在拉取 `14b692b` 后已成功重建，page 6 能正常加载；此前的
+`load_tencent_effect_web_card` ImportError 是旧进程缓存旧代码造成的，重启后已消失。
+当前 Cloud Settings → Secrets 页面已打开，但尚未配置腾讯特效 Web 所需的三项根级配置：
+`TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`。
+因此本轮没有加载 Web SDK、没有处理图片、没有 Browser Receipt，也没有更新 Card 的
+`live_smoke_status`；用户补齐三项 Secrets 后才可运行官方示例图 smoke。已有 Tencent REST
+密钥与这三项 Web License 配置是两套不同凭据，不能互相替代。`TENCENT_EFFECT_LICENSE_TOKEN`
+只用于服务端签名，禁止进入页面、Trace、仓库或聊天。
+
+## 2026-09-02 current QA override
+
+The current repository snapshot has passed `.venv/bin/pytest -q` (`178 passed, 4 warnings`), `ruff check`, `ruff format --check` (`138 files already formatted`), `compileall`, and `git diff --check`. The V3 validation runner and P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke runs also exit 0. The four warnings are existing Pillow deprecation warnings. This is an engineering-consistency receipt only: the RAG project Gate remains `FAIL`, RAG remains proposal-only, the active baseline is unchanged, and the original answerless V3 Holdout snapshot is not reclassified as a promotion result.

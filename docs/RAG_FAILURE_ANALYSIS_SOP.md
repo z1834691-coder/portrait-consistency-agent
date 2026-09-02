@@ -133,3 +133,13 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 真实代际回执：V0 Composite=`0.355614`；V1=`0.403233`（+0.047619，改变 2 条预测）；V2=`0.947619`（+0.544386，改变 22 条预测）；V3 relation guard 和 V4 evidence packing 均改变 0 条预测，连续两代增益 `<0.01` 后停止。候选 Trace 全部为 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。
 
 这次“有增益”仍只代表 owner-review 开发集上的工程事实。public regression 的固定 Precision 和 project Gate 仍为 `FAIL`；RAG 仍是 advisory-only。只有产品负责人审核新 annotations、再用全新独立 Holdout v4 验收后，才可讨论把 query compiler 候选提升为 active。
+
+为满足逐题复盘要求，报告同时输出 `final_candidate_diagnostics`，把 V0 与终态的状态、错误码、路由和是否变化并列保存；不保存原始题干，不读取 v3 私有逐题答案。人工解释见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。
+
+## 2026-09-02｜V3 验证集逐题 SOP（经负责人解冻）
+
+V3 的原始 answerless Holdout-A 运行仍是不可重跑的历史快照；本节只适用于负责人明确授权后派生的 `rag-v3-validation-unlocked-2026-09-02` 验证副本。对 H01–H36 逐题读取题干与人工 Gold，依次生成 G0 baseline、G1 查询编译、G2 policy-first 编译、G3 public regression guard、G4 relation guard、G5 evidence packing，并为每代保留完整安全 Trace。
+
+逐题分析顺序固定为：先看 hard-safety 和生命周期，再看查询投影/路由，再看证据集合、关系和排序，最后区分真正失败与 `metric_sparse_gold_denominator` 统计提醒。修复必须触达真实输入层；每代只改一个可解释变量，记录 `changed_prediction_count`，同时跑 validation 与 public regression；候选始终 proposal-only，G2 若造成公开回归必须回退，不能用 V3 高分覆盖回归事实。
+
+本轮最终 G3 的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G4/G5 无新增改变，说明继续在下游打补丁已到边际效益递减。固定 Precision/project Gate 仍 `FAIL`、hard-safety `PASS`，所以 SOP 的“优化完成”只表示诊断闭环已执行，不表示 RAG 已产品化通过。下一次泛化必须新建不与 V3 重叠的 V4 Holdout。

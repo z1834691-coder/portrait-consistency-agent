@@ -75,6 +75,13 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description="新失败驱动开发集上的查询编译候选、根因和版本化回归。",
         scope="owner_review_required_development_set_only",
     ),
+    RagReportArtifact(
+        key="v3_validation_diagnostics",
+        title="RAG｜V3 解冻验证集逐题诊断",
+        filename="rag_v3_validation_diagnostics_v1.html",
+        description="产品负责人明确解冻后的 V3 验证集：逐题结论、完整安全 Trace 与公开回归守门。",
+        scope="owner_unlocked_validation_only",
+    ),
 )
 
 

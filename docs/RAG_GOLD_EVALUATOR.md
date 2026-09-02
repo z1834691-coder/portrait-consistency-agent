@@ -178,7 +178,7 @@ v2 的 H01–H20 和私有 aggregate 保留为历史泛化诊断，不再用于�
 
 ## 2026-08-30 当前同步
 
-评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `173 passed, 4 warnings`；public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 已完成一次性 answerless 盲测且质量 Gate=`FAIL`。生命周期审计通过不等于 RAG 质量通过。
+评测器之外新增的 P0-D 生命周期审计不会改变 Gold 题目、答案隔离或评分口径；它只在运行前检查审核知识卡元数据和派生索引 manifest。历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `178 passed, 4 warnings`；public 固定分母 Precision@3=`47.44%`、project Gate=`FAIL`；v2 holdout 仍只作历史 aggregate，v3 已完成一次性 answerless 盲测且质量 Gate=`FAIL`。生命周期审计通过不等于 RAG 质量通过。
 
 ## 2026-09-01 当前状态覆盖
 
@@ -202,4 +202,12 @@ Composite 不是新的 Gate；project threshold 和 hard-safety 的原有判定�
 
 V2 的分数是开发集工程证据，不是正式 Gate；annotations 尚待产品负责人审核，public regression 的固定 Precision@3=`47.44%` 和 project Gate 仍为 `FAIL`。候选没有读取 v3 逐题答案、没有联网、没有调用 LLM/Provider、没有读照片/向量，active baseline 未改变。Holdout A 仍有效；需新独立 Holdout v4 才能验证泛化和讨论 promotion。
 
-本轮最终 QA：全量 pytest=`173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop 和 P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该 QA 不改变质量 Gate 或 Holdout A 隔离。
+本轮最终 QA：全量 pytest=`178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop 和 P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。该 QA 不改变质量 Gate 或 Holdout A 隔离。
+
+报告还提供 `final_candidate_diagnostics`，对 28 道公开题保存 V0 与终态的逐题状态、错误码、路由和变化摘要；人工解读见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。这一步是“逐题可观测”，不是读取 v3 私有答案或新增正式 Gold。
+
+## 2026-09-02｜V3 validation 逐题诊断回执
+
+产品负责人已明确把 V3 的后续用途改为 validation，因此 evaluator 新增独立的 `load_validation_cases` 边界和 `rag_v3_validation_diagnostics` 报告。原始 Holdout-A answerless 运行不变、不重跑；本轮只在派生验证副本中读取已审核题目与 Gold，输出 H01–H36 的逐题结论、失败模式、查询投影、检索步骤和完整安全 Trace。
+
+G0→G5 的最终保守候选将 validation Route 从 30.56% 提升至 100%、Evidence relation 从 23.61% 提升至 97.22%、Recall@5 从 59.72% 提升至 100%；G2 的 100% 因公开回归退化而拒绝，G3 保住公开 baseline，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`。本轮是 owner-authorized validation diagnosis，不是新的正式 Holdout，不改变 RAG `execution_authorized=false`；推广前必须新建 V4。

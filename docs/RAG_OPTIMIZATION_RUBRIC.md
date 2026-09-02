@@ -80,3 +80,11 @@ V2 的增益是开发集事实，不是产品质量 Gate：该数据集和 annot
 新开发集 V0 的主要失败代码是 `route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；`metric_sparse_gold_denominator=28` 是评测口径诊断，不是检索器缺陷。V2 通过修复上游查询投影、动作/提问歧义和安全/生命周期优先级，使 22 条预测事实发生改变；V3/V4 的 0 条改变证明继续在下游打补丁没有边际收益。
 
 该结果只允许进入开发集 SOP 和下一份独立 Holdout v4 的设计，不允许把 D/X case ID 写进规则，也不允许读取 v3 私有逐题答案来继续调参。
+
+报告还保存 `final_candidate_diagnostics`，将每道题的 V0 与终态状态、错误码和路由变化并列；从 V0 到终态共有 24 条 Prediction 事实变化（V2 相对 V1 为 22 条）。逐题解释见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。
+
+## 8. 2026-09-02｜V3 validation 诊断评分补充
+
+V3 已经从一次性 Holdout-A 盲测派生为负责人授权的 `validation` 副本，故本节分数只用于逐题失败分析和候选比较，不替代独立 Holdout。G0 baseline 为 Route 30.56%、Evidence relation 23.61%、Recall@5 59.72%；G2 policy-first 候选在 V3 达到 100% 但造成 public regression，G3 guard 后保留 Route 100%、Relation 97.22%、Recall@5 100%，G4/G5 0 改变。固定 Precision/project Gate 仍为 `FAIL`，hard-safety 为 `PASS`。
+
+验证集中的 `metric_sparse_gold_denominator` 只作为统计层诊断，必须同时查看 effective/returned Precision；不得通过补无关证据、改变固定分母或只展示 Composite 来宣称通过。候选 promotion 的必要条件仍是：public regression 不回退、hard-safety 零违规且无未知事件、完整 Trace 无网络/LLM/Provider/照片/向量读取、产品负责人批准，并由全新不重叠 V4 Holdout 验收。

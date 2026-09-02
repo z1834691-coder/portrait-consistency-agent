@@ -242,7 +242,7 @@
 | D-PROD-077 | 2026-09-01 | 将腾讯特效 Web SDK 定义为独立新 Provider Spike，不改 Tencent BeautifyPic 主链，不把移动/PC 的唇厚、鼻翼、眉毛、眼距等候选能力迁移成 Web API；产品刻度 0—100 由 Adapter 确定性映射到 Web 0—1，美白/磨皮默认 0。 | 已冻结并实现 | 能在绑定域名上验证 Web 静态图，同时保持 RAG advisory-only、Provider 白名单和主流程 fail-closed | 真实 Browser Receipt、Gold 回归和产品负责人批准后再评估 Card promotion |
 | D-TECH-078 | 2026-09-01 | 新增 `tencent-effect-web` Card、`TencentEffectWebAdapter`、`EffectWebRequest/BrowserReceipt/Admission` 合同、Streamlit page 6 和离线 smoke；浏览器只接收 License Key/APP ID/短时签名，Token 留在服务端，图片/结果只在浏览器会话。 | 已实现；离线验证通过 | `ProviderRun` 支持 `tencent_effect_web/WebARImage`；Trace 可保存 hash、尺寸、耗时、错误码和本地 receipt，不保存 Base64/原图 | Cloud Secrets 配齐后运行官方示例图，保存非敏感真实回执 |
 | D-PROD-079 | 2026-09-01 | Web Card 默认保持 `candidate`。正式准入必须同时具备有效 License、精确域名、Provider 权限、出站/区域批准、成本/预算、Adapter ready、真实成功 Browser Receipt 和产品负责人批准；准入函数只返回 `promote_after_review`，不自动改 Card 或授予图片出站权限。 | 已冻结 | 防止“License 正常”或一次 smoke 被夸写成正式能力；Web generic 与移动/PC 细项、单图与批量证据分开 | 取得真实 receipt 后人工审核 Card 与 RAG 是否接入 |
-| D-TECH-080 | 2026-09-01 | Web Adapter 离线 smoke 与 9 条测试通过；当前没有新的浏览器 live receipt，故不可宣称 Web 图片处理已上线、细项五官/批量已验证或供应商隐私/区域已确认。 | 已验证当前边界 | 所有文档、合同、代码和测试统一为 candidate/browser-smoke-pending | 配置三项 Effect Secrets 后再执行 page 6 live smoke；失败保留安全错误，不绕过准入 |
+| D-TECH-080 | 2026-09-01 | Web Adapter 离线 smoke 与 9 条测试通过；当前没有新的浏览器 live receipt，故不可宣称 Web 图片处理已上线、细项五官/批量已验证或供应商隐私/区域已确认。 | 已验证当前边界 | 所有文档、合同、代码和测试统一为 candidate/browser-smoke-blocked-by-cloud-secrets | 配置三项 Effect Secrets 后再执行 page 6 live smoke；失败保留安全错误，不绕过准入 |
 
 ## 2026-09-01 追加记录｜失败驱动 RAG Loop v2：修正层级并取得真实开发集增益
 
@@ -256,3 +256,23 @@
 | D-TECH-086 | 2026-09-01 | 完成本轮最终交叉校验：全量 `pytest 173 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 全部通过。 | 已验证 | 代码、合同、测试、报告、看板与文档在当前快照一致；4 条 warning 为既有 Pillow 弃用提示 | RAG project Gate 仍 `FAIL`；待产品负责人审核 28 题 annotations 和新建 Holdout v4 |
 
 | D-TECH-087 | 2026-09-01 | 为避免只看总分，失败驱动报告新增 `final_candidate_diagnostics`，对 28 道公开开发/挑战题保留 V0 与终态逐题状态、错误码、路由和是否发生 Prediction 变化；新增人工复盘文档 `RAG_FAILURE_CASE_REVIEW_V2.md`。 | 已实现并通过测试 | 逐题结论可回放且不泄漏 v3 私有答案；从 V0 到终态 24 条 Prediction 事实变化，V2 相对 V1 为 22 条；RAG 仍 proposal-only，active baseline 未改变 | 产品负责人审核开发集 annotations 后，再创建独立 Holdout v4；v3 不重跑 |
+
+## 2026-09-01 追加记录｜腾讯特效 Web Cloud 重建与 Secrets 阻塞
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-TECH-088 | 2026-09-01 | Streamlit Cloud 拉取最新代码后曾因旧进程缓存报 `load_tencent_effect_web_card` ImportError；执行 Cloud Reboot 后 page 6 正常加载，故将该问题归因为部署进程缓存而不是 Card/Adapter 代码缺失。 | 已定位并修复 | Cloud 构建入口恢复；不等于 Web 图片处理成功，不改变主流程 Provider 白名单 | 后续每次依赖代码更新后观察 Cloud 构建日志与页面首屏 |
+| D-TECH-089 | 2026-09-01 | Cloud page 6 在生成短时签名前发现缺少 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，本轮没有加载 SDK、图片出站或 Browser Receipt。已有 Tencent REST Secret ID/Key 与 Effect Web 三项配置分开。 | 当前阻塞 | `tencent-effect-web` Card 保持 `candidate`，离线 smoke 不得写成 live；Token 仍只在服务端签名 | 产品负责人在 Cloud Settings → Secrets 配齐后，先运行官方示例图一次，再补隐私/区域/成本/Gold/人工准入证据 |
+
+## 2026-09-02 追加记录｜V3 解冻验证诊断与 RAG 回归守门
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-090 | 2026-09-02 | 产品负责人明确允许读取已审核的 V3 题目与答案，用于逐题失败模式、SOP 和候选优化；原始一次性 answerless 盲测快照保留且不重跑，V3 新用途改为 `validation`，不能再称为独立 Holdout。 | 已冻结并实现 | 可以补齐 H01–H36 的题干、Gold、Prediction、根因和完整 Trace；新的独立泛化证据必须来自 V4 | 生成与 V3 不重叠的 V4 Holdout 后，再决定 promotion |
+| D-TECH-091 | 2026-09-02 | 新增 `rag_v3_validation_diagnostics.py`、验证集加载/派生脚本、运行脚本、逐题失败解释、完整 Trace、JSON/HTML 和 page 5 看板区。 | 已实现 | 每代 36 条 Trace 均保留 query hash、投影、检索摘要、证据关系、守门与安全布尔事实；无照片、向量、密钥、网络/LLM/Provider | 全量 pytest、Ruff、compileall、diff check 和诊断 runner 必须一起通过 |
+| D-TECH-092 | 2026-09-02 | 失败驱动迭代前移到自然语言→QuerySignals→RagQuery 边界。G0 Route=30.56%、Relation=23.61%、Recall@5=59.72%；G2 在 V3 validation 达到 100%；G3 增加 public regression guard 后 public Route/Relation/Recall 保持 100%，V3 Relation=97.22%；G4/G5 no-op。 | 已验证；候选未推广 | 证明上一轮无增益是修错层，并用回归守门抑制 V3 过拟合；RAG 仍 proposal-only、active baseline 未变 | 新 V4 通过前不得把 G2/G3 写成产品化通过 |
+| D-TECH-093 | 2026-09-02 | 固定 Precision 的稀疏 Gold 现象继续单列为评测提示；V3 最终覆盖式/返回式 Precision=100%，固定 Precision 与 project Gate 仍 FAIL。 | 已冻结 | 不通过塞无关证据或修改分母偷抬分；Composite 只用于代际比较 | 后续 Holdout 重新设计 Gold evidence 粒度并保持双口径 |
+
+| D-TECH-094 | 2026-09-02 | V3 validation HTML 增加 H01–H36 的可展开完整 Trace；JSON 保留 G0–G5 全代 Trace。全量交叉校验以本轮实际命令为准，历史 173-test 快照只保留作时间线。 | 已实现并验证 | 产品负责人可逐题复盘“问题→根因→SOP→检索/路由事实”，不需要从代码猜测；Trace 仍脱敏、离线、proposal-only | 本轮 QA 已完成；若新增代码或文档，沿用同一套全量检查 |
+
+| D-TECH-095 | 2026-09-02 | 完成当前快照交叉校验：新增 V3 validation 诊断测试后，全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 通过，失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 与 Web 离线 smoke 均保持既定结果。 | 已验证 | 代码、合同、测试、RAG 诊断文档和 Dashboard 口径同步；4 条 warning 仍为 Pillow 弃用提示。Tencent Effect Web 仍因 Cloud 缺三项 Secrets 没有 live Browser Receipt，Card 不升级。 | 产品负责人补齐 Effect Web Secrets 后再跑一次官方示例图；不得把离线 smoke 或 Cloud 重建写成图片处理成功 |

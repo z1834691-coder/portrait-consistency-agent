@@ -333,7 +333,7 @@ INPUT_QUALITY、SUBJECT_MATCH、FEATURE_EXTRACTION、ACCEPTANCE_CALIBRATION、PA
 
 ## 5. Prompt 上线 Gate
 
-`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。2026-09-01 Cloud 错误回执修复后，最新全量回归为 `160 passed, 4 warnings`，并继续要求错误码/RequestId 只进入脱敏投影。
+`IntentFrame` 的检查点 7 Gate 已完成：官方 API/model 路径核验、固定 JSON Schema、Schema/网络/HTTP 失败 fallback、常见提示注入式非法字段拒绝、9 条 Adapter 自动化案例、模型/Prompt/Token/延迟的脱敏 Trace 投影、以及“不发送照片/向量/密钥/原始 Trace”的请求体断言。默认 smoke 也证明未带 `--allow-live` 时不会联网；2026-08-27 的显式 live smoke 返回 `parser_mode=llm`、`model=deepseek-v4-flash`、`schema_validated=true`、`latency_ms=2957`、`total_tokens=1471`。8C-2 另有 6 条父子计划/回执血缘、scope 变化 fail-closed、三轮上限、用户拒绝与文字脱敏测试，以及 `smoke_plan_family_8c2.py` fixture Trace；RAG P0-A 另有 9 条本地知识/安全检索测试和默认不联网 smoke。Cloud 错误回执修复的历史快照为 `160 passed, 4 warnings`；当前全量回归为 `178 passed, 4 warnings`，并继续要求错误码/RequestId 只进入脱敏投影。
 
 仍待完成的 Gate：产品负责人逐题审核工作区外的 v3 Holdout 草案、导出正式 answerless runtime 并完成一次独立验收；真实 UI 多轮结果/取消/删除/明确不满意和供应商失败的端到端评测；未来完整 ReAct、LLM/RAG 策略选择与文字反馈澄清 Prompt 的评测。canonical Safety Event 目录已获产品负责人审核通过；Precision C、Holdout A、Safety ID C 已冻结并落地；8C-1/8C-2 的离线测试和 smoke 已通过，但不因 fixture 通过而自动完成真实 UI 视觉效果验证。当前 Gold 基线未通过，v3 草案答案不得用于调参。
 
@@ -393,4 +393,17 @@ Private Streamlit 页面已打开，第一位用户的真实照片流程和 UI 8
 
 V2 的开发集增益（Composite `0.355614→0.947619`）只说明上游层被真正触达；不能被 Prompt 当成“RAG 已通过”，不能覆盖固定 project Gate 或 hard-safety。候选必须记录 `changed_prediction_count`，0 条改变就是 no-op；必须通过 public regression、dev/challenge、anti-overfit 和产品负责人审核后，才可讨论 promotion。未审核前，在线 Agent 继续使用现役 baseline，RAG 仍 `execution_authorized=false`。
 
-当前最终工程校验（2026-09-01）为 `173 passed, 4 warnings`；RAG failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke、Ruff、format、compileall 和 diff check 均通过。Prompt 层只记录候选的安全布尔事实和版本，不把开发集增益写成产品 Gate。
+当前最终工程校验（2026-09-01）为 `178 passed, 4 warnings`；RAG failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke、Ruff、format、compileall 和 diff check 均通过。Prompt 层只记录候选的安全布尔事实和版本，不把开发集增益写成产品 Gate。
+
+## 2026-09-01｜Tencent Effect Web Prompt 运行边界补充
+
+Cloud page 6 的旧导入错误已在重建后消失，但三项 Effect Web Secrets 缺失导致本轮未进入浏览器
+调用。Prompt/LLM 只能把该 Provider 作为 `candidate / smoke_pending` 事实解释给用户，不能把
+License “正常”、Cloud 页面加载成功或 RAG 命中变成已执行事实；只有 Adapter 产生并校验真实
+Browser Receipt 后，系统才可记录一次候选运行证据。Token 永不进入 Prompt、页面或 Trace。
+
+## 2026-09-02｜V3 validation 诊断 Prompt 边界
+
+V3 的原始 answerless Holdout-A 运行仍是历史快照；产品负责人明确授权的 `validation` 副本才允许在离线诊断器中读取题干与人工 Gold。该读取不是在线 Prompt 行为，也不构成再次正式 Holdout。诊断器对 H01–H36 的 G0–G5 保存完整安全 Trace，候选只提出查询编译/证据整理建议，不能把任何验证集 Gold 变成线上规则。
+
+G2 的 validation 100% 因 public regression 退化被回退，G3 才作为保守候选保留；最终 Route=100%、Evidence relation=97.22%、Recall@5=100%，G4/G5 无增益。LLM 仍未参与本轮诊断，不能读取照片、向量、密钥或隐藏链路；`execution_authorized=false`、Provider 白名单与业务合同不变。推广前必须新建独立 V4 Holdout。

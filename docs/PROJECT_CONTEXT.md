@@ -58,11 +58,11 @@
 
 Gold Set v2 评测器已经独立于线上 RAG 路径：public 52 题（34 dev + 18 challenge）和独立答案键用于开发/挑战评分，holdout 20 题只向运行器提供 `case_id/query`；隐藏答案键已移出工作区，public deterministic prediction 与一次私有 aggregate holdout 评分已经完成，当前两者的 project Gate 都为 `FAIL`，不能写成通过。私有 Markdown 的自然语言 `must_not` 仍未转换为 canonical event ID，因此 hard-safety 只显示 `MANUAL_REVIEW_REQUIRED`。火山美颜 API V2.0 与腾讯特效移动/PC 细项仍只完成 candidate Card、typed Adapter shell、权限/预算 preflight、离线测试和 fail-closed smoke；腾讯特效 Web 另有独立的浏览器 Adapter、Streamlit page 6 和 `ProviderRun` 联合合同，但 Card 仍为 candidate、尚无新的 Browser Receipt，不能写成已进入主执行链或细项能力已验证。基于官方计费/准入核验，火山 V0 暂不购买/接入，当前主执行链仍只用已验证的 Tencent BeautifyPic/IMS。
 
-当前交叉校验：全量 `pytest 172 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 已在腾讯特效 Web 适配器切片后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。腾讯特效 Web 的 page 6 已能本机启动，但真实 Browser Receipt 仍待绑定域名的 Cloud 页面与 Secrets 运行；Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
+当前交叉校验（历史快照更新）：全量 `pytest 178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 已在腾讯特效 Web 适配器切片后再次通过；HTML/Markdown/JSON 评测报告在 `reports/`。Precision C、Holdout A、Safety ID C 已冻结并实现；v3 Holdout 已在工作区外完成审核并完成一次性盲测，quality Gate 仍为 `FAIL`。部署包已完成 `src/` 入口兼容、轻量锁文件和敏感材料排除，私有 GitHub 仓库已创建并推送 `main`；Cloud Private App 已创建并返回固定 URL，腾讯 Web License 已显示正常。腾讯特效 Web 的 page 6 已能本机启动，但真实 Browser Receipt 仍待绑定域名的 Cloud 页面与 Secrets 运行；Cloud ImageModeration 当前失败只会回传脱敏 `error_code`/`provider_request_id`，等待产品负责人依据真实回执继续排查。
 
 ## 2026-08-30 RAG 工程收口快照
 
-本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归已更新为 `160 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
+本轮新增 metadata-only `RagLifecycleAudit`：它检查 3 张已审核 Tencent Card 的状态/有效期/来源 URI/原子规则数，并核对 dense manifest；当前为 3 items、10 active chunks、`issue_counts={}`、`index_status=in_sync`。审计写入脱敏 SQLite/JSON/HTML，可从 page 4 显式触发；不自动发布、改状态、删除、重建索引、调用 LLM/Provider 或授权图片出站。全量回归当前为 `178 passed, 4 warnings`；RAG project quality Gate 仍为 `FAIL`，不能写成通过。
 
 ## 2026-08-30 failure-pattern 实现快照
 
@@ -98,8 +98,24 @@ Streamlit Cloud Private 页面已经打开，等待产品负责人亲自完成�
 
 报告、SOP、Rubric、page 5 和合同均记录 `changed_prediction_count`、Trace 安全布尔值和停止原因；无网络、LLM、Provider、照片/向量或 hidden-answer 访问。V3 Holdout 仍不重跑、不读取逐题答案；审核 annotations 后必须新建独立 v4 才能评估泛化。
 
-本轮最终 QA 为全量 `pytest 173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示；这不改变 RAG quality Gate=`FAIL` 或候选未推广状态。
+本轮最终 QA 为全量 `pytest 178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check`、failure-driven Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示；这不改变 RAG quality Gate=`FAIL` 或候选未推广状态。
+
+失败驱动报告现同时提供 `final_candidate_diagnostics`，让 28 道公开题可逐题比较 V0 与终态；产品复盘见 `docs/RAG_FAILURE_CASE_REVIEW_V2.md`。该可观测性补充不读取 v3 私有答案，也不改变 Holdout A。
 
 ## 2026-09-01 当前 Cloud 运行异常与修复
 
 第一位用户在 Cloud 页面触发 `Tencent ImageModeration request failed`。运行日志显示页面中断的确定性根因是 Streamlit 交互重跑时重复写入 `photo_quality_results.quality_result_id`，SQLite 抛出唯一键异常；本机真实 IMS smoke 已返回 `Pass`（RequestId `c95e1359-9ecb-45ac-aa94-3776fbccc0ad`），因此当前不能把通用页面提示直接归因为腾讯凭据失效。`LocalTraceStore` 已实现同一合同唯一键/相同脱敏投影的幂等复用，以及变化内容的 fail-closed 冲突；Cloud 重建后需重新触发一次 IMS 以取得新的云端回执。该修复不改变 RAG、Provider、图片权限或安全门。
+
+## 2026-09-01 腾讯特效 Web Cloud 当前状态
+
+Cloud 已从最新提交成功重建，page 6 能加载，旧进程缓存造成的 Web Card 导入错误已通过 Reboot
+消除；但 Effect Web 三项 Secrets（`TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、
+`TENCENT_EFFECT_LICENSE_TOKEN`）尚未配置，真实 Browser smoke 仍为 `not_run`。本轮没有加载 SDK、
+没有图片出站、没有 Browser Receipt；候选 Card 继续 fail-closed。配置后只运行官方示例图一次，
+并在隐私/区域/成本/Gold/负责人准入证据齐全后再讨论 promotion。
+
+## 2026-09-02 当前事实覆盖｜V3 validation 与 RAG 优化
+
+产品负责人已明确授权把已审核 V3 题目/答案用于 validation 诊断。原始一次性 answerless Holdout-A 快照仍保留、不重跑；验证副本 `rag_v3_validation_cases_v1.json` / `..._annotations_v1.json` 只供离线诊断。`rag_v3_validation_diagnostics_v1.json/.html` 为 H01–H36 的 G0–G5 逐题结论、根因、SOP、查询投影、检索摘要和完整安全 Trace。
+
+最终 G3 保守候选的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 的 100% 因 public regression 退化而拒绝，G4/G5 0 改变。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，active baseline 与执行权限未改变。后续 promotion 仍必须使用不与 V3 重叠的独立 V4 Holdout；RAG 继续 advisory-only。

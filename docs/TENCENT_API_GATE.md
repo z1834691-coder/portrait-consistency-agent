@@ -165,3 +165,17 @@ Cloud 重建后，产品负责人需要刷新页面并再次执行一次内容�
 - 用户层可以表达超出范围的相对愿望，但 Adapter 绝不能发送小于 0 或大于 100 的腾讯绝对参数；截断/拒绝和解释由确定性规划策略负责；
 - 实际调用前由检查点 8B 执行 Gate 检查用户确认范围、Profile 约束、照片 hash、Gate、幂等键和可配置轮次上限；首轮页面仅在用户勾选/点击后才能发请求。8C-2 的子轮若仍在同一首次确认 scope 内，则先写入 `auto_followup_preflight` 后自动发请求；scope、用途、Provider、出境方、预算或同意状态变化时 fail closed 并重新授权。
 - 合同 `v0.4` 已区分 attempt、Provider Card、参数投影、确认作用域、结果生命周期和结构化错误，并新增 8C 策略提议/目标证据字段；8B 确认后执行按钮、一次调用和 ProviderRun 已接入页面并通过离线 fixture Trace，8C-1 已接入会话内本地修后观察与 `VerificationResult`。当前没有新的 UI 8C live receipt，外部/混合复测仍未接入；ImageModeration 已有一条真实 Pass 和一条真实 Block，但这仍只是单样本路由证据，不等于完整审核覆盖。
+
+## 2026-09-01｜腾讯特效 Web Cloud Gate 当前状态
+
+腾讯特效 Web 是独立的浏览器 SDK 路线，不复用 Tencent REST 的 Secret ID/Key。Cloud 已成功重建 page 6 并消除旧进程的导入错误；当前页面在签名之前发现三项 Effect Web Secrets 缺失，因此安全停止。尚未加载 SDK、处理图片或产生 Browser Receipt，`tencent-effect-web` Card 继续保持 `candidate`。
+
+需要在 Cloud App Settings → Secrets 根级配置以下名称（值由产品负责人自行粘贴，不能发到聊天）：
+
+```text
+TENCENT_EFFECT_APP_ID
+TENCENT_EFFECT_LICENSE_KEY
+TENCENT_EFFECT_LICENSE_TOKEN
+```
+
+补齐后只运行官方示例图一次；回执只记录脱敏字段。即使成功，也还需补齐图片出站/地区/留存、成本、Gold 回归和产品负责人 promotion，不能因 License 正常或离线 smoke 通过而放行主流程。

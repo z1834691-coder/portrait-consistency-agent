@@ -49,3 +49,20 @@
 ## 不可夸写边界
 
 即使 v3 已完成一次正式评分，只要质量 Gate 为 `FAIL`，README、简历和面试材料也只能写“完成独立 Holdout 隔离与一次盲测，发现当前 baseline 泛化不足；hard-safety 通过”，不能写“RAG 已通过”或“泛化达到上线标准”。
+
+## 2026-09-02｜产品负责人明确解冻：V3 改为验证集（原盲测快照不变）
+
+产品负责人在完成 v3 审核后明确要求补齐逐题结论、失败模式和完整 Trace，并允许依据 v3 做候选优化。因此，v3 的**新用途**从“独立 Holdout”改为 `validation`；这不是重新运行原盲测，也不是把旧结果擦掉。
+
+- 原始一次性 answerless 盲测快照继续保留在工作区外，作为不可污染的历史证据；本轮没有重跑它；
+- `data/evaluation/rag_v3_validation_cases_v1.json` 和 `..._annotations_v1.json` 是从产品负责人已审核材料派生出的明确验证副本，服务于逐题诊断；
+- 验证副本允许报告显示题干、Gold、失败码和完整脱敏 Trace，但不被在线 RAG、active baseline 或 Provider 执行链读取；
+- 本轮答案键被读取是产品负责人明确授权后的诊断行为，不能再把这份副本称为独立 Holdout，也不能用它证明泛化；
+- 任何候选要晋升为产品逻辑，必须先通过 public regression，再用一份与 V3 不重叠的新 V4 Holdout；
+- 看板和报告必须同时显示 `owner_unlocked_v3=true`、`historical_holdout_a_snapshot_preserved=true`、`new_independent_v4_required_for_promotion=true`，避免后续把两类证据混称。
+
+本次验证诊断报告为 `reports/rag_v3_validation_diagnostics_v1.json/.html`，其中每个代次都保存 H01–H36 的题干、Gold、Prediction、failure analysis、检索 Trace 和安全布尔事实。它是产品负责人授权的内部诊断材料，不是对外质量承诺。
+
+### 当前解释（2026-09-02）
+
+“答案键不回流开发”仍适用于原始 answerless Holdout-A 运行和在线 RAG；本轮负责人明确授权的 validation 副本是一个不同用途的诊断材料，因此其 annotations 可被离线诊断器读取。两者不能混称：原始盲测结果仍是一次性历史证据，validation 结果只能指导失败分析和候选回归，不能作为新的泛化通过或 promotion 依据。任何 promotion 都需要与 V3 不重叠的新 V4 Holdout。

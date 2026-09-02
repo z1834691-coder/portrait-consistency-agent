@@ -549,7 +549,7 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 
 Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审输入合同和答案不泄漏 HTML/Markdown/JSON 报告已落地；public deterministic baseline 已生成并评分，固定分母 Precision@3=47.44%，project Gate=`FAIL`；answerless holdout 20 题也已运行，产品负责人在工作区外私有目录完成一次仅聚合比对，Route=25.00%、Recall@5=38.24%、MRR=52.94%、nDCG@5=41.56%，project Gate=`FAIL`。私有 Markdown 的自然语言 `must_not` 尚未规范成 canonical event ID，因此 hard-safety 明确为 `MANUAL_REVIEW_REQUIRED`，不伪报通过；隐藏逐题答案不回流规则、Prompt 或调参。
 
-火山美颜 API V2.0 与腾讯特效移动/PC 细项仍是 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；腾讯特效 Web 已另建浏览器 Adapter、page 6 和 `ProviderRun` 联合合同，但 Card 仍为 candidate，尚未取得新的 Browser Receipt。所有新 Provider 都必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`；本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。该处的历史快照为 `pytest 172 passed, 4 warnings`；当前全量同步校验为 `173 passed, 4 warnings`，Ruff、format、compileall、`git diff --check` 均通过。
+火山美颜 API V2.0 与腾讯特效移动/PC 细项仍是 candidate Card + fail-closed Adapter shell、权限/预算检查、离线测试和 smoke；腾讯特效 Web 已另建浏览器 Adapter、page 6 和 `ProviderRun` 联合合同，但 Card 仍为 candidate，尚未取得新的 Browser Receipt。所有新 Provider 都必须完成供应商书面能力、License/隐私/区域、价格/延迟、真实 receipt、Gold 回归和产品负责人冻结后才可进入 `reviewed_active`；本轮产品规则未改变“RAG 只能提议、不能授权”的边界。failure-pattern analyzer 与优化看板只做脱敏诊断和 proposal-only 候选，不改变上述边界。该处的历史快照为 `pytest 172 passed, 4 warnings`；当前全量同步校验为 `178 passed, 4 warnings`，Ruff、format、compileall、`git diff --check` 均通过。
 
 ## 2026-08-30 评测治理冻结（Precision C / Holdout A / Safety ID C）
 
@@ -623,6 +623,18 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 
 ## 2026-09-01｜失败驱动 Loop v2 后的工程一致性校验
 
-本轮全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 以及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。代码、合同、测试、报告和看板使用同一版 `rag-failure-driven-loop-v0.1` 事实；该校验不改变 RAG advisory-only、project Gate=`FAIL` 或候选未推广边界。
+本轮全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 以及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。代码、合同、测试、报告和看板使用同一版 `rag-failure-driven-loop-v0.1` 事实；该校验不改变 RAG advisory-only、project Gate=`FAIL` 或候选未推广边界。
 
 <span style="color:#C00000"><strong>2026-09-01 逐题复盘补充。</strong> 失败驱动报告新增 `final_candidate_diagnostics`，将 28 道公开开发/挑战题的 V0 与终态逐题状态、错误码、路由变化放在同一份脱敏报告中；人工复盘见 `docs/RAG_FAILURE_CASE_REVIEW_V2.md`。这解决了“只看到总分、不知道哪道题变好”的可观测性缺口，但不读取 v3 私有答案、不改变 active baseline，也不把开发集增益写成产品化通过。</span>
+
+## 2026-09-01｜腾讯特效 Web Cloud 状态补充
+
+腾讯特效 Web 继续是独立候选 Provider，不替换已验证的 Tencent BeautifyPic。Cloud 已完成最新代码重建并解决旧进程 ImportError；但 page 6 在服务端签名前发现缺少 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，所以本轮没有加载 SDK、处理图片或产生 Browser Receipt。Card 继续保持 `candidate`，不能对用户承诺 Web 细项、批量或视觉改善。
+
+即使后续官方示例图 smoke 成功，也必须补齐精确域名/License、图片出站与地区/留存、预算、真实回执、Gold 回归和产品负责人 promotion；RAG/LLM 不能因检索命中或一次成功自动放行。Effect Token 只用于服务端签名，不得进入页面、Trace、仓库或聊天。
+
+## 2026-09-02｜V3 解冻验证：产品规则当前覆盖
+
+产品负责人明确授权后，V3 由“一次性 Holdout-A 盲测”派生出独立 `validation` 副本，用于逐题失败分析和候选优化；原始 answerless 盲测快照保留、不重跑。验证副本允许使用 H01–H36 的题干和人工 Gold，但不进入在线 RAG、Prompt、Provider 或现役 baseline。
+
+当前规则是：RAG 仍 proposal-only；候选只能改变自然语言→`RagQuery` 的查询编译或离线证据整理，不能生成参数、ProviderRun、权限或图片出站。G0–G5 每代记录逐题结论、失败码、SOP、完整安全 Trace、`changed_prediction_count` 和 public regression；G2 的 100% validation 结果因 public regression 退化而不采纳，G3 的保守守门候选才保留。最终 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G4/G5 无新增增益。固定 Precision/project Gate 仍 `FAIL`、hard-safety `PASS`，不得写成 RAG 产品化通过；推广前必须新建不与 V3 重叠的 V4 Holdout。

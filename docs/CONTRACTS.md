@@ -407,7 +407,7 @@ Holdout A 的运行合同仍只允许 `case_id + query`。v2 包及 aggregate �
 
 ## 18. 2026-08-30 最新评测治理状态
 
-本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `173 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
+本文件中较早章节保留当时的测试快照；当前同步状态以本节及第 21 节为准：历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `178 passed, 4 warnings`。Precision C、Holdout A、Safety ID C 已冻结并实现；public/failure 报告已用显式 predictions 重跑，v2 hidden 仍为历史 aggregate，v3 已完成一次性 answerless 盲测，未知安全标签仍进入 `MANUAL_REVIEW_REQUIRED`。腾讯 ImageModeration 的 UI 失败回执只保存 `error_code`/`provider_request_id` 等脱敏事实，不改变任何合同放行条件。这些评测合同不改变 RAG `execution_authorized=false`、候选 Provider fail-closed 或图片执行权限。
 
 本地合同落账还要求“相同合同唯一键 + 相同脱敏投影”才可幂等复用；如果质量结果 ID、计划 ID+revision 或验证 ID 已存在但投影发生变化，写入必须 fail-closed 并返回可识别的 `ValueError`，不得覆盖旧证据或暴露底层 SQLite 唯一键异常。`LocalTraceStore` 的回归测试覆盖了质量置信度和 `photo_id` 变化两种冲突路径。
 
@@ -473,6 +473,26 @@ Loop 的不变量是：每代只改一个可解释变量；必须记录 `changed
 
 ### 24.1 当前一致性校验
 
-2026-09-01 全量 `.venv/bin/pytest -q` 为 `173 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果只证明合同实现与测试/报告一致，不代表 RAG project Gate 通过或改变六个业务合同的执行权限。
+2026-09-01 全量 `.venv/bin/pytest -q` 为 `178 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 及失败驱动 Loop、P0-A/P0-B/advisory/lifecycle/8C/8C2 smoke 均通过。4 条 warning 是既有 Pillow 弃用提示。该结果只证明合同实现与测试/报告一致，不代表 RAG project Gate 通过或改变六个业务合同的执行权限。
 
 失败驱动报告的 `final_candidate_diagnostics` 额外保存 28 道公开题的 V0/终态诊断；它只包含 case ID、标签、错误码、路由和安全布尔事实。逐题解释见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)，不含 v3 私有答案，也不扩展任何执行合同。
+
+## 2026-09-01｜Tencent Effect Web 运行合同状态
+
+`TencentEffectWebParams`、`EffectWebBrowserReceipt` 与 `ProviderRun` 联合合同已在本机和 Cloud
+构建中加载成功。Cloud 曾因旧进程缓存旧模块而报导入错误，Reboot 后已恢复；这只证明合同能被
+部署加载，不是图片处理成功。由于 Cloud 尚缺三项 Effect Web Secrets，本轮没有 Browser Receipt，
+因此不能把 `tencent_effect_web/WebARImage` 写成已执行或已验证的 ProviderRun。
+
+继续保持以下合同不变量：Token 不进入浏览器或 Trace；图片 data URL 只在组件短时载荷；数据库
+只接收脱敏 receipt；`candidate` Card 不能制造执行权限；单次成功回执必须携带输入/输出 hash、
+尺寸、SDK 版本和耗时，失败必须携带安全错误码。补齐 Secrets 后才可运行一次官方示例图并落一条
+真实 Browser Receipt。
+
+## 2026-09-02｜V3 validation 诊断合同补充
+
+V3 的原始 Holdout-A answerless 运行合同仍保持“一次性、不可重跑”的历史快照；产品负责人明确授权后，另建 `rag-v3-validation-unlocked-2026-09-02` 验证合同。验证合同的输入是 36 个 `case_id + query`，另有已审核 annotations；它只供离线诊断，不被在线 RAG、Prompt、Provider 或现役 baseline 读取。
+
+每个 G0–G5 代次必须输出逐题 `Prediction`、失败码、根因/SOP、评分、查询投影和完整安全 Trace。Trace 允许保留题干/Gold 是因为这是负责人授权的内部 validation 报告，但仍不得含照片、向量、密钥或隐藏链路；必须明确 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`photo_or_face_vector_read=false`。`RagAdvisoryDecision.execution_authorized` 继续为 `false`，诊断候选不得写入六个业务合同或生成 `ProviderRun`。
+
+当前最终 G3 保守候选的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 虽为 100% 但因 public regression 退化而不采纳，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`；只能用新建且与 V3 不重叠的 V4 Holdout 讨论 promotion。

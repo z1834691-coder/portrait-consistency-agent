@@ -1,6 +1,6 @@
 # 腾讯特效 Web SDK Adapter｜静态图准入切片
 
-> 当前状态：`candidate / browser-smoke-pending`（2026-09-01）
+> 当前状态：`candidate / browser-smoke-blocked-by-cloud-secrets`（2026-09-01）
 > 这不是一个 Python REST API。它是浏览器 JavaScript/WebGL SDK 的受限桥接层。
 
 ## 1. 它解决什么问题
@@ -86,3 +86,24 @@ effect_web_request_prepared
 - [腾讯 Web 静态图片处理教程](https://cloud.tencent.com/document/product/616/118039)
 - [腾讯 Web 快速上手与测试 License](https://intl.cloud.tencent.com/ind/document/product/1143/53939)
 - [腾讯 Web 签名说明](https://cloud.tencent.com/document/product/616/71370)
+
+## 8. 2026-09-01｜Cloud 运行回执与当前阻塞
+
+Cloud 在拉取最新提交后曾因旧进程缓存报 `load_tencent_effect_web_card` ImportError；执行一次
+Cloud Reboot 后，page 6 已正常加载，官方示例图入口、参数控件和 Card candidate 状态均可见。
+这次重建修复的是部署进程状态，不是一次图片处理成功回执。
+
+本轮浏览器 smoke 尚未真正开始：Cloud Secrets 中缺少
+`TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`。
+页面因此在服务端签名之前安全停止，未加载 SDK、未发送图片、未生成 Browser Receipt，Card
+继续保持 `candidate`。已有 Tencent REST `TENCENT_SECRET_ID/KEY` 不能替代 Effect Web 的
+三项 License 配置；Token 仍只用于服务端签名。
+
+官方证据只确认 Web 测试 License 有申请/有效期规则，并不等于本项目已取得图片处理成功：
+
+- [Web 测试 License 说明](https://cloud.tencent.com/document/product/616/80189)
+- [Web 价格与域名绑定规则](https://cloud.tencent.com/document/product/616/86942)
+
+用户补齐三项 Secrets 后，下一步只运行一次腾讯官方示例图；若收到回执，保存脱敏的
+`receipt_id/input_sha256/output_sha256/elapsed_ms/sdk_version/status`，再分别完成隐私、区域、
+成本、Gold 回归和产品负责人 promotion 审核。任何单次成功都不会自动改变 Card 或主流程权限。

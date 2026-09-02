@@ -42,7 +42,7 @@ v3 只回流错误类型计数，因此下面的“观察”是聚合事实，�
 
 本轮新建 `data/evaluation/rag_failure_driven_dev_v1.json`（16 dev + 12 challenge）及其待审核 annotations。`reports/rag_failure_driven_loop_v1.json` 的 `baseline.case_diagnostics` 为 28 条逐题记录。每条只保存 `case_id`、`split`、标签、题干 SHA-256、预测/Gold 证据数量和结构化错误代码，不保存 v3 私有题干或答案。
 
-V0 逐题事实统计为：`route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；另有 28 条 `metric_sparse_gold_denominator`，它是评测口径提示而非检索器缺陷。错误码可以重叠，不能相加当作独立坏题。V2 之后 22 条预测事实发生改变，开发集的 route/relation/recall@5 达到 100%；这证明候选修复触达了正确层，但因数据集/annotations 尚待产品负责人审核，不能当正式发布 Gate。
+V0 逐题事实统计为：`route_mismatch=24`、`evidence_relation_mismatch=23`、`evidence_set_mismatch=18`、`rank_mismatch=10`；另有 28 条 `metric_sparse_gold_denominator`，它是评测口径提示而非检索器缺陷。错误码可以重叠，不能相加当作独立坏题。V2 之后 22 条预测事实相对 V1 发生改变，从 V0 到终态共有 24 条 Prediction 事实发生改变；开发集的 route/relation/recall@5 达到 100%。这证明候选修复触达了正确层，但因数据集/annotations 尚待产品负责人审核，不能当正式发布 Gate。逐题对照见 [RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)。
 
 ## 4. 自动化候选代次（首次 loop，历史快照）
 
@@ -66,7 +66,7 @@ Composite 的权重和 project Gate 见 [RAG 优化 Rubric](RAG_OPTIMIZATION_RUB
 | V3 | relation guard | 0 | 0.947619 | 0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
 | V4 | evidence packing | 0 | 0.947619 | 0.000000 | 100.00% | 100.00% | 100.00% | 无增益 |
 
-停止原因：V3/V4 连续两代 Composite 增益 `<0.01`，且 public regression 的固定 Precision@3 仍导致 project Gate=`FAIL`，所以没有继续堆下游补丁。所有候选 Trace 的 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。V2 仍只是 owner-review development evidence，不改变现役 P0-A/P0-B/P0-C。
+停止原因：V3/V4 连续两代 Composite 增益 `<0.01`，且 public regression 的固定 Precision@3 仍导致 project Gate=`FAIL`，所以没有继续堆下游补丁。所有候选 Trace 的 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`hidden_answer_key_read=false`、`active_baseline_changed=false`，anti-overfit=`PASS`。V2 仍只是 owner-review development evidence，不改变现役 P0-A/P0-B/P0-C。报告同时保存 `final_candidate_diagnostics`，使 V0/终态差异可逐题复盘。
 
 ## 5. 完整可回放链路
 
@@ -103,6 +103,7 @@ owner-review development dev/challenge + annotations
 - 看板：`pages/5_RAG优化看板.py`
 - SOP：[RAG_FAILURE_ANALYSIS_SOP.md](RAG_FAILURE_ANALYSIS_SOP.md)
 - Rubric：[RAG_OPTIMIZATION_RUBRIC.md](RAG_OPTIMIZATION_RUBRIC.md)
+- 逐题复盘：[RAG_FAILURE_CASE_REVIEW_V2.md](RAG_FAILURE_CASE_REVIEW_V2.md)
 
 ```bash
 UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
@@ -111,3 +112,17 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 ```
 
 当前报告只把 v3 aggregate 作为上下文；不传 `--private-aggregate` 也可以完整运行 public loop。
+
+## 8. 2026-09-02｜V3 解冻后的验证优化（当前最新）
+
+产品负责人明确允许读取已审核 V3 题目和答案，因此本轮不再把 V3 当作“不可逐题读取的 Holdout”，而是使用单独的 validation 副本做失败模式分析；原始一次性盲测快照保持不变、不重跑。新增 `scripts/prepare_v3_validation_package.py`、`services/rag_v3_validation_diagnostics.py` 和 `scripts/run_rag_v3_validation_diagnostics.py`，产出 36 题逐题结论、根因、SOP、G0–G5 完整 Trace、JSON/HTML 和 page 5 看板。
+
+| 代次 | 实际处理 | V3 Route | V3 Relation | V3 Recall@5 | Public regression | 结论 |
+|---|---|---:|---:|---:|---:|---|
+| G0 | 原 baseline | 30.56% | 23.61% | 59.72% | 基线 | 失败起点 |
+| G1 | v0.1 查询编译 | 58.33% | 52.78% | 77.78% | 退化 | 不采纳 |
+| G2 | v0.2 policy-first 编译 | 100% | 100% | 100% | 退化 | 不采纳，验证过拟合 |
+| G3 | public regression guard | 100% | 97.22% | 100% | 保持基线 | 保守候选 |
+| G4/G5 | 下游关系/打包检查 | 100% | 97.22% | 100% | 保持基线 | 0 改变，停止 |
+
+V3 的最终失败只剩 1 条 `evidence_relation_mismatch` 和 36 条 `metric_sparse_gold_denominator`；后者是固定 Precision 口径提醒，不是检索缺陷。最终固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`，active baseline 未改变。报告中的 `hidden_answer_key_read=true` 仅表示这次负责人授权的离线 validation 诊断，不是在线流程，也不构成正式 Holdout 通过。完整报告见 `reports/rag_v3_validation_diagnostics_v1.json/.html`；推广仍需新建独立 V4 Holdout。

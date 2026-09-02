@@ -112,7 +112,7 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
   uv run python scripts/audit_rag_lifecycle.py
 ```
 
-它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。最新全量回归为 `160 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。Cloud ImageModeration 若真实调用失败，页面和 Trace 会保留脱敏错误码与 RequestId 供定位。
+它只审计知识卡元数据和派生 dense manifest，输出 `reports/rag_lifecycle_audit.json/.html` 并记录到 `rag_lifecycle_audits`；不读取照片/原文/向量/答案键/密钥，不联网，也不自动修改知识库。当前快照为 3 张审核 Tencent Card、10 条 active 规则、无 issue、`index_status=in_sync`。历史幂等修复快照为 `160 passed, 4 warnings`，当前全量回归为 `178 passed, 4 warnings`，RAG 质量 Gate 仍为 `FAIL`。Cloud ImageModeration 若真实调用失败，页面和 Trace 会保留脱敏错误码与 RequestId 供定位。
 
 ## 2026-09-01｜v3 Holdout 与第一位用户入口
 
@@ -128,7 +128,7 @@ Cloud 重建后，产品负责人刷新页面，在同人不确定提示处确�
 
 ## 2026-09-01｜Cloud 页面异常恢复
 
-如果页面显示 `Tencent ImageModeration request failed`，先查看页面下方的脱敏 `error_code`/`RequestId`。本轮 Cloud 日志还发现了另一条确定性根因：Streamlit 重跑重复插入同一 `photo_quality_result_id`，触发 SQLite 唯一键异常并中断页面。已在 `LocalTraceStore` 增加幂等复用与变化内容冲突保护；本地全量回归为 `160 passed, 4 warnings`。
+如果页面显示 `Tencent ImageModeration request failed`，先查看页面下方的脱敏 `error_code`/`RequestId`。本轮 Cloud 日志还发现了另一条确定性根因：Streamlit 重跑重复插入同一 `photo_quality_result_id`，触发 SQLite 唯一键异常并中断页面。已在 `LocalTraceStore` 增加幂等复用与变化内容冲突保护；历史修复回归为 `160 passed, 4 warnings`，当前全量回归为 `178 passed, 4 warnings`。
 
 Cloud 拉取新版本后无需重新配置本机 `.env`：只需刷新页面，重新执行一次当前照片的 IMS 检查。Cloud Secrets 仍必须保留在 Cloud App 的根级设置中；若新的真实腾讯错误仍出现，只回传错误码和 RequestId，不绕过安全门或重复上传无授权照片。
 
@@ -147,6 +147,14 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 
 该命令应输出 `status=not_run`、`network_called=false`，不读取照片、不加载浏览器 SDK。真实 smoke 必须打开已绑定精确域名的 page 6，点击组件内“开始腾讯特效处理”，然后观察页面是否收到 Browser Receipt；成功回执只能证明单次 Web 静态图处理，不代表 Card 已升级或主流程可用。当前 Web Card 仍为 `candidate`，移动/PC 细项和批量能力继续保持未验证。
 
+### Cloud 当前运行记录（2026-09-01）
+
+最新提交在 Cloud 重建后 page 6 已正常加载；此前旧进程缓存产生的导入错误已消失。Cloud Secrets
+仍缺少 `TENCENT_EFFECT_APP_ID`、`TENCENT_EFFECT_LICENSE_KEY`、`TENCENT_EFFECT_LICENSE_TOKEN`，
+所以 Browser smoke 尚未运行，未产生图片或回执。已有 Tencent REST Secret ID/Key 不可替代这三个
+Effect Web 配置。配置完成后刷新 page 6，先使用官方示例图；回执只保留脱敏状态、hash、尺寸、
+SDK 版本和耗时。
+
 ## 2026-09-01 RAG 失败驱动 Loop v2 运行态
 
 使用 `scripts/run_rag_failure_driven_loop.py` 可在本机重放 V0→V4 的开发/挑战回归与 public regression：
@@ -157,3 +165,14 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
 ```
 
 本次真实报告为 `reports/rag_failure_driven_loop_v1.json/.html`。V0 Composite=`0.355614`，V1=`0.403233`（2 条预测改变），V2=`0.947619`（22 条预测改变），V3/V4 各 0 条改变并按两代低增益停止。运行器不联网、不调用 LLM/Provider、不读照片/向量/hidden 答案，且不修改 active baseline；报告和 page 5 看板是只读治理证据。开发 annotations 尚待产品负责人审核，public regression/project Gate 仍 `FAIL`，不得将 V2 写成 RAG 产品化通过。
+
+## 2026-09-02｜V3 validation 诊断运行态
+
+V3 原始 answerless Holdout-A 盲测快照保持在工作区外，本轮没有重跑；产品负责人明确授权的验证副本位于 `data/evaluation/rag_v3_validation_cases_v1.json` 与 `..._annotations_v1.json`。运行命令：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache \
+  uv run python scripts/run_rag_v3_validation_diagnostics.py
+```
+
+该命令离线运行 G0–G5，生成 `reports/rag_v3_validation_diagnostics_v1.json/.html`，并在 page 5 提供只读入口。每个 H01–H36 都有题目、Gold、Prediction、根因/SOP、查询投影、FTS/dense/RRF/rerank 和完整安全 Trace；没有照片、向量、密钥、网络、LLM 或 Provider。最终 G3 Route=100%、Relation=97.22%、Recall@5=100%，G4/G5 无增益；固定 Precision/project Gate=`FAIL`、hard-safety=`PASS`，候选未推广。验证副本只用于诊断，下一次正式泛化必须用独立 V4。
