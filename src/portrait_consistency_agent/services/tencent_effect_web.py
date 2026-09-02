@@ -718,12 +718,18 @@ def render_tencent_effect_web(
                   if (!imageData || !imageData.data || !imageData.width || !imageData.height) {
                     throw new Error("STATIC_IMAGE_OUTPUT_MISSING");
                   }
-                  canvas.width = imageData.width;
-                  canvas.height = imageData.height;
-                  const context = canvas.getContext("2d");
+                  // The SDK owns the output canvas after initialization.  Resizing
+                  // that same canvas here triggers Chromium's
+                  // "Cannot resize canvas after call to transfer..." error in
+                  // some WebGL builds.  Keep the SDK canvas immutable and copy
+                  // the returned ImageData into a fresh, browser-owned canvas.
+                  const resultCanvas = document.createElement("canvas");
+                  resultCanvas.width = imageData.width;
+                  resultCanvas.height = imageData.height;
+                  const context = resultCanvas.getContext("2d");
                   if (!context) throw new Error("CANVAS_CONTEXT_MISSING");
                   context.putImageData(imageData, 0, 0);
-                  const outputUrl = canvas.toDataURL("image/png");
+                  const outputUrl = resultCanvas.toDataURL("image/png");
                   const outputHash = await hashDataUrl(outputUrl);
                   result.src = outputUrl;
                   result.style.display = "block";
@@ -740,8 +746,8 @@ def render_tencent_effect_web(
                     output_sha256: outputHash,
                     input_width: inputImage.naturalWidth || inputImage.width,
                     input_height: inputImage.naturalHeight || inputImage.height,
-                    output_width: result.naturalWidth || canvas.width,
-                    output_height: result.naturalHeight || canvas.height,
+                    output_width: resultCanvas.width,
+                    output_height: resultCanvas.height,
                     elapsed_ms: elapsed,
                     error_code: null,
                     safe_error: null,

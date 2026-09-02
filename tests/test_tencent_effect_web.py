@@ -314,6 +314,9 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     source = inspect.getsource(render_tencent_effect_web)
     assert "takePhoto" in source
     assert "getOutput" not in source
+    assert 'const resultCanvas = document.createElement("canvas")' in source
+    assert "canvas.width = imageData.width" not in source
+    assert "canvas.height = imageData.height" not in source
     assert "errorCodeOf" in source
     assert "SDK 鉴权缺少必要参数" in source
     assert "runButton.disabled = false" in source
