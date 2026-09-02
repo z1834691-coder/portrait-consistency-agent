@@ -150,6 +150,28 @@ def _load_v5_process_audit_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_v5_gold_aggregate_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v5_holdout_gold_aggregate.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _load_v5_failure_analysis_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_v5_failure_analysis_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -224,6 +246,8 @@ def main() -> None:
     policy_candidate = _load_policy_coverage_candidate_report()
     candidate_diagnostics = _load_candidate_diagnostics_report()
     v5_process = _load_v5_process_audit_report()
+    v5_gold = _load_v5_gold_aggregate_report()
+    v5_failures = _load_v5_failure_analysis_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -433,6 +457,46 @@ def main() -> None:
         )
         if v5_artifact is not None and v5_artifact.path(PROJECT_ROOT).is_file():
             render_component(read_rag_report(v5_artifact, PROJECT_ROOT), height=360, scrolling=True)
+    if v5_gold is not None:
+        st.subheader("V5 独立 Holdout：负责人授权后的聚合质量")
+        st.caption(
+            "答案只在授权评分时短暂连接；看板只读取不含题目/答案的聚合结果。"
+            "这不是逐题调参依据，也不代表 RAG 已产品化。"
+        )
+        v5_metrics = v5_gold.get("metrics", {})
+        v5_metrics = v5_metrics if isinstance(v5_metrics, dict) else {}
+        v5_cards = st.columns(5)
+        v5_cards[0].metric("题数", v5_gold.get("case_count", "—"))
+        v5_cards[1].metric("Route", _percent(v5_metrics.get("route_accuracy")))
+        v5_cards[2].metric("Recall@5", _percent(v5_metrics.get("recall_at_5")))
+        v5_cards[3].metric("关系", _percent(v5_metrics.get("evidence_relation_accuracy")))
+        v5_cards[4].metric("项目 Gate", v5_metrics.get("project_threshold_gate", "—"))
+        v5_table = [
+            {"指标": name, "结果": value}
+            for name, value in v5_metrics.items()
+            if name != "precision_by_gold_evidence_count"
+        ]
+        st.dataframe(v5_table, use_container_width=True, hide_index=True)
+        v5_gold_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "v5_holdout_gold_aggregate"),
+            None,
+        )
+        if v5_gold_artifact is not None and v5_gold_artifact.path(PROJECT_ROOT).is_file():
+            render_component(
+                read_rag_report(v5_gold_artifact, PROJECT_ROOT), height=620, scrolling=True
+            )
+    if v5_failures is not None:
+        st.subheader("V5 失败模式与 SOP（聚合）")
+        st.caption("这些模式用于提出下一轮公开候选；V5 快照已经封存，不在同一题集上反复试错。")
+        st.write("失败计数：", v5_failures.get("failure_counts", {}))
+        st.write("过程 Gate：", v5_failures.get("process_integrity", {}).get("trace_gate", "—"))
+        v5_failure_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "v5_failure_analysis"), None
+        )
+        if v5_failure_artifact is not None and v5_failure_artifact.path(PROJECT_ROOT).is_file():
+            render_component(
+                read_rag_report(v5_failure_artifact, PROJECT_ROOT), height=720, scrolling=True
+            )
     if failure_driven is not None:
         st.subheader("失败驱动迭代（查询理解层）")
         st.caption(

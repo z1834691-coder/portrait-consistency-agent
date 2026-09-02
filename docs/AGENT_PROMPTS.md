@@ -500,6 +500,31 @@ Meta-Agent 的“智能”定义为在已审核、已登记、权限受控的工
 
 本轮全量工程回归为 `214 passed, 4 warnings`；新增 E1 handoff smoke 为 fixture-only，`network_called=false`、结果不落盘；E2 6 个案例全部通过。该回执不构成 Web Card promotion。
 
+## 2026-09-03｜V5 Gold join 后的 Agent 评测 Prompt 约束
+
+V5 Gold join 只能作为负责人授权后的离线聚合步骤。Prompt 必须要求：先冻结 answerless 运行；不把
+Gold route/evidence、题目标签或评测分数注入被测查询；完成后只返回聚合质量和失败模式；RAG 继续
+`proposal-only`。如果报告显示“已找到相关资料但路由/关系错误”，Agent 不能自行宣布成功或升级权限，
+只能提出下一轮公开候选的修正假设。
+
+失败模式对应的 Prompt SOP 是：把已识别意图显式映射为允许路由；按 operation/provider 分配证据槽位；
+由来源类型、能力状态和生命周期判定 direct/reference/conflict；任何候选先过公开安全回归，再考虑
+新的独立 Holdout。不得在封存的 V5 上反复试错、补写旧快照或把 Hit@5 当成产品化证明。
+
 ## 2026-09-02｜Web B/E1/E2 Prompt 执行回执覆盖
 
-当前 Prompt 的可回放链路已增加 Meta-Agent proposal→Web EditPlan 绑定断言，并明确 E2 的 hard-safety 与批量失败隔离是独立验收项；回归样例已补齐输入哈希错位和结果大小上限。最新全量 QA=`216 passed, 4 warnings`；E1/E2 仍只证明合同、Trace 和失败隔离，不把 candidate 变成可执行 Provider。
+当前 Prompt 的可回放链路已增加 Meta-Agent proposal→Web EditPlan 绑定断言，并明确 E2 的 hard-safety 与批量失败隔离是独立验收项；回归样例已补齐输入哈希错位和结果大小上限。该段 `216 passed` 为历史回执；RAG 候选和 V5 过程完成后的 QA=`217 passed, 4 warnings` 也属于此前快照，本轮代码同步后的新 QA 以最终回执为准；E1/E2 仍只证明合同、Trace 和失败隔离，不把 candidate 变成可执行 Provider。
+
+## 2026-09-02｜RAG 双轨 Gold 连接与 V5 边界（当前）
+
+公平 Gold 连接按“编译轨/真实检索轨”分开执行：V3/V4 的答案键只在内存与已封存 answerless 运行对齐，输出仅含聚合指标和安全布尔事实。V3/V4 检索 Recall@5=`34.72%`/`41.32%`、Evidence relation=`16.67%`/`24.65%`，均未通过质量门。答案、题干和 case 级结果不进入 Prompt、Trace 或报告；V5 仍保持答案未连接状态。该段为 Gold join 前历史快照（当时全量 QA=`217 passed, 4 warnings`），当前 V5 连接和 QA 见下方的 2026-09-03 约束。
+
+本轮 Prompt、聚合失败分析和看板同步后的全量工程 QA 为 `220 passed, 4 warnings`；Ruff check、format、compileall 与 `git diff --check` 均通过。V5 质量 Gate 仍为 `FAIL`，RAG 仍 `proposal-only`。
+
+## 2026-09-03｜E3 真实多样本候选试验 Prompt 当前事实
+
+本轮执行 Prompt 为 [E3_FINALIZATION_EXECUTION_PROMPT.md](E3_FINALIZATION_EXECUTION_PROMPT.md)。负责人已授权四张真实 JPEG 做候选试验。Prompt 约束执行树为：本地预检与哈希绑定 → 精确域名 page 6 浏览器 SDK → 脱敏 Browser Receipt → 结果 handoff 证据 → E3 汇总与候选看板 → 人工视觉/供应商准入 Gate。每个阶段必须保留输入、输出、原因码和不含图片的 Trace，并把“SDK 返回成功”“视觉效果改善”“共同 VerificationResult 完成”“Card promotion”分开。
+
+当前事实是 4/4 真实浏览器回执成功、输入哈希 4/4 与预检匹配、结果交接标记 4/4，E2 离线合同/批量隔离回归通过；透明通道 PNG 作为异常样本被拒绝。手工 manifest 尚未抄录每条完整 `request_ref`，因此 Prompt 禁止用 receipt ID 猜测 request_ref，报告必须保留缺口。
+
+Prompt 不得让 Agent、RAG 或 LLM：把 SDK 成功当成母版一致；生成视觉事实、参数、权限或供应商条款；自动创建 promotion；把结果图/data URL/密钥/本地路径写入 Trace、数据库、RAG 或 Git。`tencent_effect_web` Card 继续 `candidate`，RAG 继续 `proposal-only`；没有共同 `VerificationResult` 的真实几何复测、供应商地区/留存/费用证据和负责人最终批准，不得宣称 Web 已正式接入或泛化。

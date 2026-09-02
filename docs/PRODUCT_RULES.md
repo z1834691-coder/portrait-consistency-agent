@@ -759,7 +759,7 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 
 ## 2026-09-02｜Web 纵向绑定测试与 E2 指标口径修正
 
-新增一条 Meta-Agent proposal→Web `EditPlan` provider/Card 绑定测试，确保提议层和计划层不会静默选用不同工具；同时将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 分开计算：坏样本必须被拦截，是否有后续样本证明批量继续是独立字段。随后补齐输入哈希错位与结果大小上限样例。最新全量 QA=`216 passed, 4 warnings`，Web E2 为 8/8；Web Card 继续 `candidate`，不改变正式主流程或 E3 准入规则。
+新增一条 Meta-Agent proposal→Web `EditPlan` provider/Card 绑定测试，确保提议层和计划层不会静默选用不同工具；同时将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 分开计算：坏样本必须被拦截，是否有后续样本证明批量继续是独立字段。随后补齐输入哈希错位与结果大小上限样例。该段全量 QA=`216 passed, 4 warnings` 为历史快照，Web E2 为 8/8；Web Card 继续 `candidate`，不改变正式主流程或 E3 准入规则。此前 RAG 候选与 V5 过程后的 `217 passed, 4 warnings` 也属于历史快照，当前回执见 2026-09-03 段。
 
 ## 2026-09-02｜RAG 深度优化候选与 V5 过程规则（当前）
 
@@ -767,6 +767,36 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 
 <span style="color:#C00000"><strong>过程规则。</strong>新 Holdout 必须先封存答案键，再由独立过程监督逐题核验无漏题、无答案/标签/照片/向量/密钥泄露、有合法查询和完整检索 Trace、Prediction 只来自真实检索回执、无投影注入和无外部副作用。过程门 PASS 只代表考试过程完整，不代表内容质量正确。</span>
 
-<span style="color:#C00000"><strong>当前结果。</strong>开发集候选 Evidence relation/Recall@5/MRR=`100%`，公开回归候选 Evidence relation/Recall@5=`100%`、MRR=`93.27%`、nDCG@5=`95.30%`，hard-safety PASS；候选 promotion 状态仍为 `not_promoted_proposal_only`。V5 `60/60` 过程门 PASS，但质量评分尚未取得负责人授权。</span>
+<span style="color:#C00000"><strong>当时结果。</strong>开发集候选 Evidence relation/Recall@5/MRR=`100%`，公开回归候选 Evidence relation/Recall@5=`100%`、MRR=`93.27%`、nDCG@5=`95.30%`，hard-safety PASS；候选 promotion 状态仍为 `not_promoted_proposal_only`。当时 V5 只有过程门 PASS；负责人现已授权并完成一次质量 Gold join，当前质量见本文件末尾。</span>
+
+<span style="color:#C00000"><strong>双轨基线补充。</strong>本轮已把封存的 V3/V4 无答案运行包分别连接已审核 Gold，并只输出聚合：V3 编译 Route=`30.56%`、真实检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 编译 Route=`12.50%`、真实检索 Recall@5=`41.32%`、Evidence relation=`24.65%`；两者 hard-safety 均 PASS。该连接只纠正评测口径，不是新 Holdout，也不允许用逐题结果继续调参。</span>
 
 这次不把指标优化写成产品化：只有 V5 完成一次独立 Gold join，且同时通过安全、公开回归、成本/延迟、逐题失败检查和产品负责人准入，才可讨论 promotion；在此之前，RAG 仍不能直接调用图片工具或改变腾讯主流程。
+
+## 2026-09-03｜V5 Gold join 后的当前产品规则
+
+<span style="color:#C00000"><strong>负责人已授权一次性 Gold join。</strong>封存的 V5 answerless 运行与负责人审核答案只在内存中对齐，输出仅保留聚合指标和失败模式；私有答案键、题干、case 级结果不进入工作区报告。该动作是质量诊断，不是 promotion。</span>
+
+<span style="color:#C00000"><strong>冻结的迭代边界。</strong>早期 no-op 证明“只改结果整理层”不能算真正优化；多操作证据被挤出证明必须在候选池/操作覆盖层修正；V3/V4 解冻高分和旧 Holdout 快照不得改写为新的泛化成绩。V5 失败模式只能指导公开候选设计，不能在 V5 上反复试错。RAG 继续 proposal-only，权限、Provider 白名单和 active baseline 不变。</span>
+
+当前 V5 聚合：Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`、hard-safety=`PASS`、project Gate=`FAIL`。这表示“常能碰到相关资料”不等于“能选对路由、集合和关系”；产品不能用单一 Hit/Recall 指标替代任务完成度。
+
+本轮 V5 Gold join 失败分析、看板入口与隐私测试同步后的工程 QA：`220 passed, 4 warnings`；Ruff check、format、compileall 与 `git diff --check` 均通过。该回执不改变 `proposal-only`、active baseline 或 V5 `FAIL`。
+
+## 2026-09-03｜E3 真实 Web 候选试验规则（当前）
+
+<span style="color:#C00000"><strong>产品目标。</strong>当前先保证网页 Demo 能让用户上传照片、看到真实 Web SDK 结果并留下可审计证据；“调用成功”与“视觉效果泛化/母版一致”必须分开，不因演示目标而降低安全或准入规则。</span>
+
+<span style="color:#C00000"><strong>已冻结规则。</strong>仅使用负责人授权的真实 JPEG 做候选试验；透明通道等不支持输入进入异常隔离，不进入效果结论。E3 报告保存样本 ID、哈希、尺寸、状态、耗时、回执和原因，不保存图片 bytes、data URL、完整路径或密钥。真实浏览器回执需按输入哈希绑定；未记录完整 `request_ref` 时必须标记缺口，不可猜测。</span>
+
+<span style="color:#C00000"><strong>当前结果与边界。</strong>4/4 真实回执成功，输入哈希 4/4 匹配，结果交接标记 4/4，E2 合同/批量隔离回归通过；这只证明候选浏览器处理和证据关联。视觉泛化、共同 `VerificationResult` 的真实图片复测、供应商地区/留存/费用及负责人 promotion 仍未闭合。Web Card 继续 `candidate`，正式主流程继续使用已验证 Tencent BeautifyPic，RAG 继续 `proposal-only`。</span>
+
+### E3 当前规则矩阵
+
+| 规则 | 当前状态 | 产品含义 |
+|---|---|---|
+| 真实 Web 处理 | 已验证候选试验 | 可作为 Demo 结果展示，不能称正式主流程 |
+| 结果交接 | 已有脱敏 handoff 证据 | 真实共同复测仍需单独确认 |
+| 视觉效果/母版一致 | 未建立 | 不展示未经复测的改善或达标结论 |
+| 供应商地区/费用/留存 | 未闭合 | 不宣称生产准入 |
+| Card promotion | `candidate` | 只能由负责人在证据齐全后人工批准 |

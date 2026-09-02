@@ -91,6 +91,8 @@ Getty 的 `Tracing Art` 不是把资料堆成普通仪表盘，而是让用户�
 
 ## 6. 三个视觉探索方向
 
+<span style="color:#C00000">A/B/C 是前一轮用于建立视觉语言的历史探索，继续保留用于回溯和混合参考；当前最新的精细化执行候选是第 11 节的 Getty × Thread Track 1。未完成负责人评审前，任何方向都不视为最终实现。</span>
+
 ### A｜Archive Ribbon「档案游线」
 
 **定位：**最接近 Party Rock 参考图，也是三套中最具“品牌标签”的方向。黑色左导航像档案册书脊，米白画布保持安静，紫色以一条宽窄变化的游线连接母版和当前照片；荧光绿是游线上的当前游标。
@@ -183,7 +185,19 @@ Getty 的 `Tracing Art` 不是把资料堆成普通仪表盘，而是让用户�
 
 ## 10. 下一 Gate
 
-1. 产品负责人从 A/B/C（或混合方向）中选择一个视觉方向。
+1. 产品负责人优先评审第 11 节的 Getty × Thread Track 1；如需回溯，可从 A/B/C（或混合方向）中选择结构参考。
 2. 对所选方向做 Impeccable `shape`、`critical`、`audit`，只改视觉和可用性问题，不改产品合同。
 3. 完成桌面 1440×900、1280×800 和 reduced-motion 版本的 UI Gate。
 4. 再把确定的视觉语言映射到 Streamlit；真实运行状态、授权、错误和结果边界必须继续以代码、测试和回执为准。
+
+## 11. 2026-09-02｜精细化视觉 Track 1（最新候选覆盖）
+
+本章节把本说明从“方向原则”落到设计师可以直接执行的视觉稿级规范，完整细节见 [UI_VISUAL_DESIGN_SPEC_DETAILED.md](UI_VISUAL_DESIGN_SPEC_DETAILED.md)。它新增了：
+
+- 1440×900、1280×800、1024 以下和移动端的三栏网格、间距、断点与焦点规则；
+- `PrimaryNav`、`ProjectContext`、`AlignmentStage`、`AgentThread` 的尺寸、层级、边框、圆角、状态和精确中文文案；
+- E01「建立母版」和 E02「向母版靠拢」的逐区块排版、母版→当前照片→检查→结果轨迹、一次有界授权和线程内结果；
+- `orbit-paper`、`folded-window`、`ink-garden` 三张无人物 Image 2 环境素材的构图、使用边界、alt/加载策略和动效时间线；
+- reduced-motion、键盘/屏幕阅读器、图像性能、SVG 语义图层和 Reference fit / Getty grammar / Contract safety 验收门。
+
+已生成一条可直接评审的候选实现：[Getty × Thread Track 1](../design/visual-tracks/getty-thread-party-rock/visual-review.html)。其中 HTML 仅用于视觉与交互预览，E01/E02 SVG 为可导入 Figma 的分层矢量源，PNG 是装饰材质方向稿；均不代表 Streamlit 已实现、原生 `.fig` 云文件或真实用户结果。Party Rock 原始 token、苹方、黑色左导航/米白中右画布和 Agent 合同边界不变；产品负责人尚未冻结最终构图方向。

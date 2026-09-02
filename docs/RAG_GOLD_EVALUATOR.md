@@ -249,3 +249,19 @@ V4 运行器在答案键隔离状态下完成一次 48 题 baseline：`predictio
 LLM、照片、向量或 Provider 副作用。新运行的质量状态为 `READY_AFTER_SEPARATE_GOLD_JOIN`，旧 V4
 历史快照为 `LOCKED_HISTORICAL_PROCESS_AUDIT`。后续评分只能按题目哈希连接这四份脱敏运行包；不得
 把旧快照改写成通过，也不得把过程门 PASS 当作 RAG 质量或产品化通过。
+## 2026-09-02｜V3/V4 双轨 Gold 连接回执
+
+在新版公平过程门通过后，已将工作区外受控的 V3/V4 答案键分别与封存的无答案运行包连接一次。评测器只在内存中按哈希对齐，输出 `reports/rag_fair_gold_join_v2.json/.html` 的聚合事实，不输出题目、答案、case 级结论或私有路径。编译轨与真实检索轨分开：V3 检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 检索 Recall@5=`41.32%`、Evidence relation=`24.65%`；两代 hard-safety 均 PASS，质量 Gate 仍未通过。该段记录的是 V5 Gold join 前的状态；V5 现已由负责人授权完成一次聚合，当前结果见本文件末尾。
+## 2026-09-03｜V5 负责人授权 Gold join 回执
+
+负责人已经审核并授权 V5 Gold join。`score_rag_v5_holdout_private.py` 只在内存读取工作区外答案键，
+生成聚合-only 报告；`analyze_rag_v5_failures_private.py` 再生成不含题目、case 或答案的失败模式报告。
+V5 质量结果为 Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、Recall@5=`73.89%`、
+MRR=`90.33%`、nDCG@5=`75.36%`；hard-safety=`PASS`、project Gate=`FAIL`。过程完整性仍是 `60/60`，
+但过程 Gate 与质量 Gate 必须分开。
+
+当前失败集中在路由传递、证据集合打包和关系标签，不是完全召回不到资料。V5 已封存，不能用于逐题调参；
+下一候选先在 public/dev 与 regression 验证，再用新的独立 Holdout 检验泛化。RAG `proposal-only` 不变。
+
+本轮 Gold evaluator、失败分析合同、看板与测试同步后的全量工程 QA 为 `220 passed, 4 warnings`；Ruff check、
+format、compileall 与 `git diff --check` 均通过。质量 Gate 仍由独立 Gold 和安全/回归条件共同决定，不能由工程 QA 替代。

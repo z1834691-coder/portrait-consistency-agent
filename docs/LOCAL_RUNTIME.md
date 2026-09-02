@@ -223,3 +223,17 @@ uv run python scripts/run_effect_web_regression.py
 当前 E1 smoke 为 fixture-only、`network_called=false`、`result_bytes_persisted=false`；E2 报告为 8/8，通过成功/失败/请求/输入/输出哈希错位/非法 MIME/尺寸/大小和批量失败隔离。两者不证明真实视觉改善或 Provider promotion；结果图不写入数据库、Trace、RAG 或 Git。
 
 新增 Meta-Agent→Web EditPlan 绑定测试、输入哈希/大小异常样例，并修正“安全拦截”和“批量继续”分开统计后，最新全量 `.venv/bin/pytest -q`=`216 passed, 4 warnings`；其余静态检查和离线 smoke 均通过。此前的 205/196/189 等数字均为历史快照。
+
+## 2026-09-03｜E3 真实 Web 候选回放
+
+E3 已在部署后的精确域名 page 6 使用四张负责人授权 JPEG 完成真实候选试验，4/4 Browser Receipt 成功；输入 SHA-256 与预检 manifest 全部匹配，透明 PNG 异常样本在预检阶段被拒绝。运行时只在浏览器会话保留结果图，E3 报告只保存脱敏 receipt、hash、尺寸、状态和耗时：`reports/effect_web_e3_evidence_v1.json/.html`。只读展示页是 `pages/8_腾讯特效Web_E3证据看板.py`。
+
+复核命令：
+
+```bash
+uv run python scripts/build_effect_web_e3_evidence.py
+uv run python scripts/run_effect_web_regression.py
+uv run python scripts/smoke_effect_web_b_handoff.py
+```
+
+注意：四条手工回执尚未记录完整 `request_ref`，报告会显示该阻塞；真实视觉复测、供应商地区/费用/留存证据和负责人 promotion 仍未完成。Web Card 继续 `candidate`，不要将本次回放写成视觉效果或正式上线证据。

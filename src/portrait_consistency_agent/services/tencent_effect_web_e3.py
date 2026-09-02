@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import re
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -32,6 +33,11 @@ E3_MAX_SAMPLE_BYTES = 5_242_880
 
 SampleRole = Literal["reference_candidate", "target"]
 PreflightStatus = Literal["eligible", "warning", "rejected"]
+LiveReceiptStatus = Literal["succeeded", "failed"]
+VerificationHandoffStatus = Literal["not_run", "metadata_only", "completed", "failed"]
+
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{2,127}$")
+_SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 
 
 @dataclass(frozen=True)
@@ -196,6 +202,385 @@ code{font-size:12px}</style></head><body>
             .replace("__ROWS__", "".join(rows))
             .replace("__STRATA__", html.escape(str(projection["strata"])))
         )
+
+
+@dataclass(frozen=True)
+class E3LiveReceipt:
+    """One redacted receipt captured during an owner-authorized browser run.
+
+    The manifest deliberately stores metadata only.  The browser output stays
+    in the browser session, while the input/output hashes let us prove that a
+    receipt belongs to the preflighted sample.  ``request_ref`` is optional so
+    a manually transcribed receipt cannot invent a request-generation ID; when
+    it is absent, the report explicitly marks that linkage as incomplete.
+    """
+
+    sample_id: str
+    receipt_id: str
+    input_sha256: str
+    status: LiveReceiptStatus
+    elapsed_ms: int
+    output_sha256: str | None = None
+    request_ref: str | None = None
+    output_width: int | None = None
+    output_height: int | None = None
+    handoff_accepted: bool = False
+    result_retention: Literal["browser_session_only"] = "browser_session_only"
+    verification_status: VerificationHandoffStatus = "not_run"
+    note: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.status not in {"succeeded", "failed"}:
+            raise ValueError("status must be succeeded or failed")
+        if self.verification_status not in {"not_run", "metadata_only", "completed", "failed"}:
+            raise ValueError("verification_status is not supported")
+        if not _SAFE_ID_RE.fullmatch(self.sample_id):
+            raise ValueError("sample_id must be a safe identifier")
+        if not _SAFE_ID_RE.fullmatch(self.receipt_id):
+            raise ValueError("receipt_id must be a safe identifier")
+        if self.request_ref is not None and not _SAFE_ID_RE.fullmatch(self.request_ref):
+            raise ValueError("request_ref must be a safe identifier when present")
+        if not _SHA256_RE.fullmatch(self.input_sha256):
+            raise ValueError("input_sha256 must be a lowercase SHA-256")
+        if self.output_sha256 is not None and not _SHA256_RE.fullmatch(self.output_sha256):
+            raise ValueError("output_sha256 must be a lowercase SHA-256 when present")
+        if self.elapsed_ms < 0 or self.elapsed_ms > 900_000:
+            raise ValueError("elapsed_ms must stay inside the browser receipt limit")
+        if self.status == "succeeded" and not self.output_sha256:
+            raise ValueError("a succeeded live receipt requires output_sha256")
+        if self.status == "failed" and self.output_sha256 is not None:
+            raise ValueError("a failed live receipt cannot carry output_sha256")
+        if self.output_width is not None and not 1 <= self.output_width <= 20_000:
+            raise ValueError("output_width is outside the browser receipt limit")
+        if self.output_height is not None and not 1 <= self.output_height <= 20_000:
+            raise ValueError("output_height is outside the browser receipt limit")
+        if self.status == "failed" and self.handoff_accepted:
+            raise ValueError("a failed receipt cannot be marked as handed off")
+
+    @classmethod
+    def from_mapping(cls, value: dict[str, object]) -> E3LiveReceipt:
+        """Parse a redacted manifest row without accepting arbitrary fields."""
+
+        allowed = {
+            "sample_id",
+            "receipt_id",
+            "receipt_ref",
+            "request_ref",
+            "input_sha256",
+            "status",
+            "elapsed_ms",
+            "output_sha256",
+            "output_width",
+            "output_height",
+            "handoff_accepted",
+            "result_retention",
+            "verification_status",
+            "note",
+            "notes",
+        }
+        unknown = set(value) - allowed
+        if unknown:
+            raise ValueError("live receipt row contains unsupported fields")
+        receipt_id = value.get("receipt_id", value.get("receipt_ref"))
+        note = value.get("note", value.get("notes"))
+        if not isinstance(receipt_id, str):
+            raise ValueError("live receipt row requires receipt_id")
+        if note is not None and not isinstance(note, str):
+            raise ValueError("live receipt note must be text")
+        result_retention = value.get("result_retention", "browser_session_only")
+        if result_retention != "browser_session_only":
+            raise ValueError("E3 live receipts must remain browser_session_only")
+        return cls(
+            sample_id=str(value.get("sample_id", "")),
+            receipt_id=receipt_id,
+            request_ref=(
+                value.get("request_ref") if isinstance(value.get("request_ref"), str) else None
+            ),
+            input_sha256=str(value.get("input_sha256", "")),
+            status=value.get("status", "failed"),  # type: ignore[arg-type]
+            elapsed_ms=int(value.get("elapsed_ms", -1)),
+            output_sha256=(
+                value.get("output_sha256") if isinstance(value.get("output_sha256"), str) else None
+            ),
+            output_width=(
+                int(value["output_width"]) if value.get("output_width") is not None else None
+            ),
+            output_height=(
+                int(value["output_height"]) if value.get("output_height") is not None else None
+            ),
+            handoff_accepted=bool(value.get("handoff_accepted", False)),
+            result_retention="browser_session_only",
+            verification_status=value.get("verification_status", "not_run"),  # type: ignore[arg-type]
+            note=note,
+        )
+
+    def projection(self) -> dict[str, object]:
+        """Return a receipt row safe for a report or dashboard."""
+
+        return {
+            "sample_id": self.sample_id,
+            "receipt_id": self.receipt_id,
+            "request_ref": self.request_ref,
+            "request_ref_recorded": self.request_ref is not None,
+            "input_sha256": self.input_sha256,
+            "status": self.status,
+            "elapsed_ms": self.elapsed_ms,
+            "output_sha256": self.output_sha256,
+            "output_dimensions": (
+                f"{self.output_width}x{self.output_height}"
+                if self.output_width is not None and self.output_height is not None
+                else None
+            ),
+            "handoff_accepted": self.handoff_accepted,
+            "result_retention": self.result_retention,
+            "verification_status": self.verification_status,
+            "note": self.note,
+            "image_bytes_saved": False,
+            "data_url_saved": False,
+        }
+
+
+@dataclass(frozen=True)
+class E3EvidenceReport:
+    """Join preflight facts, live receipts and admission evidence.
+
+    This is intentionally an evidence report rather than a promotion command.
+    It can prove that browser calls returned and that sample hashes line up, but
+    it keeps visual generalization and vendor terms as explicit open gates.
+    """
+
+    evidence_version: str
+    reference_sample_id: str | None
+    preflight_summary: dict[str, object]
+    live_receipts: tuple[E3LiveReceipt, ...]
+    live_success_count: int
+    live_failed_count: int
+    all_target_receipts_present: bool
+    sample_hashes_match_preflight: bool
+    request_refs_recorded: bool
+    handoff_success_count: int
+    batch_failure_isolation_verified: bool
+    offline_contract_regression_passed: bool
+    visual_generalization_status: Literal["not_established", "established"]
+    formal_admission_evidence: dict[str, bool]
+    promotion_status: Literal["candidate", "verified"]
+    blockers: tuple[str, ...]
+    next_actions: tuple[str, ...]
+
+    def projection(self) -> dict[str, object]:
+        live_total = len(self.live_receipts)
+        return {
+            "evidence_version": self.evidence_version,
+            "reference_sample_id": self.reference_sample_id,
+            "preflight_summary": self.preflight_summary,
+            "live_summary": {
+                "total_receipts": live_total,
+                "succeeded": self.live_success_count,
+                "failed": self.live_failed_count,
+                "success_rate": round(self.live_success_count / live_total, 4)
+                if live_total
+                else 0.0,
+                "all_target_receipts_present": self.all_target_receipts_present,
+                "sample_hashes_match_preflight": self.sample_hashes_match_preflight,
+                "request_refs_recorded": self.request_refs_recorded,
+                "handoff_accepted": self.handoff_success_count,
+                "result_payloads_persisted": False,
+            },
+            "offline_contract_regression": {
+                "passed": self.offline_contract_regression_passed,
+                "batch_failure_isolation_verified": self.batch_failure_isolation_verified,
+            },
+            "visual_generalization_status": self.visual_generalization_status,
+            "formal_admission_evidence": self.formal_admission_evidence,
+            "promotion_status": self.promotion_status,
+            "blockers": list(self.blockers),
+            "next_actions": list(self.next_actions),
+            "report_contains_image_bytes": False,
+            "report_contains_local_paths": False,
+            "report_contains_data_urls": False,
+            "receipts": [receipt.projection() for receipt in self.live_receipts],
+        }
+
+    def to_html(self) -> str:
+        """Render a static, human-readable E3 evidence report."""
+
+        payload = self.projection()
+        rows: list[str] = []
+        for receipt in self.live_receipts:
+            row = receipt.projection()
+            rows.append(
+                "<tr>"
+                f"<td>{html.escape(str(row['sample_id']))}</td>"
+                f"<td>{html.escape(str(row['receipt_id']))}</td>"
+                f"<td>{html.escape(str(row['status']))}</td>"
+                f"<td>{html.escape(str(row['elapsed_ms']))} ms</td>"
+                f"<td>{'是' if row['handoff_accepted'] else '否'}</td>"
+                f"<td>{'是' if row['request_ref_recorded'] else '否'}</td>"
+                f"<td>{html.escape(str(row['verification_status']))}</td>"
+                "</tr>"
+            )
+        blockers = "".join(f"<li>{html.escape(item)}</li>" for item in self.blockers)
+        actions = "".join(f"<li>{html.escape(item)}</li>" for item in self.next_actions)
+        return (
+            "<!doctype html><html lang='zh-CN'><meta charset='utf-8'>"
+            "<title>腾讯特效 Web E3 真实证据</title>"
+            "<style>body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;"
+            "max-width:1200px;margin:32px auto;color:#1f2024}table{border-collapse:collapse;"
+            "width:100%;font-size:14px}th,td{border:1px solid #d9d9df;padding:8px;text-align:left}"
+            "th{background:#f2eff8}.meta{background:#faf8f2;border-left:4px solid #7b61a8;"
+            "padding:14px;margin:16px 0}.ok{color:#087f23}.warn{color:#9a6700}"
+            "code{font-size:12px;word-break:break-all}</style><body>"
+            "<h1>腾讯特效 Web｜E3 真实多样本证据</h1>"
+            "<div class='meta'><p><strong>当前结论：</strong>"
+            f"真实浏览器回执 {self.live_success_count}/{len(self.live_receipts)} 成功；"
+            f"Card 仍为 <strong>{html.escape(self.promotion_status)}</strong>。</p>"
+            "<p>这份报告证明的是回执、哈希绑定、结果交接和失败隔离；"
+            "它不把一次或多次 SDK 成功调用当作母版视觉一致性已经泛化。</p>"
+            "<p>报告不含图片 bytes、data URL 或本地路径；输出哈希只用于证据关联。</p></div>"
+            "<h2>实时回执</h2><table><thead><tr><th>样本</th><th>receipt</th><th>状态</th>"
+            "<th>耗时</th><th>结果交接</th><th>request_ref</th><th>复测状态</th></tr></thead><tbody>"
+            + "".join(rows)
+            + "</tbody></table>"
+            "<h2>证据摘要</h2><pre><code>" + html.escape(json_projection(payload)) + "</code></pre>"
+            "<h2>仍未闭合的 Gate</h2><ul>"
+            + blockers
+            + "</ul><h2>下一步</h2><ul>"
+            + actions
+            + "</ul></body></html>"
+        )
+
+
+def json_projection(payload: dict[str, object]) -> str:
+    """Stable JSON formatting kept local to avoid importing a report writer."""
+
+    import json
+
+    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def build_e3_evidence_report(
+    preflight: dict[str, object],
+    live_receipts: Iterable[E3LiveReceipt],
+    *,
+    offline_contract_regression_passed: bool,
+    batch_failure_isolation_verified: bool,
+    formal_admission_evidence: dict[str, bool] | None = None,
+) -> E3EvidenceReport:
+    """Join a redacted preflight projection with live browser evidence.
+
+    The function is fail-closed for linkage: an unknown sample or a mismatched
+    input hash makes the evidence incomplete rather than silently attributing a
+    receipt to another photo.
+    """
+
+    items = preflight.get("items")
+    if not isinstance(items, list):
+        raise ValueError("preflight report must contain an items list")
+    preflight_rows = [item for item in items if isinstance(item, dict)]
+    hashes_by_sample = {
+        str(item.get("sample_id")): str(item.get("sha256"))
+        for item in preflight_rows
+        if item.get("sample_id") and item.get("sha256")
+    }
+    target_ids = {
+        str(item.get("sample_id"))
+        for item in preflight_rows
+        if item.get("role") == "target" and item.get("status") != "rejected"
+    }
+    receipts = tuple(live_receipts)
+    if len({receipt.receipt_id for receipt in receipts}) != len(receipts):
+        raise ValueError("live receipt IDs must be unique")
+    if len({receipt.sample_id for receipt in receipts}) != len(receipts):
+        raise ValueError("one live receipt per sample is required in the E3 manifest")
+    linked = all(
+        receipt.sample_id in hashes_by_sample
+        and hashes_by_sample[receipt.sample_id] == receipt.input_sha256
+        for receipt in receipts
+    )
+    unique_sample_ids = {receipt.sample_id for receipt in receipts}
+    all_targets_present = target_ids.issubset(unique_sample_ids)
+    request_refs_recorded = bool(receipts) and all(
+        receipt.request_ref is not None for receipt in receipts
+    )
+    live_success = sum(receipt.status == "succeeded" for receipt in receipts)
+    live_failed = sum(receipt.status == "failed" for receipt in receipts)
+    handoff_success = sum(receipt.handoff_accepted for receipt in receipts)
+    formal = {
+        "license_active": False,
+        "exact_domain_bound": False,
+        "provider_permission_granted": False,
+        "outbound_data_policy_approved": False,
+        "region_approved": False,
+        "estimated_cost_known": False,
+        "adapter_ready": True,
+        "static_image_smoke_succeeded": live_success > 0 and linked,
+        "multi_sample_visual_review_complete": False,
+        "product_owner_promotion_approved": False,
+    }
+    if formal_admission_evidence:
+        for key, value in formal_admission_evidence.items():
+            if key in formal:
+                formal[key] = bool(value)
+    blockers: list[str] = []
+    if not linked:
+        blockers.append("live_receipt_input_hash_not_linked_to_preflight")
+    if not all_targets_present:
+        blockers.append("all_preflighted_target_receipts_not_present")
+    if not request_refs_recorded:
+        blockers.append("request_ref_not_recorded_for_every_manual_receipt")
+    if not offline_contract_regression_passed:
+        blockers.append("offline_contract_regression_not_passed")
+    if not batch_failure_isolation_verified:
+        blockers.append("batch_failure_isolation_not_verified")
+    blockers.append("visual_effect_generalization_not_established")
+    blockers.extend(
+        key
+        for key, value in formal.items()
+        if not value and key not in {"multi_sample_visual_review_complete"}
+    )
+    blockers.append("product_owner_promotion_approval_required")
+    # Keep order stable while avoiding duplicate explanations when a caller
+    # supplied the same missing evidence twice.
+    blockers = list(dict.fromkeys(blockers))
+    next_actions = (
+        "把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult",
+        "对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功",
+        "补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据",
+        "在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion",
+    )
+    reference_id = preflight.get("reference_sample_id")
+    preflight_summary = {
+        key: preflight.get(key)
+        for key in (
+            "total_samples",
+            "eligible_samples",
+            "warning_samples",
+            "rejected_samples",
+            "target_samples",
+            "reference_present",
+            "ready_for_candidate_trials",
+            "batch_failure_isolation_ready",
+        )
+    }
+    return E3EvidenceReport(
+        evidence_version="effect_web_e3_evidence_v0.1",
+        reference_sample_id=str(reference_id) if reference_id else None,
+        preflight_summary=preflight_summary,
+        live_receipts=receipts,
+        live_success_count=live_success,
+        live_failed_count=live_failed,
+        all_target_receipts_present=all_targets_present,
+        sample_hashes_match_preflight=linked,
+        request_refs_recorded=request_refs_recorded,
+        handoff_success_count=handoff_success,
+        batch_failure_isolation_verified=batch_failure_isolation_verified,
+        offline_contract_regression_passed=offline_contract_regression_passed,
+        visual_generalization_status="not_established",
+        formal_admission_evidence=formal,
+        promotion_status="candidate",
+        blockers=tuple(blockers),
+        next_actions=next_actions,
+    )
 
 
 def _item_status(observation: PhotoObservation, *, bytes_read: int) -> PreflightStatus:

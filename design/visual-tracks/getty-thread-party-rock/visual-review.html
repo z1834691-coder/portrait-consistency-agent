@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="母版人像一致性 Agent 的 Getty × Thread 视觉设计 Track：E01 入口与 E02 Agent 对话。" />
+    <title>对齐 · Getty × Thread 视觉 Track</title>
+    <style>
+      :root {
+        --ivory: #f2f1e6;
+        --purple: #a855f7;
+        --lilac: #c084fc;
+        --ink: #121212;
+        --black: #000;
+        --acid: #36ff9b;
+        --coral: #ff4d4d;
+        --muted: rgba(18, 18, 18, .64);
+        --faint: rgba(18, 18, 18, .17);
+        --nav-muted: rgba(242, 241, 230, .63);
+        --nav-line: rgba(242, 241, 230, .2);
+        --radius-xl: 28px;
+        --radius-lg: 21px;
+        --radius-md: 16px;
+        --shadow-ink: 4px 4px 0 rgba(18, 18, 18, .14);
+        --font-ui: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; min-height: 100%; background: var(--ivory); }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background: var(--ivory);
+        font-family: var(--font-ui);
+        text-rendering: optimizeLegibility;
+      }
+      button, textarea { font: inherit; }
+      button { cursor: pointer; }
+      button:focus-visible, textarea:focus-visible, a:focus-visible {
+        outline: 3px solid var(--coral);
+        outline-offset: 3px;
+      }
+      a { color: inherit; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Reviewer chrome: this is outside the product shell and is intentionally light. */
+      .review-bar {
+        min-height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 12px 22px;
+        border-bottom: 1px solid var(--faint);
+        background: var(--ivory);
+      }
+      .review-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .review-mark {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        border: 1.5px solid var(--ink);
+        border-radius: 10px;
+        background: var(--purple);
+        box-shadow: 3px 3px 0 var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .review-heading h1 { margin: 0; font-size: 15px; line-height: 1.2; letter-spacing: -.02em; }
+      .review-heading p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.3; }
+      .review-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+      .review-group { display: inline-flex; align-items: center; gap: 6px; }
+      .review-group + .review-group { padding-left: 10px; border-left: 1px solid var(--faint); }
+      .review-label { margin-right: 2px; color: var(--muted); font-size: 11px; }
+      .review-button {
+        min-height: 34px;
+        padding: 0 11px;
+        border: 1px solid var(--ink);
+        border-radius: 999px;
+        color: var(--ink);
+        background: transparent;
+        font-size: 11px;
+        font-weight: 650;
+        transition: transform 160ms ease-out, background-color 160ms ease-out;
+      }
+      .review-button:hover { transform: translateY(-1px); }
+      .review-button[aria-pressed="true"] { background: var(--lilac); box-shadow: 3px 3px 0 var(--ink); }
+      .review-button.motion-toggle[aria-pressed="true"] { background: var(--acid); }
+
+      .review-main { padding: 12px 14px 18px; }
+      .product-shell {
+        height: calc(100vh - 100px);
+        min-height: 680px;
+        display: grid;
+        grid-template-columns: 236px minmax(0, 1fr) 352px;
+        overflow: hidden;
+        border: 1.5px solid var(--ink);
+        border-radius: 26px;
+        background: var(--ivory);
+      }
+
+      /* Shared icon language: every icon is a single-stroke, rounded SVG. */
+      .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+      .icon-sm { width: 17px; height: 17px; }
+
+      .global-nav {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 24px 17px 18px;
+        color: var(--ivory);
+        background: var(--black);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 2px 4px;
+        color: var(--ivory);
+        text-decoration: none;
+      }
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ivory);
+        border-radius: 11px;
+        color: var(--ink);
+        background: var(--lilac);
+      }
+      .brand-name { font-size: 16px; font-weight: 700; letter-spacing: -.04em; }
+      .brand-sub { display: block; margin-top: 1px; color: var(--nav-muted); font-size: 10px; letter-spacing: .06em; }
+      .nav-section { margin-top: 36px; }
+      .nav-caption { margin: 0 8px 9px; color: var(--nav-muted); font-size: 11px; letter-spacing: .08em; }
+      .nav-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+      .nav-link {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 11px;
+        border: 1px solid transparent;
+        border-radius: 15px;
+        color: var(--nav-muted);
+        background: transparent;
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 160ms ease-out, background-color 160ms ease-out, transform 160ms ease-out;
+      }
+      .nav-link:hover { color: var(--ivory); background: rgba(192, 132, 252, .17); transform: translateX(2px); }
+      .nav-link[aria-current="page"] { color: var(--ink); background: var(--lilac); border-color: var(--ivory); box-shadow: 3px 3px 0 rgba(242, 241, 230, .25); }
+      .nav-link[aria-current="page"] .icon { stroke-width: 2; }
+      .project-shelf { margin-top: 22px; padding: 13px 10px 12px; border: 1px solid var(--nav-line); border-radius: 18px; background: rgba(242, 241, 230, .04); }
+      .project-shelf > p { margin: 0 0 6px; color: var(--nav-muted); font-size: 10px; letter-spacing: .08em; }
+      .project-name { display: block; color: var(--ivory); font-size: 13px; font-weight: 650; line-height: 1.35; text-decoration: none; }
+      .project-actions { display: grid; gap: 5px; margin-top: 10px; }
+      .project-action { min-height: 31px; padding: 0 9px; border: 1px solid rgba(192, 132, 252, .7); border-radius: 999px; color: var(--ivory); background: rgba(192, 132, 252, .16); text-align: left; font-size: 11px; }
+      .project-action:first-child { color: var(--ink); background: var(--purple); border-color: var(--ink); font-weight: 700; }
+      .project-action:hover { color: var(--ink); background: var(--lilac); }
+      .nav-divider { height: 1px; margin: auto 8px 15px; background: var(--nav-line); }
+      .nav-bottom { display: grid; gap: 6px; }
+      .nav-meta { margin: 15px 8px 0; color: var(--nav-muted); font-size: 11px; line-height: 1.5; }
+
+      .stage {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 24px 34px 24px;
+        background: var(--ivory);
+        border-right: 1px solid var(--faint);
+      }
+      .stage::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 44%;
+        height: 1px;
+        background: var(--purple);
+        opacity: .7;
+      }
+      .stage-top {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .crumb { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+      .crumb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); }
+      .context-line { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+      .context-chip { padding: 6px 9px; border: 1px solid var(--ink); border-radius: 999px; background: rgba(192, 132, 252, .34); font-size: 11px; font-weight: 650; }
+      .context-chip.ghost { background: transparent; font-weight: 500; }
+      .screen { position: relative; z-index: 2; min-height: 0; flex: 1; display: flex; flex-direction: column; }
+      .screen[hidden] { display: none; }
+      .entry-content { width: min(640px, 100%); margin: auto; padding: 6px 0 8px; }
+      .kicker { margin: 0 0 13px; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+      .screen h2 { max-width: 13ch; margin: 0; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.12; letter-spacing: -.055em; text-wrap: balance; }
+      .lead { max-width: 28ch; margin: 15px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+      .art-layer {
+        position: absolute;
+        z-index: 1;
+        top: 44px;
+        right: -10%;
+        width: min(58%, 560px);
+        aspect-ratio: 1586 / 992;
+        overflow: hidden;
+        border-radius: 38% 18% 40% 24%;
+        opacity: .58;
+        pointer-events: none;
+        mix-blend-mode: multiply;
+        animation: art-breathe 22s ease-in-out infinite;
+      }
+      .art-layer img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .art-layer::after { content: ""; position: absolute; inset: 0; border: 1px solid rgba(18, 18, 18, .12); border-radius: inherit; }
+      .upload-panel {
+        position: relative;
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1fr);
+        align-items: center;
+        gap: 22px;
+        margin-top: 42px;
+        padding: 22px;
+        border: 1.5px solid var(--ink);
+        border-radius: var(--radius-xl);
+        background: rgba(242, 241, 230, .88);
+        box-shadow: var(--shadow-ink);
+      }
+      .upload-visual {
+        height: 116px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed var(--ink);
+        border-radius: 21px;
+        color: var(--purple);
+        background: rgba(192, 132, 252, .2);
+      }
+      .upload-visual .icon { width: 33px; height: 33px; stroke-width: 1.4; }
+      .upload-copy { min-width: 0; }
+      .upload-copy strong { display: block; font-size: 18px; line-height: 1.35; letter-spacing: -.03em; }
+      .upload-copy p { margin: 7px 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+      .primary-action, .secondary-action {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 15px;
+        border: 1px solid var(--ink);
+        border-radius: 999px;
+        color: var(--ink);
+        background: var(--purple);
+        box-shadow: 3px 3px 0 var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+      }
+      .primary-action:hover, .secondary-action:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+      .primary-action:active, .secondary-action:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+      .secondary-action { color: var(--ink); background: transparent; box-shadow: none; font-weight: 600; }
+      .upload-state { min-height: 20px; margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+      .trajectory-preview { position: relative; display: flex; align-items: center; gap: 0; margin: 35px 5px 0; }
+      .trajectory-preview::before { content: ""; position: absolute; left: 8px; right: 8px; top: 14px; height: 1px; background: var(--ink); opacity: .5; }
+      .trajectory-step { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex: 1; color: var(--muted); font-size: 12px; }
+      .trajectory-step:nth-child(2) { justify-content: flex-end; }
+      .trajectory-node { width: 9px; height: 9px; flex: 0 0 auto; border: 1px solid var(--ink); border-radius: 50%; background: var(--ivory); }
+      .trajectory-step:first-child .trajectory-node { background: var(--acid); }
+      .trajectory-step:last-child .trajectory-node { background: var(--lilac); }
+      .composer {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) 42px;
+        align-items: center;
+        gap: 9px;
+        min-height: 74px;
+        margin-top: auto;
+        padding: 10px 11px;
+        border: 1.5px solid var(--ink);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, .42);
+        box-shadow: 0 9px 24px rgba(18, 18, 18, .06);
+      }
+      .composer textarea { width: 100%; min-height: 36px; max-height: 90px; resize: none; padding: 8px 2px; border: 0; color: var(--ink); background: transparent; outline: 0; font-size: 15px; line-height: 1.45; }
+      .composer textarea::placeholder { color: rgba(18, 18, 18, .55); }
+      .composer-icon, .send-button {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ink);
+        border-radius: 50%;
+        color: var(--ink);
+        background: transparent;
+      }
+      .send-button { width: 42px; height: 42px; border-color: var(--ink); background: var(--purple); transition: transform 150ms ease-out; }
+      .send-button:hover { transform: translateY(-1px); }
+      .send-button:disabled { cursor: not-allowed; opacity: .45; }
+      .stage-note { margin: 11px 2px 0; color: var(--muted); font-size: 11px; text-align: right; }
+
+      /* E02 central workspace */
+      .session-content { width: min(730px, 100%); margin: auto; padding: 22px 0 10px; }
+      .session-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+      .session-heading h2 { max-width: 18ch; font-size: clamp(27px, 3vw, 36px); }
+      .session-heading p { max-width: 22ch; margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; text-align: right; }
+      .photo-pair { display: grid; grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr); align-items: center; gap: 14px; margin-top: 32px; }
+      .photo-slot { min-width: 0; padding: 13px; border: 1.5px solid var(--ink); border-radius: 25px; background: rgba(255,255,255,.32); }
+      .slot-art { position: relative; aspect-ratio: 4 / 3; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--ink); border-radius: 16px; background: rgba(192,132,252,.23); }
+      .slot-art::before { content: ""; width: 38%; aspect-ratio: 1; border: 1.5px solid var(--ink); border-radius: 50%; opacity: .8; }
+      .slot-art::after { content: ""; position: absolute; bottom: 11%; width: 58%; height: 23%; border: 1.5px solid var(--ink); border-radius: 50% 50% 12px 12px; opacity: .8; }
+      .photo-slot.current .slot-art { background: rgba(168,85,247,.17); }
+      .photo-slot.current .slot-art::before { transform: translateX(8px) scale(.92); }
+      .slot-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 13px; font-weight: 700; }
+      .slot-label small { color: var(--muted); font-size: 11px; font-weight: 500; }
+      .pair-arrow { display: grid; place-items: center; color: var(--purple); }
+      .pair-arrow::before { content: ""; width: 100%; height: 1px; background: var(--ink); opacity: .55; }
+      .pair-arrow .icon { position: absolute; width: 22px; height: 22px; padding: 3px; border: 1px solid var(--ink); border-radius: 50%; background: var(--ivory); }
+      .session-trajectory { margin-top: 35px; padding: 17px 18px 15px; border: 1.5px solid var(--ink); border-radius: 22px; background: rgba(255,255,255,.26); }
+      .trajectory-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .trajectory-head strong { font-size: 13px; }
+      .trajectory-head span { color: var(--muted); font-size: 11px; }
+      .lineage { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 18px; }
+      .lineage::before { content: ""; position: absolute; top: 8px; left: 7px; right: 7px; height: 1px; background: var(--ink); opacity: .6; }
+      .lineage-item { position: relative; z-index: 1; display: grid; justify-items: center; gap: 7px; color: var(--muted); font-size: 11px; text-align: center; }
+      .lineage-item i { width: 16px; height: 16px; display: block; border: 1px solid var(--ink); border-radius: 50%; background: var(--ivory); }
+      .lineage-item.is-done i { background: var(--acid); }
+      .lineage-item.is-current { color: var(--ink); font-weight: 700; }
+      .lineage-item.is-current i { background: var(--purple); box-shadow: 0 0 0 3px rgba(168,85,247,.2); }
+      .difference-note { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 11px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--faint); }
+      .difference-note .icon { color: var(--purple); }
+      .difference-note strong { display: block; font-size: 13px; }
+      .difference-note p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+      .session-art { position: absolute; right: -10%; bottom: 6%; width: min(34%, 300px); aspect-ratio: 1586 / 992; overflow: hidden; border-radius: 44% 20% 31% 14%; opacity: .31; pointer-events: none; mix-blend-mode: multiply; }
+      .session-art img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+      /* Right thread */
+      .thread {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 24px 22px 18px;
+        background: var(--ivory);
+      }
+      .thread-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid var(--faint); }
+      .thread-title { display: flex; align-items: center; gap: 9px; }
+      .thread-title h2 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+      .thread-sub { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+      .thread-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--ink); border-radius: 999px; font-size: 11px; font-weight: 650; }
+      .thread-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); }
+      .thread-screen { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+      .thread-screen[hidden] { display: none; }
+      .thread-empty { margin: auto 0; padding: 23px 20px; border: 1px solid var(--ink); border-radius: 22px; background: rgba(255,255,255,.3); }
+      .thread-empty .icon { color: var(--purple); }
+      .thread-empty strong { display: block; margin-top: 15px; font-size: 15px; }
+      .thread-empty p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .thread-quiet { margin-top: 17px; padding-top: 15px; border-top: 1px solid var(--faint); color: var(--muted); font-size: 11px; line-height: 1.55; }
+      .messages { min-height: 0; overflow: auto; display: grid; align-content: start; gap: 16px; padding: 20px 2px 18px 0; }
+      .message { max-width: 94%; }
+      .message.agent { justify-self: start; }
+      .message.user { justify-self: end; }
+      .message-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; color: var(--muted); font-size: 10px; }
+      .message.user .message-meta { justify-content: flex-end; }
+      .message-meta i { width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
+      .message.user .message-meta i { background: var(--acid); }
+      .bubble { padding: 11px 13px; border: 1px solid var(--ink); border-radius: 17px 17px 17px 5px; font-size: 13px; line-height: 1.55; }
+      .message.user .bubble { border-radius: 17px 17px 5px 17px; background: rgba(192,132,252,.46); }
+      .fact { margin-top: 7px; padding: 10px 12px; border: 1px solid rgba(168,85,247,.62); border-radius: 12px; background: rgba(192,132,252,.17); font-size: 12px; line-height: 1.5; }
+      .scope-card { margin-top: 7px; padding: 13px; border: 1.5px solid var(--ink); border-radius: 17px; background: rgba(255,255,255,.35); }
+      .scope-card strong { display: block; font-size: 13px; }
+      .scope-card p { margin: 5px 0 11px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+      .scope-card button { min-height: 38px; width: 100%; }
+      .result-card { margin-top: 7px; padding: 12px 13px; border: 1px solid var(--ink); border-radius: 17px; background: rgba(54,255,155,.17); font-size: 12px; line-height: 1.5; }
+      .result-card strong { display: block; margin-bottom: 3px; font-size: 13px; }
+      .thread-composer { margin-top: auto; }
+      .thread-composer .composer { min-height: 68px; grid-template-columns: 34px minmax(0,1fr) 38px; padding: 8px 9px; }
+      .thread-composer .composer-icon { width: 34px; height: 34px; }
+      .thread-composer .send-button { width: 38px; height: 38px; }
+      .thread-footer { margin-top: 9px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+      .thread-footer a { text-underline-offset: 2px; }
+      .prototype-status { min-height: 18px; margin-top: 7px; color: var(--muted); font-size: 11px; }
+
+      @keyframes art-breathe {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
+        50% { transform: translate3d(-7px, 5px, 0) rotate(1deg); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
+      }
+      .motion-paused .art-layer, .motion-paused .session-art { animation-play-state: paused; }
+      .motion-paused .art-layer { transform: none; }
+      @media (max-width: 1180px) {
+        .product-shell { grid-template-columns: 216px minmax(0, 1fr) 326px; }
+        .stage { padding-inline: 28px; }
+        .global-nav { padding-inline: 13px; }
+        .thread { padding-inline: 18px; }
+      }
+      @media (max-width: 940px) {
+        body { overflow-x: hidden; }
+        .review-bar { align-items: flex-start; flex-direction: column; gap: 10px; }
+        .review-controls { justify-content: flex-start; }
+        .review-main { padding: 0; }
+        .product-shell { height: auto; min-height: calc(100vh - 120px); grid-template-columns: 84px minmax(0, 1fr); border: 0; border-radius: 0; }
+        .global-nav { padding: 20px 11px 15px; }
+        .brand-name, .brand-sub, .nav-caption, .nav-link span, .nav-meta { display: none; }
+        .project-shelf { display: none; }
+        .brand { justify-content: center; }
+        .nav-link { justify-content: center; padding-inline: 0; }
+        .thread { display: none; }
+        .stage { min-height: calc(100vh - 120px); border-right: 0; }
+      }
+      @media (max-width: 600px) {
+        .review-bar { padding: 12px 14px; }
+        .review-controls { width: 100%; gap: 6px; }
+        .review-group { gap: 5px; }
+        .review-group + .review-group { padding-left: 6px; }
+        .review-label { display: none; }
+        .review-button { padding-inline: 9px; }
+        .product-shell { grid-template-columns: 64px minmax(0, 1fr); }
+        .global-nav { padding-inline: 7px; }
+        .brand-mark { width: 32px; height: 32px; }
+        .stage { min-height: calc(100vh - 122px); padding: 19px 18px 18px; }
+        .stage-top { display: block; }
+        .context-line { justify-content: flex-start; margin-top: 12px; }
+        .entry-content, .session-content { padding-top: 42px; }
+        .upload-panel { grid-template-columns: 1fr; gap: 14px; margin-top: 29px; padding: 15px; }
+        .upload-visual { height: 82px; }
+        .upload-copy strong { font-size: 16px; }
+        .photo-pair { grid-template-columns: 1fr; gap: 8px; }
+        .pair-arrow { height: 30px; }
+        .pair-arrow::before { width: 1px; height: 100%; }
+        .pair-arrow .icon { transform: rotate(90deg); }
+        .session-heading { display: block; }
+        .session-heading p { margin-top: 9px; text-align: left; }
+        .lineage { gap: 0; }
+        .lineage-item { font-size: 10px; }
+        .art-layer { top: 160px; right: -28%; width: 84%; opacity: .34; }
+        .session-art { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="sr-only" href="#product-main">跳到产品内容</a>
+    <header class="review-bar" aria-label="视觉评审控制">
+      <div class="review-heading">
+        <div class="review-mark" aria-hidden="true">像</div>
+        <div>
+          <h1>Getty × Thread · 视觉 Track 1</h1>
+          <p>Party Rock × 苹方 · 两张关键帧 · 候选探索，不代表正式实现</p>
+        </div>
+      </div>
+      <div class="review-controls">
+        <div class="review-group" role="group" aria-label="画面切换">
+          <span class="review-label">画面</span>
+          <button class="review-button" type="button" data-screen-button="e01" aria-pressed="true">E01 入口</button>
+          <button class="review-button" type="button" data-screen-button="e02" aria-pressed="false">E02 对话</button>
+        </div>
+        <div class="review-group" role="group" aria-label="环境素材切换">
+          <span class="review-label">素材</span>
+          <button class="review-button" type="button" data-art-button="orbit-paper" aria-pressed="true">纸上轨道</button>
+          <button class="review-button" type="button" data-art-button="folded-window" aria-pressed="false">折叠窗口</button>
+          <button class="review-button" type="button" data-art-button="ink-garden" aria-pressed="false">墨线花园</button>
+        </div>
+        <button class="review-button motion-toggle" type="button" aria-pressed="false" data-motion-toggle>暂停动效</button>
+      </div>
+    </header>
+
+    <main id="product-main" class="review-main">
+      <section class="product-shell" aria-label="母版人像一致性 Agent 产品视觉关键帧">
+        <nav class="global-nav" aria-label="全局导航">
+          <a class="brand" href="#" aria-label="对齐首页">
+            <span class="brand-mark" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M9 5v14M15 5v14M5 9h14M5 15h14" /></svg>
+            </span>
+            <span><strong class="brand-name">对齐</strong><small class="brand-sub">PORTRAIT AGENT</small></span>
+          </a>
+          <section class="nav-section" aria-labelledby="nav-workspace">
+            <p class="nav-caption" id="nav-workspace">工作区</p>
+            <ul class="nav-list">
+              <li><a class="nav-link" href="#entry" aria-current="page"><svg class="icon" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg><span>对齐</span></a></li>
+              <li><a class="nav-link" href="#master"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3" /><path d="M5 20c.9-3.5 3.2-5.4 7-5.4s6.1 1.9 7 5.4" /><path d="M4 4h16v16H4z" /></svg><span>母版</span></a></li>
+              <li><a class="nav-link" href="#records"><svg class="icon" viewBox="0 0 24 24"><path d="M6 4h12v16H6z" /><path d="M9 8h6M9 12h6M9 16h4" /></svg><span>记录</span></a></li>
+            </ul>
+          </section>
+          <section class="project-shelf" aria-label="当前项目">
+            <p>当前项目</p>
+            <a class="project-name" href="#project">人像一致性项目</a>
+            <div class="project-actions">
+              <button class="project-action" type="button">建立模板</button>
+              <button class="project-action" type="button">模板库</button>
+              <button class="project-action" type="button">新建对象</button>
+            </div>
+          </section>
+          <div class="nav-divider"></div>
+          <div class="nav-bottom">
+            <a class="nav-link" href="#settings"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /><circle cx="12" cy="12" r="4" /></svg><span>设置</span></a>
+            <a class="nav-link" href="#help"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.5 2.5 0 1 1 4.5 1.5c-.8 1-2.1 1.3-2.1 2.8M12 17h.01" /></svg><span>帮助</span></a>
+          </div>
+          <p class="nav-meta">本轮结果只在当前任务中保留。<br />需要更多信息时，再向 Agent 询问。</p>
+        </nav>
+
+        <section class="stage" aria-label="中央任务舞台">
+          <div class="stage-top">
+            <div class="crumb"><i class="crumb-dot" aria-hidden="true"></i><span>人像一致性项目</span><span>/</span><span data-breadcrumb>入口</span></div>
+            <div class="context-line"><span class="context-chip" data-context-status>等待母版</span><span class="context-chip ghost">2026 · 09</span></div>
+          </div>
+
+          <div class="art-layer" aria-hidden="true"><img data-art-surface="stage" src="assets/orbit-paper.png" alt="" width="1586" height="992" decoding="async" /></div>
+
+          <section class="screen" data-screen="e01" aria-labelledby="entry-title">
+            <div class="entry-content">
+              <p class="kicker">01 / 到达</p>
+              <h2 id="entry-title">建立母版</h2>
+              <p class="lead">先上传一张你认可的本人照片。</p>
+              <div class="upload-panel">
+                <div class="upload-visual" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 15v4h16v-4" /></svg></div>
+                <div class="upload-copy">
+                  <strong>上传母版照片</strong>
+                  <p>选择一张光线稳定、你愿意作为参照的照片。</p>
+                  <button class="primary-action" type="button" data-upload><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 15v4h16v-4" /></svg><span data-upload-label>选择照片</span></button>
+                  <p class="upload-state" aria-live="polite" data-upload-state></p>
+                </div>
+              </div>
+              <div class="trajectory-preview" aria-label="任务路径：上传后进入对话">
+                <div class="trajectory-step"><i class="trajectory-node" aria-hidden="true"></i><span>上传</span></div>
+                <div class="trajectory-step"><span>同一条 Agent 线程</span><i class="trajectory-node" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <form class="composer" data-composer="entry">
+              <button class="composer-icon" type="button" aria-label="添加照片或附件"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
+              <label class="sr-only" for="entry-message">告诉 Agent 你的目标</label>
+              <textarea id="entry-message" rows="1" placeholder="直接告诉我想保留什么……" data-message-input></textarea>
+              <button class="send-button" type="submit" aria-label="发送给 Agent"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-3 14-4-5-7-2Z" /><path d="m12 14 4-9" /></svg></button>
+            </form>
+            <p class="stage-note">我会先看照片，再告诉你下一步。</p>
+          </section>
+
+          <section class="screen" data-screen="e02" hidden aria-labelledby="session-title">
+            <div class="session-content">
+              <div class="session-heading">
+                <div><p class="kicker">02 / 对齐</p><h2 id="session-title">向母版靠拢</h2></div>
+                <p>你可以继续用一句话改写目标。<br />不需要重新开始。</p>
+              </div>
+              <div class="photo-pair" aria-label="母版与当前照片">
+                <article class="photo-slot"><div class="slot-art" aria-hidden="true"></div><div class="slot-label"><span>母版</span><small>已确认</small></div></article>
+                <div class="pair-arrow" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></div>
+                <article class="photo-slot current"><div class="slot-art" aria-hidden="true"></div><div class="slot-label"><span>当前照片</span><small>待检查</small></div></article>
+              </div>
+              <section class="session-trajectory" aria-labelledby="trajectory-title">
+                <div class="trajectory-head"><strong id="trajectory-title">这次对齐</strong><span>关键事实</span></div>
+                <div class="lineage">
+                  <div class="lineage-item is-done"><i aria-hidden="true"></i><span>母版</span></div>
+                  <div class="lineage-item is-done"><i aria-hidden="true"></i><span>当前照片</span></div>
+                  <div class="lineage-item is-current"><i aria-hidden="true"></i><span>检查</span></div>
+                  <div class="lineage-item"><i aria-hidden="true"></i><span>结果</span></div>
+                </div>
+                <div class="difference-note"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h9" /><circle cx="17" cy="17" r="3" /></svg><div><strong>可测量差异会在对话里说明</strong><p>只处理能够可靠比较的脸型和眼睛；无法可靠判断的部分会明确停下。</p></div></div>
+              </section>
+            </div>
+            <div class="session-art" aria-hidden="true"><img data-art-surface="session" src="assets/ink-garden.png" alt="" width="1586" height="992" loading="lazy" decoding="async" /></div>
+          </section>
+        </section>
+
+        <aside class="thread" aria-label="Agent 连续线程">
+          <div class="thread-head">
+            <div class="thread-title"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 3V5Z" /><path d="M8 9h8M8 12h5" /></svg><div><h2>Agent</h2><p class="thread-sub">同一条任务线程</p></div></div>
+            <span class="thread-status"><i aria-hidden="true"></i><span data-thread-status>待命</span></span>
+          </div>
+
+          <section class="thread-screen" data-thread-screen="e01" aria-label="入口提示">
+            <div class="thread-empty"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></svg><strong>把照片交给我</strong><p>上传之后，直接说你想保留什么。检查、决策和结果会留在这条线程里。</p></div>
+            <p class="thread-quiet">这里不提前展示后台步骤。只有和你下一步有关的事实，才会出现。</p>
+          </section>
+
+          <section class="thread-screen" data-thread-screen="e02" hidden aria-label="对话消息">
+            <div class="messages" data-messages>
+              <article class="message agent"><div class="message-meta"><i aria-hidden="true"></i><span>Agent · 刚刚</span></div><div class="bubble">我会保留妆面，只处理可可靠测量的脸型和眼睛。</div></article>
+              <article class="message user"><div class="message-meta"><span>你 · 刚刚</span><i aria-hidden="true"></i></div><div class="bubble" data-user-bubble>把这张向母版靠拢，保留妆面。</div></article>
+              <article class="message agent"><div class="message-meta"><i aria-hidden="true"></i><span>Agent · 检查中</span></div><div class="fact">我先确认这张照片是否适合比较。</div></article>
+              <article class="message agent"><div class="message-meta"><i aria-hidden="true"></i><span>需要一次确认</span></div><div class="scope-card"><strong>可以继续这一次处理</strong><p>会发送当前照片，只尝试一次。之后我会把结果和能否复测说清楚。</p><button class="primary-action" type="button" data-authorize>确认这一次</button><p class="prototype-status" aria-live="polite" data-authorize-state></p></div></article>
+              <article class="message agent" data-result-message hidden><div class="message-meta"><i aria-hidden="true"></i><span>Agent · 已返回</span></div><div class="result-card"><strong>结果已回到这条线程</strong>脸型的可测量差异缩小了；眼睛本轮无法可靠复测。</div></article>
+            </div>
+            <form class="thread-composer" data-composer="thread">
+              <div class="composer"><button class="composer-icon" type="button" aria-label="添加照片或附件"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button><label class="sr-only" for="thread-message">继续告诉 Agent 你的目标</label><textarea id="thread-message" rows="1" placeholder="继续告诉我想保留什么……" data-message-input></textarea><button class="send-button" type="submit" aria-label="发送给 Agent"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-3 14-4-5-7-2Z" /><path d="m12 14 4-9" /></svg></button></div>
+            </form>
+            <p class="thread-footer">按 Enter 发送，Shift + Enter 换行。<br /><a href="#why">查看为什么（摘要）</a></p>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const artMap = {
+          "orbit-paper": "assets/orbit-paper.png",
+          "folded-window": "assets/folded-window.png",
+          "ink-garden": "assets/ink-garden.png"
+        };
+        const screenButtons = [...document.querySelectorAll("[data-screen-button]")];
+        const artButtons = [...document.querySelectorAll("[data-art-button]")];
+        const screens = [...document.querySelectorAll("[data-screen]")];
+        const threadScreens = [...document.querySelectorAll("[data-thread-screen]")];
+        const breadcrumb = document.querySelector("[data-breadcrumb]");
+        const threadStatus = document.querySelector("[data-thread-status]");
+        const contextStatus = document.querySelector("[data-context-status]");
+        const artSurfaces = [...document.querySelectorAll("[data-art-surface]")];
+        const motionButton = document.querySelector("[data-motion-toggle]");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const setScreen = (name) => {
+          screens.forEach((item) => {
+            const active = item.dataset.screen === name;
+            item.hidden = !active;
+            item.setAttribute("aria-hidden", String(!active));
+          });
+          threadScreens.forEach((item) => {
+            const active = item.dataset.threadScreen === name;
+            item.hidden = !active;
+            item.setAttribute("aria-hidden", String(!active));
+          });
+          screenButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.screenButton === name)));
+          breadcrumb.textContent = name === "e01" ? "入口" : "当前会话";
+          threadStatus.textContent = name === "e01" ? "待命" : "检查中";
+          contextStatus.textContent = name === "e01" ? "等待母版" : "母版已确认";
+        };
+
+        const setArt = (name) => {
+          const src = artMap[name];
+          artSurfaces.forEach((image) => { image.src = src; });
+          artButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.artButton === name)));
+        };
+
+        screenButtons.forEach((button) => button.addEventListener("click", () => setScreen(button.dataset.screenButton)));
+        artButtons.forEach((button) => button.addEventListener("click", () => setArt(button.dataset.artButton)));
+        motionButton.addEventListener("click", () => {
+          const paused = document.body.classList.toggle("motion-paused");
+          motionButton.setAttribute("aria-pressed", String(paused));
+          motionButton.textContent = paused ? "播放动效" : "暂停动效";
+        });
+        if (reducedMotion) {
+          document.body.classList.add("motion-paused");
+          motionButton.setAttribute("aria-pressed", "true");
+          motionButton.textContent = "播放动效";
+        }
+
+        document.querySelector("[data-upload]").addEventListener("click", () => {
+          document.querySelector("[data-upload-label]").textContent = "母版已加入任务";
+          document.querySelector("[data-upload-state]").textContent = "原型预览：下一步会在 Agent 线程里继续。";
+          document.querySelector("[data-context-status]").textContent = "母版已确认";
+          document.querySelector("[data-thread-status]").textContent = "可以开始";
+        });
+        document.querySelector("[data-authorize]").addEventListener("click", (event) => {
+          event.currentTarget.disabled = true;
+          event.currentTarget.textContent = "已确认这一次";
+          document.querySelector("[data-authorize-state]").textContent = "原型预览：等待受控处理返回。";
+          document.querySelector("[data-result-message]").hidden = false;
+        });
+
+        document.querySelectorAll("[data-composer]").forEach((form) => form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const input = form.querySelector("[data-message-input]");
+          const value = input.value.trim();
+          if (!value) return;
+          const userBubble = document.querySelector("[data-user-bubble]");
+          if (userBubble) userBubble.textContent = value;
+          input.value = "";
+          setScreen("e02");
+          const live = document.querySelector("[data-authorize-state]");
+          if (live) live.textContent = "已收到。先确认照片是否适合比较。";
+        }));
+
+        document.querySelectorAll("textarea").forEach((input) => input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            input.form?.requestSubmit();
+          }
+        }));
+      })();
+    </script>
+  </body>
+</html>

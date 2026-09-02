@@ -78,3 +78,9 @@ Registry → RAG advisory → Meta-Agent → candidate proposal/fallback 的链�
 ## 失败与回滚
 
 先定位合同/请求代次，再定位浏览器生命周期，再核对 APPID、License、签名和域名，最后才改代码。每个修复只针对一个根因并新增一个回归案例。真实 SDK 或供应商证据失败时，追加原始脱敏回执，保持 Web candidate，恢复到 BeautifyPic baseline；不删除历史证据、不放宽校验、不重复无意义调用。
+
+## 2026-09-03｜E3 真实多样本回放覆盖
+
+负责人已批准 E3，四张真实 JPEG 已在部署后的精确域名 page 6 完成候选试验：4/4 Browser Receipt 成功，输入哈希 4/4 与预检绑定，结果交接标记 4/4；透明通道 PNG 被预检拒绝并作为异常隔离样本保留。汇总脚本生成 `reports/effect_web_e3_evidence_v1.json/.html`，page 8 只读展示。
+
+本回放不等于视觉效果、母版一致性、批量泛化或共同 `VerificationResult` 的真实几何复测。手工 manifest 尚未记录完整 `request_ref` 时，必须保留该缺口，不得用 receipt ID 猜测；供应商地区/费用/留存和负责人 promotion 仍是独立 Gate。Web Card 保持 `candidate`，RAG 保持 `proposal-only`，正式主流程继续使用 BeautifyPic baseline。

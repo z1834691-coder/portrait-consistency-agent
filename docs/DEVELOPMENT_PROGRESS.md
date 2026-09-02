@@ -2211,7 +2211,7 @@ E2 regression: 8/8 passed, hard_safety_passed=true, batch_failure_isolation_pass
 
 在 B/E1/E2 实现后补充一条纵向回归：Meta-Agent 明确提出 `tencent_effect_web` 后，`diagnose_and_plan` 只能生成同一 provider/Card 的 Web `EditPlan`，且 proposal 仍 `execution_authorized=false`。同时修正 E2 报告：`hard_safety_passed` 只回答恶意/损坏样本是否全部被拒绝，`batch_failure_isolation_passed` 单独回答坏样本后是否仍处理后续样本；避免测试排列导致错误结论。
 
-最新回执：`.venv/bin/pytest -q`=`216 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、E1 handoff smoke 和 E2 regression 均通过。当前 E1/E2 仍为 fixture/合同层证据，Web Card 继续 `candidate`，E3 尚需真实多样本视觉、供应商条款/区域/费用和负责人批准。
+该段记录的是 RAG 候选前的历史回执：`.venv/bin/pytest -q`=`216 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、E1 handoff smoke 和 E2 regression 均通过。当前 E1/E2 仍为 fixture/合同层证据，Web Card 继续 `candidate`，E3 尚需真实多样本视觉、供应商条款/区域/费用和负责人批准。RAG 候选与 V5 过程后的最新全量 QA 见下方当前段，为 `217 passed, 4 warnings`。
 
 ## 2026-09-02｜E2 回归覆盖补齐
 
@@ -2229,7 +2229,7 @@ E2 regression: 8/8 passed, hard_safety_passed=true, batch_failure_isolation_pass
 ### 实际回执
 
 ```text
-pytest -q: 216 passed, 4 warnings
+pytest -q: 217 passed, 4 warnings
 ruff check: PASS
 ruff format --check: PASS (235 files)
 compileall: PASS
@@ -2241,4 +2241,107 @@ V5 process audit: 60/60, process_gate=PASS, quality_scoring_gate=READY_AFTER_SEP
 
 ### 尚未完成
 
-V5 质量 Gold join 尚未运行，因为负责人还需要审核工作区外的 `v5_holdout_review_form.md` 并明确授权；候选不能因过程门通过而 promotion。新增 Provider、真实用户效果、RAG 线上自动发布和产品化结论仍不在本轮范围内。
+V5 质量 Gold join 尚未运行（这是本段当时的交接状态）；负责人现已审核并授权一次聚合，当前质量结果见本文件 2026-09-03 段。候选不能因过程门通过而 promotion。新增 Provider、真实用户效果、RAG 线上自动发布和产品化结论仍不在本轮范围内。
+
+### 本轮追加：V3/V4 双轨 Gold 连接
+
+已按公平过程门把已审核、工作区外保管的 V3/V4 答案键与封存无答案运行包各连接一次。连接器只在内存按哈希对齐并输出 `reports/rag_fair_gold_join_v2.json/.html` 聚合；V3/V4 真实检索 Recall@5=`34.72%`/`41.32%`、Evidence relation=`16.67%`/`24.65%`，hard-safety 均 PASS，质量仍未通过。该连接不回写旧快照、不改变 active baseline，不消费 V5 答案。
+
+同步后的全量 QA：`217 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check`、候选报告、候选诊断、V5 answerless runner 和 V5 过程审计均通过。该段是 Gold join 前的历史回执，当前质量与下一步见 2026-09-03 段。
+
+## 2026-09-03｜V5 Gold join、失败模式与当前交接
+
+负责人审核通过并授权 Gold join 后，使用封存的 V5 answerless 运行只做一次聚合评分。V5 质量结果为：
+Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、
+nDCG@5=`75.36%`、hard-safety=`PASS`、project Gate=`FAIL`。过程审计仍为 60/60 完整 Trace、治理干净；
+这两个 Gate 分开记录。
+
+聚合失败分析见 `reports/rag_v5_failure_analysis_v1.json/.html`：路由不一致 50/60、证据集合不一致
+59/60、关系不一致 54/60，前五条完全 miss 2/60；33 题没有可靠投影，20 题在已有投影后仍回退
+BASELINE。根因已转成“显式意图→路由、按操作分配证据、关系规则化”的公开候选 SOP。V5 快照封存，
+不用于逐题调参；RAG 仍 `proposal-only`，active baseline、权限和图片 Provider 不变。
+
+本轮新增诊断模块、V5 聚合看板入口及测试；代码/文档同步后的全量 QA 已重新执行：`220 passed, 4 warnings`，
+Ruff check、format、compileall 与 `git diff --check` 均通过。4 条 warning 仍是既有 Pillow 弃用提示；不沿用上一轮
+`217 passed` 快照。
+
+## 2026-09-02｜Getty × Thread 精细化视觉 Track 1（无应用代码变更）
+
+### 本轮目标
+
+产品负责人要求把视觉要求从“方向说明”推进到设计师可以直接执行的视觉稿级规范：抽象用户提供的三栏 Agent 截图的排版关系，吸收 Getty `Tracing Art` 的路径叙事、编辑式留白和混合媒介语法，保留 Party Rock 原始 token 与苹方，不复制任何品牌、网站资产或真实人像。
+
+### 已完成
+
+- 新增 `docs/UI_VISUAL_DESIGN_SPEC_DETAILED.md`（`VISUAL-DESIGN-SPEC-v0.1`）：包含三栏网格、模块/组件尺寸、精确中文文案、图标族、线条/圆角/阴影、E01/E02 排版、Image 2 素材方向、动效时间线、reduced-motion、响应式、性能、可访问性、Contract safety 和 R0→R6 Track；它是视觉稿级候选规范，不重写执行版 PRD 的业务合同。
+- 新增 `design-system/portrait-consistency-agent/pages/align-entry.md` 与 `pages/align-session.md`，把 ui-ux-pro-max 的通用建议收敛到 Party Rock + 苹方；明确通用 Master 中自动生成的紫色/粉色 token、Space Grotesk/DM Sans 与本产品冻结输入不相容，不能直接套用。
+- 使用 Image 2 生成并人工检查三张无人物环境素材：`orbit-paper.png`、`folded-window.png`、`ink-garden.png`；每张有完整 prompt sidecar，尺寸均为 `1586×992`，仅作首页氛围/关系隐喻，不是照片或结果图。
+- 新增 `design/visual-tracks/getty-thread-party-rock/visual-review.html`：可切换 E01/E02、三张环境素材与暂停动效；产品壳为 `236px` 黑色左导航 + 米白中央舞台 + `352px` 米白 Agent 线程，E02 的授权、结果和反馈仍留在同一线程。
+- 新增 `figma-import/e01-entry.svg` 与 `e02-session.svg`，分为 `nav/context/stage/thread/trajectory/composer/art` 语义图层，并导出 `renders/e01-entry.png`、`renders/e02-session.png` 作为 1440×900 检查帧。SVG 可导入 Figma 后继续编辑，但没有声称生成原生云端 `.fig`。
+- 将 Track 1 链接同步到 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`、`docs/前端与交互设计需求文档.md`、`PRODUCT.md`、`README.md`、`docs/PROJECT_CONTEXT.md` 和 `AGENTS.md`；不改变 Streamlit、Provider、权限、结果保留、Trace、RAG 或隐私边界。
+
+### 视觉/静态回执
+
+- `xmllint --noout`：2/2 SVG 通过；`rsvg-convert`：2/2 生成 1440×900 渲染帧并完成图像检查。
+- 浏览器本地 1440×900：E01/E02 均可加载、三栏关系和中文文案可读；E02 授权按钮可在原型中完成一次状态展示；控制台错误为 0。375×812 也完成基础响应式检查，线程按移动端规则隐藏并保留中央任务路径。
+- HTML 内联脚本语法、`git diff --check` 通过；页面使用显式 label/aria、键盘 Enter/Shift+Enter、可见 focus、`prefers-reduced-motion` 和暂停动效。
+- 尚未运行 Impeccable Critical/Audit、WCAG 2.2 AA 全量审查、Streamlit 映射或真实照片 UI 走查；这些是下一道 Gate，不能用本轮候选资产替代。
+
+### 当前边界与下一步
+
+Track 1 是高保真视觉候选，不是正式实现。产品负责人需先确认是否沿用这套 Getty × Thread 结构、哪一张环境素材作为默认；随后才进入 Impeccable Critical/Audit、浏览器/WCAG Gate，再由 Frontend 按现有合同映射到 Streamlit。任何改变冻结 token、授权、Provider、保存期、结果或 Trace 的建议必须另立变更请求。
+
+### Track 1 收尾复核补充
+
+- Impeccable `detect.mjs --json` 已执行；由于本机缺少 `htmlparser2/css-select/css-tree/domutils`，结果按 skill 标记为 **DEGRADED regex**，不能替代完整计算样式与对比度检查。唯一提示为事实块的彩色侧边条；已改为带圆角的细紫色边框，并用静态扫描确认不再存在厚侧边条、渐变、玻璃拟态或 emoji。
+- 三张 Image 2 PNG 已将完整生成 prompt 嵌入 `impeccable:prompt`；重新扫描结果为 `3 raster, 0 missing`。四张浏览器证据帧已保存到 `.impeccable/review/`：`desktop-e01.png`、`desktop-e02.png`（1440×900）和 `mobile-e01.png`、`mobile-e02.png`（390×844），并确认文件为有效 PNG、非空且与文件名画面一致。
+- 这次复核仍是候选资产级证据；未把 degraded detector、静态 SVG、浏览器预览或环境素材误写成 WCAG 2.2 AA、真实照片效果、Provider 效果、用户满意度或 Streamlit 已实现。
+- 新增根目录 `DESIGN.md` 作为下一次 Frontend/Impeccable 的视觉入口，只记录视觉优先级、已确认 token/字体、当前 Track 和未冻结项；不复制或改写产品合同。
+
+## 2026-09-03｜E3 真实多样本 Web 试验与 Demo 收尾
+
+### 本轮目标
+
+负责人批准启动 E3，并提供四张真实 JPEG。目标是把“网页上传一张图→浏览器 SDK 处理→结果可展示→回执可追溯”推进到可录制 Demo，同时不把 SDK 调用成功夸写成视觉一致性或 Provider promotion。
+
+### 已完成
+
+- 增加 `services/tencent_effect_web_e3.py` 的 `E3LiveReceipt` 和 `E3EvidenceReport`：对手工回执做安全字段校验，按样本 ID/输入 SHA-256 关联预检，检测重复样本/重复 receipt，输出 promotion blocker 和下一步；报告不接受 raw data URL、图片 bytes 或本地路径。
+- 新增 `scripts/build_effect_web_e3_evidence.py`，把 E3 预检、真实回执、离线合同回归和正式准入证据汇总成 JSON/HTML；新增 `pages/8_腾讯特效Web_E3证据看板.py`，以只读脱敏方式展示真实回执和未闭合 Gate。
+- 记录四次真实浏览器试验：`e3_reference_001` 与 `e3_target_001..003` 均 `succeeded`，成功率 `4/4`；四个输入哈希均与预检一致；结果交接标记 `4/4`；离线 E2 合同回归与批量失败隔离均通过。
+- 更新 `tencent_effect_web.json` 的 E3 evidence，保留 Card=`candidate`；新增 [E3 收尾与可录制 Demo Prompt](E3_FINALIZATION_EXECUTION_PROMPT.md)。
+
+### 真实 E3 结论
+
+```text
+真实 Web 回执：4/4 succeeded
+输入哈希关联：PASS
+结果交接标记：4/4
+离线合同/批量隔离：PASS
+视觉效果泛化：NOT ESTABLISHED
+Card promotion：CANDIDATE
+```
+
+### 当前未完成/必须保持诚实的边界
+
+- 手工汇总的四条回执没有完整抄录 `request_ref`，所以报告保留 `request_ref_not_recorded_for_every_manual_receipt`，不通过字段完整性掩盖证据缺口；
+- 结果目前在浏览器会话可展示，但四张真实输出尚未全部完成共同 Python `VerificationResult` 的几何复测；
+- 供应商图片出站/留存、地区和费用/预算证据仍未闭合；视觉泛化需要盲化前后复核或可复测的几何指标；产品负责人尚未作最终 candidate→verified 批准；
+- page 6/page 8 是 Web 候选试验与证据看板，不等于主应用的 IMS/CompareFace/Profile/8A/8B/8C 全流程已切换到 Web；正式主流程仍以已审核 Tencent baseline 为准。
+
+### 本轮验证
+
+- `tests/test_tencent_effect_web_e3.py`：`6 passed`；覆盖预检、真实回执关联、hash mismatch、重复样本和 raw payload 拦截；
+- E3 证据生成：`reports/effect_web_e3_evidence_v1.json/.html`；
+- E3 预检：5 个样本（4 个真实 JPEG + 1 个透明通道异常 PNG），2 eligible、2 warning、1 rejected，失败后仍继续处理；
+- 代码质量：E3 专项 Ruff check/format 通过；全量回归将在本节文档同步后重新执行并以最新数字为准。
+
+### 下一道 Gate
+
+当前不再有可安全自动推断的产品结论。下一步是完成真实结果的共同 VerificationResult/视觉复核以及供应商条款证据；证据齐全后才进入产品负责人对 Web Card promotion 的单独决策。网页 Demo 本身已经具备录制路径，但视频文案必须称“真实 Web 候选试验/原型”，不能称“正式上线或一致性已证明”。
+
+### 2026-09-03 收口复核（最新）
+
+E3 预检、证据汇总、Web 合同回归和 handoff smoke 已在文档同步后重新运行。最新可复核事实：预检 5 个样本（2 eligible、2 warning、1 rejected）；真实浏览器回执 4/4 成功，输入哈希 4/4 匹配，结果交接标记 4/4；离线 Web 回归 8/8，批量失败隔离通过。全量工程 QA 为 `.venv/bin/pytest -q`=`226 passed, 4 warnings`；Ruff check、format、compileall 和 `git diff --check` 通过。4 条 warning 是既有 Pillow 弃用提示。
+
+本轮没有把 request_ref 缺失、视觉效果泛化、共同 VerificationResult 的真实图片复测、供应商地区/费用/留存或负责人 promotion 伪装成完成。Web Card 仍 `candidate`，RAG 仍 `proposal-only`，正式主流程仍为已验证的 BeautifyPic。page 6 已具备“上传→真实 Web 结果展示”的录制路径，page 8 提供脱敏 E3 证据看板；下一道真实决策门是补证后是否批准 Web Card promotion。

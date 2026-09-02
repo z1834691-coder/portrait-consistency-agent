@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" fill="none">
+  <title>母版人像一致性 Agent · E01 入口</title>
+  <desc>可导入 Figma 的分层矢量源。黑色左侧导航，米白中央与右侧，紫色轨迹与少量荧光绿节点。</desc>
+  <metadata>VISUAL-DESIGN-SPEC-v0.1; tokens: ivory=#F2F1E6,purple=#A855F7,lilac=#C084FC,ink=#121212,black=#000000,acid=#36FF9B; font=PingFang SC</metadata>
+  <g id="nav">
+    <rect width="236" height="900" fill="#000000"/>
+    <rect x="25" y="24" width="34" height="34" rx="11" fill="#C084FC" stroke="#F2F1E6"/>
+    <path d="M35 34h14v14H35zM39 34v14M45 34v14M35 38h14M35 44h14" stroke="#121212" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="71" y="43" fill="#F2F1E6" font-family="PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif" font-size="16" font-weight="700">对齐</text>
+    <text x="71" y="57" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif" font-size="9" letter-spacing="1.2">PORTRAIT AGENT</text>
+    <text x="25" y="111" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, sans-serif" font-size="11" letter-spacing="1">工作区</text>
+    <g id="nav-align">
+      <rect x="17" y="127" width="202" height="46" rx="15" fill="#C084FC" stroke="#F2F1E6"/>
+      <path d="M32 140h14v14H32zM53 140h14v14H53zM32 161h14v14H32zM53 161h14v14H53z" stroke="#121212" stroke-width="1.7"/>
+      <text x="81" y="157" fill="#121212" font-family="PingFang SC, sans-serif" font-size="14" font-weight="650">对齐</text>
+    </g>
+    <g id="nav-master">
+      <path d="M32 205c0-5 4-9 9-9s9 4 9 9M28 221c1.5-6 5.8-9 13-9s11.5 3 13 9M29 188h24v34H29z" stroke="#F2F1E6" stroke-opacity=".72" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="81" y="211" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, sans-serif" font-size="14">母版</text>
+    </g>
+    <g id="nav-records">
+      <path d="M31 249h20v27H31zM36 256h10M36 263h10M36 270h6" stroke="#F2F1E6" stroke-opacity=".72" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="81" y="267" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, sans-serif" font-size="14">记录</text>
+    </g>
+    <g id="project-shelf">
+      <rect x="17" y="301" width="202" height="153" rx="18" fill="#F2F1E6" fill-opacity=".04" stroke="#F2F1E6" stroke-opacity=".2"/>
+      <text x="28" y="323" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, sans-serif" font-size="10" letter-spacing="1">当前项目</text>
+      <text x="28" y="349" fill="#F2F1E6" font-family="PingFang SC, sans-serif" font-size="13" font-weight="650">人像一致性项目</text>
+      <rect x="28" y="363" width="180" height="29" rx="14" fill="#A855F7" stroke="#121212"/>
+      <text x="43" y="382" fill="#121212" font-family="PingFang SC, sans-serif" font-size="11" font-weight="700">建立模板</text>
+      <rect x="28" y="398" width="180" height="29" rx="14" fill="#C084FC" fill-opacity=".16" stroke="#C084FC" stroke-opacity=".7"/>
+      <text x="43" y="417" fill="#F2F1E6" font-family="PingFang SC, sans-serif" font-size="11">模板库</text>
+      <rect x="28" y="433" width="180" height="29" rx="14" fill="#C084FC" fill-opacity=".16" stroke="#C084FC" stroke-opacity=".7"/>
+      <text x="43" y="452" fill="#F2F1E6" font-family="PingFang SC, sans-serif" font-size="11">新建对象</text>
+    </g>
+    <path d="M25 833h186" stroke="#F2F1E6" stroke-opacity=".2"/>
+    <path d="M32 855v-2a9 9 0 0 1 18 0v2M30 871h22M30 871v-12h22v12" stroke="#F2F1E6" stroke-opacity=".63" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="81" y="864" fill="#F2F1E6" fill-opacity=".63" font-family="PingFang SC, sans-serif" font-size="14">设置</text>
+    <path d="M32 890a9 9 0 1 1 18 0M37 889h.01M45 889h.01" stroke="#F2F1E6" stroke-opacity=".63" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+  <g id="context">
+    <rect x="236" width="1204" height="900" fill="#F2F1E6"/>
+    <path d="M236 72h1204" stroke="#121212" stroke-opacity=".17"/>
+    <circle cx="270" cy="40" r="4" fill="#36FF9B" stroke="#121212"/>
+    <text x="284" y="44" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">人像一致性项目　/　入口</text>
+    <rect x="890" y="25" width="88" height="28" rx="14" fill="#C084FC" fill-opacity=".34" stroke="#121212"/>
+    <text x="912" y="43" fill="#121212" font-family="PingFang SC, sans-serif" font-size="11" font-weight="650">等待母版</text>
+    <rect x="989" y="25" width="75" height="28" rx="14" fill="none" stroke="#121212" stroke-opacity=".55"/>
+    <text x="1008" y="43" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">2026 · 09</text>
+  </g>
+  <g id="art" opacity=".32">
+    <path d="M862 151c94-59 246-35 311 43 68 81 31 214-69 259-83 37-224 4-250-91-22-79-59-151 8-211Z" stroke="#A855F7" stroke-width="4"/>
+    <path d="M953 107c32 48 41 106 20 153-16 36-52 77-41 121 11 46 70 70 128 90" stroke="#121212" stroke-width="2" stroke-linecap="round"/>
+    <path d="M1040 178l81-38-32 83zM1142 332l63-24-42 56zM895 437l89-45-32 81z" fill="#C084FC" stroke="#121212" stroke-width="1"/>
+    <circle cx="1137" cy="185" r="13" fill="#36FF9B" stroke="#121212" stroke-width="1"/>
+  </g>
+  <g id="stage">
+    <text x="300" y="142" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12" letter-spacing="1">01 / 到达</text>
+    <text x="300" y="201" fill="#121212" font-family="PingFang SC, sans-serif" font-size="42" font-weight="700" letter-spacing="-2">建立母版</text>
+    <text x="300" y="239" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="16">先上传一张你认可的本人照片。</text>
+    <g id="upload-card">
+      <rect x="300" y="294" width="640" height="193" rx="28" fill="#F2F1E6" fill-opacity=".9" stroke="#121212" stroke-width="1.5"/>
+      <rect x="323" y="333" width="108" height="116" rx="21" fill="#C084FC" fill-opacity=".2" stroke="#121212" stroke-dasharray="5 5"/>
+      <path d="M377 411V366M359 383l18-18 18 18M350 413v16h54v-16" stroke="#A855F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="463" y="356" fill="#121212" font-family="PingFang SC, sans-serif" font-size="18" font-weight="700">上传母版照片</text>
+      <text x="463" y="382" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="13">选择一张光线稳定、你愿意作为参照的照片。</text>
+      <rect x="463" y="408" width="107" height="44" rx="22" fill="#A855F7" stroke="#121212"/>
+      <path d="M480 431v-16m-6 6 6-6 6 6m-12 10v6h12v-6" stroke="#121212" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="500" y="436" fill="#121212" font-family="PingFang SC, sans-serif" font-size="13" font-weight="700">选择照片</text>
+    </g>
+    <g id="trajectory">
+      <path d="M309 547h622" stroke="#121212" stroke-opacity=".55"/>
+      <circle cx="317" cy="547" r="5" fill="#36FF9B" stroke="#121212"/>
+      <text x="332" y="551" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12">上传</text>
+      <circle cx="923" cy="547" r="5" fill="#C084FC" stroke="#121212"/>
+      <text x="899" y="551" text-anchor="end" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12">同一条 Agent 线程</text>
+    </g>
+  </g>
+  <g id="composer">
+    <rect x="300" y="730" width="640" height="75" rx="22" fill="#FFFFFF" fill-opacity=".42" stroke="#121212" stroke-width="1.5"/>
+    <circle cx="331" cy="767" r="20" fill="none" stroke="#121212"/>
+    <path d="M331 759v16M323 767h16" stroke="#121212" stroke-width="1.7" stroke-linecap="round"/>
+    <text x="364" y="773" fill="#121212" fill-opacity=".55" font-family="PingFang SC, sans-serif" font-size="15">直接告诉我想保留什么……</text>
+    <circle cx="900" cy="767" r="21" fill="#A855F7" stroke="#121212"/>
+    <path d="m890 767 14-7-3 14-4-5-7-2Z" stroke="#121212" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="300" y="830" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">我会先看照片，再告诉你下一步。</text>
+  </g>
+  <g id="thread">
+    <path d="M1088 0v900" stroke="#121212" stroke-opacity=".17"/>
+    <path d="M1120 72h286" stroke="#121212" stroke-opacity=".17"/>
+    <path d="M1125 38h20v17h-20zM1130 42h10M1130 47h8" stroke="#121212" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="1159" y="43" fill="#121212" font-family="PingFang SC, sans-serif" font-size="18" font-weight="700">Agent</text>
+    <text x="1159" y="61" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">同一条任务线程</text>
+    <rect x="1335" y="29" width="71" height="28" rx="14" fill="none" stroke="#121212"/>
+    <circle cx="1350" cy="43" r="4" fill="#36FF9B" stroke="#121212"/>
+    <text x="1360" y="47" fill="#121212" font-family="PingFang SC, sans-serif" font-size="11" font-weight="650">待命</text>
+    <rect x="1120" y="344" width="276" height="160" rx="22" fill="#FFFFFF" fill-opacity=".3" stroke="#121212"/>
+    <path d="m1150 375 1.8 5.2 5.2 1.8-5.2 1.8-1.8 5.2-1.8-5.2-5.2-1.8 5.2-1.8 1.8-5.2Z" stroke="#A855F7" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1150" y="420" fill="#121212" font-family="PingFang SC, sans-serif" font-size="15" font-weight="700">把照片交给我</text>
+    <text x="1150" y="446" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12">上传之后，直接说你想保留什么。</text>
+    <text x="1150" y="469" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12">检查、决策和结果会留在这条线程里。</text>
+    <path d="M1120 533h276" stroke="#121212" stroke-opacity=".17"/>
+    <text x="1120" y="557" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">这里不提前展示后台步骤。</text>
+    <text x="1120" y="576" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">只有和你下一步有关的事实，才会出现。</text>
+  </g>
+</svg>

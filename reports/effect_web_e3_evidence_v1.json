@@ -1,0 +1,130 @@
+{
+  "blockers": [
+    "request_ref_not_recorded_for_every_manual_receipt",
+    "visual_effect_generalization_not_established",
+    "region_approved",
+    "estimated_cost_known",
+    "product_owner_promotion_approved",
+    "product_owner_promotion_approval_required"
+  ],
+  "evidence_version": "effect_web_e3_evidence_v0.1",
+  "formal_admission_evidence": {
+    "adapter_ready": true,
+    "estimated_cost_known": false,
+    "exact_domain_bound": true,
+    "license_active": true,
+    "multi_sample_visual_review_complete": false,
+    "outbound_data_policy_approved": true,
+    "product_owner_promotion_approved": false,
+    "provider_permission_granted": true,
+    "region_approved": false,
+    "static_image_smoke_succeeded": true
+  },
+  "live_summary": {
+    "all_target_receipts_present": true,
+    "failed": 0,
+    "handoff_accepted": 4,
+    "request_refs_recorded": false,
+    "result_payloads_persisted": false,
+    "sample_hashes_match_preflight": true,
+    "succeeded": 4,
+    "success_rate": 1.0,
+    "total_receipts": 4
+  },
+  "next_actions": [
+    "把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult",
+    "对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功",
+    "补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据",
+    "在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion"
+  ],
+  "offline_contract_regression": {
+    "batch_failure_isolation_verified": true,
+    "passed": true
+  },
+  "preflight_summary": {
+    "batch_failure_isolation_ready": true,
+    "eligible_samples": 2,
+    "ready_for_candidate_trials": true,
+    "reference_present": true,
+    "rejected_samples": 1,
+    "target_samples": 3,
+    "total_samples": 5,
+    "warning_samples": 2
+  },
+  "promotion_status": "candidate",
+  "receipts": [
+    {
+      "data_url_saved": false,
+      "elapsed_ms": 2302,
+      "handoff_accepted": true,
+      "image_bytes_saved": false,
+      "input_sha256": "b6a298c7072f721829752763c9f8ae3ae9396262ddd50cc88517eea4aa72b129",
+      "note": "真实浏览器静态图处理成功；结果仍保留在浏览器会话，未写入 Python 数据库。",
+      "output_dimensions": null,
+      "output_sha256": "c05054c8eddbfbc5e09fad7c66a461f688469520139b7458d015b9801adff171",
+      "receipt_id": "web_receipt_effect_web_c83e83d54d8e4b1d",
+      "request_ref": null,
+      "request_ref_recorded": false,
+      "result_retention": "browser_session_only",
+      "sample_id": "e3_reference_001",
+      "status": "succeeded",
+      "verification_status": "metadata_only"
+    },
+    {
+      "data_url_saved": false,
+      "elapsed_ms": 1397,
+      "handoff_accepted": true,
+      "image_bytes_saved": false,
+      "input_sha256": "6bd38fcfc79d81edf8b91f75af8191545e43eac64417766737f6c276ca419bc9",
+      "note": "真实浏览器静态图处理成功；该样本预检为质量提醒，不能据此宣称视觉效果通过。",
+      "output_dimensions": null,
+      "output_sha256": "b00005f2b618888de37cc8c9a4ed6b2d83f7145ae9e9fa035c86380a28832811",
+      "receipt_id": "web_receipt_effect_web_0710c27460e34a32",
+      "request_ref": null,
+      "request_ref_recorded": false,
+      "result_retention": "browser_session_only",
+      "sample_id": "e3_target_001",
+      "status": "succeeded",
+      "verification_status": "metadata_only"
+    },
+    {
+      "data_url_saved": false,
+      "elapsed_ms": 1583,
+      "handoff_accepted": true,
+      "image_bytes_saved": false,
+      "input_sha256": "513bddd89f6b52eb3dc508db5e4485a10a8ffc66db5e2296bdf2ac6772046006",
+      "note": "真实浏览器静态图处理成功；当前记录只证明回执和结果哈希，不证明母版一致性。",
+      "output_dimensions": null,
+      "output_sha256": "0ae08586785a59c009e8cc59251ca80aa5f4453ee938d460e36b4ffa304b49a7",
+      "receipt_id": "web_receipt_effect_web_9563c0fb46aa4f3f",
+      "request_ref": null,
+      "request_ref_recorded": false,
+      "result_retention": "browser_session_only",
+      "sample_id": "e3_target_002",
+      "status": "succeeded",
+      "verification_status": "metadata_only"
+    },
+    {
+      "data_url_saved": false,
+      "elapsed_ms": 1340,
+      "handoff_accepted": true,
+      "image_bytes_saved": false,
+      "input_sha256": "1c24aaaf290d7e66b754595d846037c996375f77ac7e1ec00bfe89a04bbd3a4c",
+      "note": "真实浏览器静态图处理成功；三分之四侧脸/微笑样本仍需独立视觉复核。",
+      "output_dimensions": "1600x2442",
+      "output_sha256": "acd09781dadf34ec28ee61a137265bbfacf14b84a9e11fc1ab8b7ae3f4cccdf5",
+      "receipt_id": "web_receipt_effect_web_0046d91ec02a4e08",
+      "request_ref": null,
+      "request_ref_recorded": false,
+      "result_retention": "browser_session_only",
+      "sample_id": "e3_target_003",
+      "status": "succeeded",
+      "verification_status": "metadata_only"
+    }
+  ],
+  "reference_sample_id": "e3_reference_001",
+  "report_contains_data_urls": false,
+  "report_contains_image_bytes": false,
+  "report_contains_local_paths": false,
+  "visual_generalization_status": "not_established"
+}

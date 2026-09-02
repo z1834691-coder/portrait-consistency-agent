@@ -141,7 +141,7 @@ V4 的答案在盲测封存后才被负责人授权用于诊断；因此 validat
 
 ### 10.3 V5 过程门不是质量门
 
-V5 过程审计 `60/60` 输入、`60/60` Trace、`60/60` Prediction、`60/60` retrieval，过程门 `PASS`；答案键未读，质量状态为 `READY_AFTER_SEPARATE_GOLD_JOIN`。只有负责人审核并显式授权，才可计算 V5 聚合质量。评分后仍要同时看开发/公开回归、hard-safety、成本/延迟、Trace 完整率和逐题失败模式；平均分不能抵消任何安全越权或关键任务失败。
+V5 过程审计 `60/60` 输入、`60/60` Trace、`60/60` Prediction、`60/60` retrieval，过程门 `PASS`；该段记录的是答案键未读时的 `READY_AFTER_SEPARATE_GOLD_JOIN` 状态。负责人现已审核并授权一次聚合，评分后仍要同时看开发/公开回归、hard-safety、成本/延迟、Trace 完整率和失败模式；平均分不能抵消任何安全越权或关键任务失败，当前结果见 10.6。
 
 ### 10.4 Goodhart 反例检查
 
@@ -150,3 +150,19 @@ V5 过程审计 `60/60` 输入、`60/60` Trace、`60/60` Prediction、`60/60` re
 - 不因为过程门 PASS 就称答案正确；
 - 不因为某一代分数上升就删除失败题、重复跑 Holdout 或按 case ID 写规则；
 - 不把“候选改变了 Prediction”误写成“线上用户任务已完成”。
+
+### 10.5 V3/V4 双轨 Gold 连接回执
+
+公平过程门通过后，已将工作区外受控的 V3/V4 答案键与封存的无答案运行包各连接一次。V3 编译轨 Route=`30.56%`、真实检索轨 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 编译轨 Route=`12.50%`、真实检索轨 Recall@5=`41.32%`、Evidence relation=`24.65%`；两代 hard-safety 均 PASS，质量均未通过。该连接只建立双轨基线，不回写 Holdout、不输出 case 级结果，也不改变 RAG `proposal-only`。该段关于“V5 仍需授权”的文字属于 Gold join 前历史状态；V5 当前结果见 10.6。
+### 10.6 V5 一次性 Gold join 回执与反 Goodhart 规则
+
+负责人审核通过后，V5 只连接一次并输出聚合。Route=`16.67%`、Evidence exact=`1.67%`、Evidence
+relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`，hard-safety=`PASS`，项目 Gate=`FAIL`。
+固定 Precision 仍保留用于历史可比，effective/returned 只作诊断；不能靠增加无关证据、改变分母或
+重复运行 V5 来抬高分数。Hit@5 高而路由/关系低，说明评测必须拆成理解、召回、关系、路由四层。
+
+V5 失败分析的 SOP 是候选假设，不是自动发布：显式映射路由、按 operation 分配证据槽位、用来源/能力/
+生命周期规则确定关系。候选先过公开安全回归；V5 快照不得用于逐题学习，泛化证明必须新建 V6。
+
+本轮 Rubric、V5 聚合失败分析和看板同步后的全量工程 QA 为 `220 passed, 4 warnings`；Ruff check、format、
+compileall 与 `git diff --check` 均通过。该 QA 只证明评测实现一致，不改变质量 Gate=`FAIL`。

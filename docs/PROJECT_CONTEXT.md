@@ -29,7 +29,7 @@
 
 | 层 | 当前选择 | 边界 |
 |---|---|---|
-| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；设计已冻结为“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”三空间信息分组，桌面壳为全局导航、项目/母版上下文、中央对齐工作区、右侧 Agent 对话轻量四区；正式视觉 token 为 Tweakcn Party Rock 原始 Light/Dark、字体为 PingFang SC；当前候选统一为最左侧黑色导航、中央/右侧米白、紫色柔性框/轨迹、荧光绿少量节点和黑色线框结构，上一版紫黑暗流仅作历史；A/B/C 每套各 E01 入口 + E02 Agent 对话两帧，方向待选择；[前端与交互设计需求文档](前端与交互设计需求文档.md)、[关键帧 Prompt](FRONTEND_UI_KEYFRAME_PROMPT.md) 与 [风格说明](UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md) 已写成执行/评审规格；候选源见 `design/keyframes/party-rock-pingfang/candidates/`；Streamlit 视觉迁移待 UI Gate；暂不做公网开放 |
+| UI | Streamlit（当前承载） | 本机开发 + 已准备 Community Cloud Private/受邀 Beta 部署包；设计已冻结为“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”三空间信息分组，桌面壳为全局导航、项目/母版上下文、中央对齐工作区、右侧 Agent 对话轻量四区；正式视觉 token 为 Tweakcn Party Rock 原始 Light/Dark、字体为 PingFang SC；当前候选统一为最左侧黑色导航、中央/右侧米白、紫色柔性框/轨迹、荧光绿少量节点和黑色线框结构，上一版紫黑暗流仅作历史；A/B/C 是历史方向包；最新 Getty × Thread Track 1 是当前精细化候选，另提供三张无人物 Image 2 环境素材、分层 SVG 和可交互 HTML，仍待方向选择；[前端与交互设计需求文档](前端与交互设计需求文档.md)、[精细化视觉规范](UI_VISUAL_DESIGN_SPEC_DETAILED.md)、[关键帧 Prompt](FRONTEND_UI_KEYFRAME_PROMPT.md) 与 [风格说明](UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md) 已写成执行/评审规格；候选源见 `design/keyframes/party-rock-pingfang/candidates/` 与 `design/visual-tracks/getty-thread-party-rock/`；Streamlit 视觉迁移待 UI Gate；暂不做公网开放 |
 | 状态/编排 | Python 状态机 + 受限 ReAct 工具提议 | 状态机拥有权限与迁移最终权；不要求 LangGraph，LLM 只能在当前状态白名单内提议下一工具 |
 | 数据 | SQLite + JSONL trace + 匿名 `product_events`（本地）；部署后按平台存储方案扩展 | Demo 仍不做多租户；主体锚点需加密、可删除、受限访问、183 天到期；当前只是合同/Policy，真实加密/worker 未实现 |
 | 几何与质量视觉 | OpenCV Haar + Pillow V0 基线（可替换 CV Adapter） | 已实现真实图片解码、质量/可编辑性指标和粗粒度脸框/眼睛几何；不承担同一人物判断，后续可替换为关键点模型 |
@@ -150,12 +150,29 @@ smoke 均通过。新版 V3 `36/36`、V4 `48/48` 的无答案过程重放均完�
 
 E1 已由 `accept_effect_web_browser_result()` 与共同 `verify_result()` 的 fixture 链路验证；E2 已由 8 个成功、失败、请求/输入/输出哈希错位、MIME/尺寸/大小异常和批量隔离样本验证，坏样本不阻塞后续样本，结果 payload 不持久化。新增的纵向 smoke/test 还验证 Meta-Agent 的 Web proposal 与 Web EditPlan provider/Card 绑定。E3 仍等待真实多样本视觉、供应商数据/费用证据和负责人批准；在 E3 前 BeautifyPic 继续是唯一正式主流程 Provider。
 
-本轮最新全量工程 QA 为 `216 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。该回执只证明代码/合同/fixture 一致，不改变 Web Card `candidate`、RAG `proposal-only` 或 E3 准入要求。
+该段为 Web E2 变更时的历史工程 QA：`216 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。它只证明代码/合同/fixture 一致，不改变 Web Card `candidate`、RAG `proposal-only` 或 E3 准入要求；RAG 候选与 V5 过程后的最新 QA 为 `217 passed, 4 warnings`，见本文件当前事实覆盖段。
 
 ## 2026-09-02 当前事实覆盖｜RAG 深度优化与 V5
 
 当前 RAG 深度优化已从“只看总分”改为“真实检索层候选 + 过程监督 + 独立 Holdout”。operation coverage candidate 在开发集 28 题、公开回归 52 题上留下了完整候选 Trace，分别改变 26、49 条 Prediction 事实；公开检索 Evidence relation/Recall@5 为 100%，MRR 93.27%、nDCG@5 95.30%，hard-safety PASS。候选仍是 proposal-only，active baseline 未改变。
 
-新建的 V5 独立 Holdout 有 60 题，运行时只读取 answerless 题目。当前过程审计为输入/Trace/Prediction/retrieval 均 60/60、`process_gate=PASS`、`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`；没有读取答案/标注、照片/向量或密钥，也没有调用 LLM、网络或 Provider。工作区外 owner package 由负责人审核后才能进行一次质量 Gold join；在授权前没有 V5 质量分数，也不能称 RAG 产品化。
+新建的 V5 独立 Holdout 有 60 题，运行时只读取 answerless 题目。该段记录 Gold join 前的过程审计：输入/Trace/Prediction/retrieval 均 60/60、`process_gate=PASS`、`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`；没有读取答案/标注、照片/向量或密钥，也没有调用 LLM、网络或 Provider。负责人现已授权完成一次质量 Gold join，当前质量见本文件末尾，不能称 RAG 产品化。
 
-本轮真实代码/报告入口：`reports/rag_policy_coverage_candidate_v2.json/.html`、`reports/rag_candidate_diagnostics_v1.json/.html`、`reports/rag_v5_holdout_process_audit.json/.html`；Dashboard 为 `pages/5_RAG优化看板.py`。当前项目状态是“候选检索修正已验证，独立 V5 过程已验证，质量泛化待负责人 Gold 审核”，不是“RAG 已通过”。
+本轮真实代码/报告入口：`reports/rag_policy_coverage_candidate_v2.json/.html`、`reports/rag_candidate_diagnostics_v1.json/.html`、`reports/rag_v5_holdout_process_audit.json/.html`；Dashboard 为 `pages/5_RAG优化看板.py`。该段记录 Gold join 前状态；负责人现已授权并完成一次聚合，当前项目状态和质量见本文件末尾，不是“RAG 已通过”。
+
+已完成一次 V3/V4 公平 Gold 连接：只在内存将工作区外答案键与已封存无答案运行对齐，输出 `reports/rag_fair_gold_join_v2.json/.html` 的双轨聚合，不输出题目、答案或 case 级结果。V3/V4 真实检索 Recall@5 分别为 `34.72%`、`41.32%`，Evidence relation 分别为 `16.67%`、`24.65%`；两者仍未达到质量门。该段 `217 passed, 4 warnings` 与“V5 质量连接仍需授权”属于 Gold join 前历史快照；V5 当前事实与最新 QA 见下一段。
+### 2026-09-03 当前事实覆盖｜V5 Gold join
+
+V5 答案已由负责人审核并授权一次聚合连接。质量结果：Route=`16.67%`、Evidence exact=`1.67%`、
+Evidence relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`、hard-safety=`PASS`、
+project Gate=`FAIL`。这不是产品化通过。新增 `reports/rag_v5_failure_analysis_v1.html` 只展示聚合失败
+模式；V5 题集已封存，不用来逐题调参。下一候选先回到公开开发/回归集，必要时新建 V6。
+
+本轮代码、合同、测试、报告和文档同步后的全量 QA 为 `220 passed, 4 warnings`；Ruff check、format、compileall
+与 `git diff --check` 均通过。4 条 warning 为既有 Pillow 弃用提示。
+
+## 2026-09-03 当前事实｜E3 真实 Web 候选试验
+
+负责人已批准 E3，并提供四张真实 JPEG。它们先经过内存预检（输入哈希、尺寸、人脸数、质量/可编辑性路由和分层标签），再在部署后的精确域名 page 6 逐张执行 Tencent Effect Web。当前真实结果为 4/4 `succeeded`，输入哈希 4/4 绑定预检，结果交接标记 4/4；透明通道 PNG 作为异常样本被拒绝。脱敏汇总为 `reports/effect_web_e3_evidence_v1.json/.html`，只读展示页为 `pages/8_腾讯特效Web_E3证据看板.py`。
+
+E3 的工程事实不等于视觉准入：手工 manifest 尚未记录四条完整 `request_ref`，共同 `VerificationResult` 的真实图像几何复测、视觉泛化、供应商地区/留存/费用与负责人 promotion 仍未完成。`tencent_effect_web` Card 保持 `candidate`；正式主流程仍走已验证的 Tencent BeautifyPic，RAG/Meta-Agent 继续 `proposal-only`。结果图 bytes、data URL、密钥和本地路径不写入数据库、Trace、RAG 或 Git。

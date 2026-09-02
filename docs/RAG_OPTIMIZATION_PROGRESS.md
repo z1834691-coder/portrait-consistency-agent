@@ -180,7 +180,7 @@ G2–G5 的 100% 只属于 owner-unlocked validation；fixed Precision 的低值
 
 固定 Precision、effective Precision 和 returned Precision 继续并列展示，不能因 Gold 稀疏而替换 project Gate。候选的公开 fixed Precision@3 为 `46.79%`，effective 为 `99.36%`，returned 为 `61.86%`；它们分别回答历史可比性、Gold 覆盖程度和返回证据纯度，不能单独称作“通过”。候选仍 `not_promoted_proposal_only`。
 
-### 10.3 V5 过程结果（质量尚未评分）
+### 10.3 V5 过程结果（创建时的质量尚未评分状态）
 
 V5 共 60 题，题型覆盖 V3/V4 没有充分覆盖的隐含目标、组合操作、否定范围、隐私/出站、生命周期/冲突、提示注入、未知 Provider/Adapter、多脸/批量、复测失败、RAG miss、跨语言和参数边界。候选只读取 answerless runtime，完成 `60/60` 输入、`60/60` Trace、`60/60` Prediction 和 `60/60` retrieval；过程监督为 `PASS`，无答案/标注/照片/向量/密钥泄露，无 LLM/网络/Provider 调用。
 
@@ -189,3 +189,26 @@ V5 共 60 题，题型覆盖 V3/V4 没有充分覆盖的隐含目标、组合操
 ### 10.4 本轮停止与下一门
 
 候选已通过开发集与公开回归的安全/不退化检查，继续在同一检索层堆同义词的边际收益较低；因此先停止代码叠加，不把候选改成 active baseline。下一步是负责人审核 V5 答案键并授权一次聚合 Gold join；之后根据 V5 逐题失败模式决定是否需要下一代规则或回到端到端产品测试。
+### 10.5 V3/V4 双轨 Gold 连接补充
+
+在 V5 之前，先完成了对已经封存的 V3/V4 answerless 运行包的一次性 Gold 连接。连接结果只在内存中计算并输出聚合：V3 编译 Route=`30.56%`、真实检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 编译 Route=`12.50%`、真实检索 Recall@5=`41.32%`、Evidence relation=`24.65%`；两代 hard-safety 均 PASS，质量仍 FAIL。该结果用于建立双轨基线，不回写旧快照，也不把 V3/V4 变成可反复调参数据。
+
+该段记录 Gold join 前的交接状态；V5 现已完成一次授权聚合，结果见 10.6。本轮同步后的工程 QA 以最终回执为准。
+
+### 10.6 2026-09-03｜V5 Gold join 与聚合失败模式（当前）
+
+负责人已审核 V5 答案并明确授权一次 Gold join。连接器只在内存中把工作区外答案与此前封存的
+answerless 运行对齐，生成 `reports/rag_v5_holdout_gold_aggregate.json/.html`；不输出题目、case
+编号、Gold 答案或私有路径。V5 过程与治理均通过（60/60 Trace、60/60 治理干净），hard-safety 为
+`PASS`，但项目质量 Gate=`FAIL`：Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、
+Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`。
+
+本轮聚合诊断确认：路由不一致 `50/60`，证据集合不一致 `59/60`，关系不一致 `54/60`，前五条
+完全 miss 只有 `2/60`；33 题没有可靠上游投影，20 题虽有结构化投影仍被下游回退为 BASELINE。
+这说明当前主要矛盾是“理解结果如何传到路由、证据如何按操作打包、关系如何判定”，不是简单增加
+Top-K。报告 `rag_v5_failure_analysis_v1` 已将这些事实转成下一轮 SOP，但不在同一 V5 快照上试错。
+
+下一步：候选先在公开开发/回归集验证；若要用 V5 诊断证明泛化，必须新建 V6，不得补写或重跑
+V5。RAG 继续 `proposal-only`，active baseline 和图片执行权限不变。本轮代码/文档同步后的最终工程
+回归为 `220 passed, 4 warnings`；Ruff check、format、compileall 与 `git diff --check` 均通过，4 条 warning
+仍是既有 Pillow 弃用提示。

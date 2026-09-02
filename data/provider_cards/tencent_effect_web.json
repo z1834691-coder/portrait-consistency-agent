@@ -147,7 +147,46 @@
       "output_hash_saved": true,
       "note": "A real explicit click on Cloud page 6 completed successfully. The SDK output remained in the browser session; Python received only the redacted receipt metadata."
     },
-    "last_review_note": "Live browser static-image processing is now proven for one explicit run. Keep review_status=candidate: exact-domain admission, vendor retention/region/cost evidence, broader image regression and product-owner approval are still separate gates."
+    "e3_live_evidence": {
+      "report_ref": "reports/effect_web_e3_evidence_v1.json",
+      "captured_at": "2026-09-03T00:00:00+08:00",
+      "preflight_sample_count": 5,
+      "live_receipt_count": 4,
+      "live_success_count": 4,
+      "input_hash_linkage": "pass",
+      "result_handoff_count": 4,
+      "request_ref_recorded": false,
+      "offline_contract_regression": "pass",
+      "batch_failure_isolation": "pass",
+      "visual_generalization": "not_established",
+      "receipt_refs": [
+        "web_receipt_effect_web_c83e83d54d8e4b1d",
+        "web_receipt_effect_web_0710c27460e34a32",
+        "web_receipt_effect_web_9563c0fb46aa4f3f",
+        "web_receipt_effect_web_0046d91ec02a4e08"
+      ],
+      "sample_input_hashes": [
+        "b6a298c7072f721829752763c9f8ae3ae9396262ddd50cc88517eea4aa72b129",
+        "6bd38fcfc79d81edf8b91f75af8191545e43eac64417766737f6c276ca419bc9",
+        "513bddd89f6b52eb3dc508db5e4485a10a8ffc66db5e2296bdf2ac6772046006",
+        "1c24aaaf290d7e66b754595d846037c996375f77ac7e1ec00bfe89a04bbd3a4c"
+      ],
+      "result_output_hashes": [
+        "c05054c8eddbfbc5e09fad7c66a461f688469520139b7458d015b9801adff171",
+        "b00005f2b618888de37cc8c9a4ed6b2d83f7145ae9e9fa035c86380a28832811",
+        "0ae08586785a59c009e8cc59251ca80aa5f4453ee938d460e36b4ffa304b49a7",
+        "acd09781dadf34ec28ee61a137265bbfacf14b84a9e11fc1ab8b7ae3f4cccdf5"
+      ],
+      "promotion_status": "candidate",
+      "promotion_blockers": [
+        "visual_effect_generalization_not_established",
+        "request_ref_not_recorded_for_every_manual_receipt",
+        "region_approved",
+        "estimated_cost_known",
+        "product_owner_promotion_approved"
+      ]
+    },
+    "last_review_note": "Four owner-authorized browser sample trials returned successful receipts with matching input/output hashes. Keep review_status=candidate: request_ref transcription, visual generalization, vendor retention/region/cost evidence and product-owner promotion remain separate gates."
   },
   "source": {
     "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",

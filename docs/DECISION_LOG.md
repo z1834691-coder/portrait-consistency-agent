@@ -373,3 +373,41 @@
 | D-TECH-133 | 2026-09-02 | 新增 `docs/TENCENT_EFFECT_WEB_FULL_INTEGRATION_PROMPT.md`，并将当前 B/E1/E2/E3 顺序、回滚和输出要求同步到执行 Prompt、PRD、合同、产品规则、进展与 README。当前全量 QA=`214 passed, 4 warnings`。 | 已完成并验证 | 项目可由下一次会话按同一 Prompt 继续，历史 A/B/C 未决文字保留为时间线并由当前冻结覆盖 | 若 Web Card promotion 或隐私/供应商事实改变，追加新决策记录，不改写本条历史 |
 
 | D-TECH-135 | 2026-09-02 | 补充 Meta-Agent→Web EditPlan provider/Card 绑定回归，并将 E2 的 `hard_safety_passed` 与 `batch_failure_isolation_passed` 拆成两个独立事实；安全拦截不再受坏样本排列位置影响。最新全量 QA=`215 passed, 4 warnings`。 | 已完成并验证 | 提议、计划和回归指标的耦合更紧；不改变 Web Card candidate、RAG proposal-only 或 E3 准入 | 后续真实 Web 多样本/批量和供应商证据仍须独立进入 E3，不能用本条 fixture 回执 promotion |
+
+## 2026-09-02 追加记录｜RAG 深度优化与 V5 独立过程门
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-137 | 2026-09-02 | 按产品负责人提出的优化目标冻结本轮执行方式：先冻结 baseline，再逐题定位最早失败层；每代只改一个变量；过程监督先于 Gold 评分；若当前证据不足，建立与 V3/V4 不重叠的新 Holdout；指标用于证据和趋势，不得通过 Goodhart 手段抬分。 | 已冻结（本轮执行规则） | 形成可重复、可回滚、不可偷看答案的优化闭环；RAG 仍 proposal-only | V5 负责人审核和一次 Gold join 后，按同一 rubric 判断是否继续下一代 |
+| D-TECH-138 | 2026-09-02 | 实现并运行 `operation_coverage` 候选：扩大真实 sparse/dense 候选池，在有效审核知识中按请求 operation/provider 保留代表证据；更新 P0-B、fair runner、candidate diagnostics、page 5 数据和报告。开发 28 题改变 26 条、公开 52 题改变 49 条 Prediction；公开 Evidence relation/Recall@5 100%，MRR 93.27%，nDCG@5 95.30%，hard-safety PASS。 | 已验证；候选未 promotion | 证明本轮修改触达真实检索层；不创造知识、不改 active baseline、不授予权限、不调用图片 Provider | 用 V5 独立 Holdout 质量评分验证泛化；若退化，删除候选 profile 回滚 |
+| D-TECH-139 | 2026-09-02 | 建立与 V3/V4 不重叠的 V5 Holdout（60 题）并完成一次 answerless 运行。过程监督核验 60/60 输入、Trace、Prediction、retrieval，答案/标注/照片/向量/密钥/LLM/网络/Provider 均未读取或调用，`process_gate=PASS`、`quality_scoring_gate=READY_AFTER_SEPARATE_GOLD_JOIN`。 | 已验证；质量待授权 | 新考试过程可审计且不浪费题目；答案键仍在工作区外，未被候选/代码读取 | 负责人审核 `v5_holdout_review_form.md` 后显式授权 scorer；不得把质量分数提前写入 |
+| D-TECH-140 | 2026-09-02 | 完成文档、代码、测试和报告一致性同步；全量 `pytest=217 passed, 4 warnings`，Ruff check/format、compileall、`git diff --check` 通过。 | 已验证 | 当前真相可由 PRD、RAG Gate、SOP、Rubric、进展、README、合同和 Dashboard 共同回放 | 后续任何 Rubric、Gold、Provider 或产品边界变更都必须追加新记录并重跑 QA |
+| D-TECH-141 | 2026-09-02 | 按已审核、工作区外保管的 V3/V4 答案键，将已封存的无答案运行包做一次公平 Gold join；只在内存对齐并输出聚合，拆分自然语言编译轨与真实检索轨。V3 编译 Route=30.56%、检索 Recall@5=34.72%、Evidence relation=16.67%；V4 编译 Route=12.50%、检索 Recall@5=41.32%、Evidence relation=24.65%；两者 hard-safety 均 PASS，质量仍未通过。 | 已完成并留证 | 纠正“路由失败”和“知识检索失败”混在一起的误诊；不改写旧盲测、不改变 active baseline、RAG proposal-only 或图片权限 | V5 仍需负责人审核答案键后再做一次独立 Gold join；不得把 V3/V4 连接结果当新 Holdout 泛化成绩 |
+
+## 2026-09-02 追加记录｜Getty × Thread 精细化视觉 Track 1
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-142 | 2026-09-02 | 产品负责人要求将视觉要求独立整理为设计稿级规范：参考三栏 Agent 截图的导航/任务/连续线程关系，抽象 Getty `Tracing Art` 的先路径后细节、关系轨迹、编辑式留白与混合媒介叙事；Party Rock 原始 token、苹方、黑色左导航/米白中右画布和两条主路由保持不变。 | 候选规范，未冻结最终构图 | 形成 `docs/UI_VISUAL_DESIGN_SPEC_DETAILED.md`，不重写产品合同、权限、Provider、Trace 或 Streamlit 行为 | 方向确认后运行 Critical/Audit、WCAG 和 UI Gate；重大语义变更另立请求 |
+| D-TECH-143 | 2026-09-02 | 完成 Getty × Thread Track 1：三张 Image 2 无人物环境素材、E01/E02 可交互 HTML、E01/E02 分层 SVG/Figma 导入源、1440×900 渲染帧、Prompt sidecar 和页面级设计系统覆盖。素材只作装饰环境层，不模拟真实照片/结果，不含 Logo、文字、数字、图表或水印。 | 已生成并静态/浏览器基础验证；视觉方向待选择 | 设计师可编辑 HTML/CSS、SVG 图层和文案；PNG 仅供材质和构图评审，不代表原生 `.fig`、Streamlit 已迁移或真实 Provider 效果 | 负责人确认默认素材与方向后再做 Impeccable Critical/Audit、WCAG 2.2 AA 与 Frontend 映射 |
+| D-TECH-144 | 2026-09-02 | Track 1 本地浏览器回归：1440×900 E01/E02 加载、三栏布局、画面/素材切换、暂停动效、E02 一次授权原型状态和控制台错误检查通过；375×812 完成基础响应式检查。`xmllint`、SVG 渲染、内联脚本语法和 `git diff --check` 通过。 | 已验证（候选资产级） | 只证明视觉原型结构与静态交互可用，不证明 WCAG 全量、真实照片链路、Provider 效果、用户满意度或生产性能 | 下一步必须跑 Critical/Audit、键盘/屏幕阅读器、真实 UI 状态走查；未完成前不把候选写成正式实现 |
+
+| D-TECH-148 | 2026-09-02 | Track 1 收尾质量复核：Impeccable detector 因本机缺少 HTML parser 依赖按 DEGRADED regex 执行，唯一侧边色条提示已改为圆角紫色事实框；静态禁用词/渐变/玻璃/emoji 扫描、SVG XML、内联脚本、`git diff --check` 通过；3 张 PNG prompt 扫描为 `3 raster, 0 missing`；浏览器证据帧已保存为 1440×900 与 390×844 四张 PNG。 | 已验证（候选资产级） | 只加强视觉候选的可追溯性和反模式防护，不改变产品合同、Streamlit、Provider、权限、结果保留或 RAG 边界；degraded detector 不等于 WCAG 或最终视觉 Gate | 方向确认后再做独立 Critical/Audit、完整 WCAG 2.2 AA 和 Frontend 映射；若 parser 依赖可用，重跑 detector 并记录新回执 |
+| D-TECH-149 | 2026-09-02 | 为避免下一次视觉实现重新猜测风格，新增根目录 `DESIGN.md` 作为视觉权威索引；它只引用详细视觉规范、方向说明和 Track 资产，并明确 Party Rock/苹方、黑色左导航/米白中右、候选未冻结和质量底线。 | 已完成 | 减少视觉文档漂移；不改变产品关系、状态机、权限、Provider、隐私、结果保留、RAG 或 Streamlit 行为 | 方向冻结或 Critical/Audit 产生重大变更时同步更新 `DESIGN.md` 与详细视觉规范 |
+
+| D-PROD-145 | 2026-09-03 | 负责人审核通过 V5 答案并授权一次 Gold join；答案只在内存与封存 answerless 运行对齐，报告只保留聚合，不输出题目、case 级 Gold 或私有路径。V5 质量 Gate=`FAIL`，hard-safety=`PASS`，因此不 promotion、不在 V5 上反复调参。 | 已冻结 | 把“过程完整”“安全通过”“质量泛化”分成三件事，避免把一次考试结果夸写成产品化 | 下一轮只能在公开开发/回归集试候选；泛化需新 V6，不得补写/重跑 V5 |
+| D-TECH-146 | 2026-09-03 | 新增 V5 聚合失败分析脚本、HTML 报告、看板 registry/展示和隐私测试。聚合根因：route mismatch=50/60、evidence set mismatch=59/60、relation mismatch=54/60、retrieval miss@5=2/60；过程 Trace/治理均 60/60。 | 已实现并验证 | 让 no-op、证据过度打包、关系默认过弱可以被量化观察；不改变 active baseline、权限或 RAG proposal-only | 公开候选必须证明真实候选池/路由变化，并通过安全与回归后再进新 Holdout |
+| D-TECH-147 | 2026-09-03 | 完成 V5 Gold join 后的跨文件一致性校验：V5 聚合/失败分析报告、registry/看板、PRD、RAG Gate、合同、Prompt、SOP、Rubric、进展与 README 均指向同一质量结论；全量 `pytest=220 passed, 4 warnings`，Ruff check/format、compileall、`git diff --check` 通过；V5 两份聚合报告未发现题目、查询、case 级 Gold 或私有路径字段。 | 已验证 | 形成当前可回放真相；RAG 保持 `proposal-only`，V5 快照不可用于逐题调参或 promotion | 下一候选只在公开开发/回归集试验；需要泛化证据时新建 V6，不重跑/补写 V5 |
+
+## 2026-09-03 追加记录｜E3 真实多样本 Web 试验与 Demo 收尾
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-150 | 2026-09-03 | 产品负责人批准启动 E3，并提供四张真实 JPEG；本轮目标冻结为“网页上传一张图片、浏览器真实处理、结果可展示、回执可追溯”，而不是在同一轮自动把 Web Card promotion。透明通道 PNG 只作为异常隔离样例。 | 已冻结（E3 启动范围） | 允许在已部署精确域名做真实候选试验；产品 Demo 可前进，同时保留视觉泛化、供应商条款和最终 promotion 的独立决策门 | 真实结果共同 VerificationResult、视觉复核、供应商地区/出站/留存/费用证据齐全后，另行决定 candidate→verified |
+| D-TECH-151 | 2026-09-03 | 新增 `E3LiveReceipt`/`E3EvidenceReport`、E3 证据生成脚本、E3 脱敏 JSON/HTML 和 page 8 看板。四个真实样本 receipt：`c83e83d54d8e4b1d`、`0710c27460e34a32`、`9563c0fb46aa4f3f`、`0046d91ec02a4e08` 均 `succeeded`；输入哈希全部与预检一致，结果交接标记 4/4，离线 E2 合同/批量隔离通过。 | 已实现并验证 | 真实调用、样本归属、结果交接和失败隔离现在可以被同一份报告回放；报告不保存图片、data URL、密钥或完整本地路径 | 手工 manifest 尚未记录四条完整 `request_ref`；共同 Python VerificationResult 的真实图像复测仍需完成 |
+| D-TECH-152 | 2026-09-03 | E3 证据报告固定 `visual_generalization_status=not_established`、`promotion_status=candidate`。即使 4/4 SDK 成功，也不能把“有输出”说成“更像母版”；正式准入仍需盲化前后视觉证据、供应商图片出站/地区/费用/留存证据和产品负责人最终批准。 | 已冻结并验证 | 防止 Demo 叙事、RAG、Meta-Agent 或 Card 把真实 Smoke 偷换成产品效果/泛化承诺；主流程继续以 BeautifyPic baseline 为准 | 补齐证据后必须人工复核 `EffectWebAdmissionInput`，代码/LLM 不得自动 promotion |
+| D-TECH-153 | 2026-09-03 | 新增 [E3 收尾与可录制 Demo 执行 Prompt](E3_FINALIZATION_EXECUTION_PROMPT.md)，把任务树、每步五项交付物、隐私/权限/回滚和最终 Demo 边界写成下一次会话可执行的单一入口。 | 已完成并验证 | 后续开发可按 E3-A→E3-D→Demo 收口推进，遇到真实产品门停下，不在错误方向盲跑 | 下一步先完成真实结果的共同复测与证据补齐，再询问 Web Card promotion，不改变本条历史 |
+
+| D-TECH-154 | 2026-09-03 | E3 证据生成、预检、Web 合同回归和 handoff smoke 在本轮同步后重新执行：预检 5 个样本（2 eligible、2 warning、1 rejected），真实浏览器回执 4/4 成功、输入哈希 4/4 匹配、结果交接标记 4/4；离线 Web 回归 8/8，E1 handoff smoke 通过。 | 已验证 | 当前仓库、报告、合同与代码可由同一组命令回放；4 条 Pillow 弃用 warning 为既有非阻塞提示 | 真实视觉复测、完整 request_ref、供应商地区/费用/留存和 Card promotion 仍必须独立补证，不得由本回执自动推断 |
+| D-TECH-155 | 2026-09-03 | 全量质量门重新执行：`.venv/bin/pytest -q`=`226 passed, 4 warnings`；`ruff check .`、`ruff format --check .`、`compileall` 与 `git diff --check` 全部通过。 | 已验证 | 证明当前 E3 代码、测试、合同与文档没有工程级回归；不改变 Web Card `candidate` 或 RAG `proposal-only` | 后续任何 E3 证据或视觉/UI 变更都必须重新执行同一套全量检查 |
+| D-PROD-156 | 2026-09-03 | E3 当前产品边界冻结为“可录制候选 Demo，不等同于正式视觉效果/Provider 上线”：page 6 可展示真实 Web 结果，page 8 只读展示脱敏证据；在视觉泛化、共同 VerificationResult、供应商条款和负责人批准未齐前，继续以 BeautifyPic 为正式 baseline。 | 已冻结 | Demo 叙事可以前进，但不能夸写成母版一致性已证明、批量效果已通过或 Web Card 已 verified | 到真实视觉与供应商准入证据齐全后，由产品负责人单独决定 candidate→verified |

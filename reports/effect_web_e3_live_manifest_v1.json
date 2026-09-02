@@ -1,0 +1,79 @@
+{
+  "manifest_version": "effect_web_e3_live_manifest_v1",
+  "captured_at": "2026-09-03T00:00:00+08:00",
+  "capture_context": "owner_authorized_browser_trials_on_deployed_streamlit_app",
+  "reference_sample_id": "e3_reference_001",
+  "rows": [
+    {
+      "sample_id": "e3_reference_001",
+      "receipt_id": "web_receipt_effect_web_c83e83d54d8e4b1d",
+      "request_ref": null,
+      "input_sha256": "b6a298c7072f721829752763c9f8ae3ae9396262ddd50cc88517eea4aa72b129",
+      "status": "succeeded",
+      "elapsed_ms": 2302,
+      "output_sha256": "c05054c8eddbfbc5e09fad7c66a461f688469520139b7458d015b9801adff171",
+      "handoff_accepted": true,
+      "result_retention": "browser_session_only",
+      "verification_status": "metadata_only",
+      "note": "真实浏览器静态图处理成功；结果仍保留在浏览器会话，未写入 Python 数据库。"
+    },
+    {
+      "sample_id": "e3_target_001",
+      "receipt_id": "web_receipt_effect_web_0710c27460e34a32",
+      "request_ref": null,
+      "input_sha256": "6bd38fcfc79d81edf8b91f75af8191545e43eac64417766737f6c276ca419bc9",
+      "status": "succeeded",
+      "elapsed_ms": 1397,
+      "output_sha256": "b00005f2b618888de37cc8c9a4ed6b2d83f7145ae9e9fa035c86380a28832811",
+      "handoff_accepted": true,
+      "result_retention": "browser_session_only",
+      "verification_status": "metadata_only",
+      "note": "真实浏览器静态图处理成功；该样本预检为质量提醒，不能据此宣称视觉效果通过。"
+    },
+    {
+      "sample_id": "e3_target_002",
+      "receipt_id": "web_receipt_effect_web_9563c0fb46aa4f3f",
+      "request_ref": null,
+      "input_sha256": "513bddd89f6b52eb3dc508db5e4485a10a8ffc66db5e2296bdf2ac6772046006",
+      "status": "succeeded",
+      "elapsed_ms": 1583,
+      "output_sha256": "0ae08586785a59c009e8cc59251ca80aa5f4453ee938d460e36b4ffa304b49a7",
+      "handoff_accepted": true,
+      "result_retention": "browser_session_only",
+      "verification_status": "metadata_only",
+      "note": "真实浏览器静态图处理成功；当前记录只证明回执和结果哈希，不证明母版一致性。"
+    },
+    {
+      "sample_id": "e3_target_003",
+      "receipt_id": "web_receipt_effect_web_0046d91ec02a4e08",
+      "request_ref": null,
+      "input_sha256": "1c24aaaf290d7e66b754595d846037c996375f77ac7e1ec00bfe89a04bbd3a4c",
+      "status": "succeeded",
+      "elapsed_ms": 1340,
+      "output_sha256": "acd09781dadf34ec28ee61a137265bbfacf14b84a9e11fc1ab8b7ae3f4cccdf5",
+      "output_width": 1600,
+      "output_height": 2442,
+      "handoff_accepted": true,
+      "result_retention": "browser_session_only",
+      "verification_status": "metadata_only",
+      "note": "真实浏览器静态图处理成功；三分之四侧脸/微笑样本仍需独立视觉复核。"
+    }
+  ],
+  "offline_contract_regression": {
+    "passed": true,
+    "batch_failure_isolation_verified": true,
+    "report_ref": "reports/tencent_effect_web_regression_v1.json"
+  },
+  "formal_admission_evidence": {
+    "license_active": true,
+    "exact_domain_bound": true,
+    "provider_permission_granted": true,
+    "outbound_data_policy_approved": true,
+    "region_approved": false,
+    "estimated_cost_known": false,
+    "adapter_ready": true,
+    "static_image_smoke_succeeded": true,
+    "multi_sample_visual_review_complete": false,
+    "product_owner_promotion_approved": false
+  }
+}

@@ -156,6 +156,14 @@ def test_dashboards_reference_report_collection_and_failure_artifact() -> None:
         project_root / "src/portrait_consistency_agent/services/rag_report_registry.py"
     ).read_text(encoding="utf-8")
     assert "rag_failure_patterns_v1.json" in optimization_page
+    assert "rag_v5_holdout_gold_aggregate.json" in optimization_page
+    assert "rag_v5_failure_analysis_v1.json" in optimization_page
     assert "proposal_only" in optimization_page or "只提议" in optimization_page
     report_keys = {artifact.key for artifact, _ in available_rag_reports(project_root)}
-    assert {"public_evaluation", "holdout_aggregate", "failure_analysis"} <= report_keys
+    assert {
+        "public_evaluation",
+        "holdout_aggregate",
+        "failure_analysis",
+        "v5_holdout_gold_aggregate",
+        "v5_failure_analysis",
+    } <= report_keys

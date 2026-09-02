@@ -1870,3 +1870,106 @@ IntentFrame
 <span style="color:#C00000"><strong>本轮交叉校验。</strong>新增代码后全量测试为 `214 passed, 4 warnings`；Ruff check/format、compileall 和 `git diff --check` 均通过，Web E2 离线回归为 `6/6`，E1 handoff smoke 为 fixture-only、无网络、结果不落盘。此前文档中关于“EditPlan 仅 BeautifyPic、Web Receipt 无结果交接、A/B/C 尚未冻结”的段落是历史状态，以本节 B 冻结和当前矩阵为准；Web Card、RAG proposal-only、主链 Beautify baseline 和生产准入边界不变。</span>
 
 <span style="color:#C00000"><strong>最新交叉校验覆盖。</strong>在上述回执后又增加了 Meta-Agent→Web EditPlan provider/Card 绑定测试，并修正 E2 报告口径：安全拦截是否正确与坏样本之后是否继续处理分别统计；随后补齐输入哈希错位与结果大小上限。当前全量 `pytest`=`216 passed, 4 warnings`；Ruff、format、compileall、`git diff --check` 和 Web E2 `8/8` 均通过。该工程回执仍是 fixture/合同证据，不是视觉泛化或 E3 promotion。</span>
+
+## 17.22 2026-09-02 产品设计：把 RAG 优化变成可验证的候选实验与独立泛化检查
+
+<span style="color:#C00000"><strong>背景与问题。</strong>前几轮 RAG 迭代出现“改了很多轮但分数不变”的现象。回看失败 Trace 后发现，部分修正只改变结果整理或标签归一化，真实候选检索没有变化；同时 V3/V4 的解冻诊断不能继续当作独立泛化证据。产品问题不是“再堆更多规则”，而是需要证明每次修改真的触达了系统、不会污染考试，并且能在没见过的新表达上复现。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong>我把优化链路拆成四层：自然语言理解、结构化查询、真实知识召回/排序、证据关系与受限路由；要求每题保留输入哈希、查询、候选、采用/排除原因和 finalized Trace。参考 RAG 评测与防过拟合的通用做法，保留 fixed/effective/returned Precision，同时看 Recall@5、MRR、nDCG、Evidence relation、hard-safety、Trace 完整率、成本和延迟；再增加独立过程监督考官，先检查“题目是否跑满且没有答案/标签泄露”，过程门通过后才允许一次 Gold join。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong>先冻结 V0 active baseline，候选每代只改一个变量，当前变量为 `operation_coverage`：面对多操作请求，系统可以在真实、已审核、未过期知识中为每个请求 operation/provider 保留代表证据，但不得创造能力、绕过权限或授权图片执行。候选必须通过开发集、公开回归和 hard-safety；如果现有证据不足以说明泛化，就建立与 V3/V4 不重叠的 V5 Holdout，答案键在运行前封存，先做一次无答案过程运行，再由负责人审核后独立评分。RAG 始终 `proposal-only`，指标不能替代产品任务完成度。</span>
+
+<span style="color:#C00000"><strong>当时效果与边界。</strong>本轮候选真实改变开发集 26 条、公开回归 49 条 Prediction；公开 Evidence relation/Recall@5 达到 100%，MRR=`93.27%`、nDCG@5=`95.30%`，hard-safety=`PASS`，说明改动已进入真实检索层且没有公开回归退化。新 V5 共 60 题，无答案过程 `60/60`、Trace `60/60`、Prediction `60/60`，过程门=`PASS`；该段是在 Gold join 前记录的过程事实。负责人现已授权一次质量 Gold join，当前质量结论见 17.24；候选仍未 promotion、RAG 仍未产品化。</span>
+
+### 17.22.1 当前实现矩阵
+
+| 产品能力 | 当前状态 | 可复核证据 | 未完成边界 |
+|---|---|---|---|
+| 候选触达真实检索层 | 已实现并验证 | `rag_policy_coverage_candidate_v2`、逐题 Trace | candidate 未 promotion |
+| 开发/公开回归与安全 | 已运行 | 28/52 题、hard-safety PASS | 不能替代新 Holdout |
+| V5 独立过程监督 | 已实现并通过 | `rag_v5_holdout_process_audit.html`，60/60 | 过程通过不代表质量通过 |
+| V5 质量与泛化 | 已完成一次聚合，质量 Gate FAIL | `rag_v5_holdout_gold_aggregate.html` | V5 已封存，不用于逐题调参 |
+| RAG 运行权限 | proposal-only | Policy/Contract/Tool Registry | 不得授权图片工具或图片出站 |
+### 17.23 2026-09-02 产品设计：把已封存 V3/V4 答案连接到双轨基线，避免误诊 RAG
+
+<span style="color:#C00000"><strong>背景与问题。</strong> V3/V4 的正式运行已经封存，但之前的聚合把“用户原话没有被正确理解”和“真实知识没有被召回”混在一起。这样会产生一个产品判断风险：我们可能错误地去调向量检索，实际上问题发生在上游；也可能把评测器的投影命中误认为知识库真的命中。为了让后续优化有可比较的起点，我需要把已审核答案键接回封存的无答案运行包，但不能破坏独立测试的历史性质。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong> 我先确认公平过程门已经通过，保证每道题都有合法查询、实际检索和完整 Trace，且运行时没有读取答案、题干、照片、人脸向量、密钥、网络、LLM 或图片 Provider。随后使用工作区外受控的 V3/V4 答案键，在内存中按题目哈希与封存运行对齐；评测器输出两条互不混淆的轨道：一条只看自然语言→结构化查询的临时路由代理，另一条只看实际召回知识的证据集合、排序和关系。答案键路径、题干和 case 级结论不写入报告。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong> 接受“一次性双轨 Gold 连接”作为 V3/V4 的基线校准，不重新跑题、不把结果用于继续修改同一 Holdout、不回写旧盲测。V3 编译 Route=`30.56%`、真实检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 编译 Route=`12.50%`、真实检索 Recall@5=`41.32%`、Evidence relation=`24.65%`；两代 hard-safety 均 PASS，但质量均未通过。后续 RAG 候选必须先在开发/公开回归产生真实变化，再用新的、未参与诊断的 Holdout 验证；V5 继续保持答案未连接，直到负责人审核并显式授权。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong> 现在的基线能明确回答“低分究竟来自理解还是检索”，避免继续在错误层堆补丁；面试时可以解释为什么要拆评测轨道、为什么答案只能在内存中短暂使用、为什么安全通过不等于质量通过。双轨 Gold 连接不是新的 Holdout 成绩，也不是产品化证明；RAG 仍是 `proposal-only`，active baseline 和图片工具权限均未改变。</span>
+
+<span style="color:#C00000"><strong>本段历史工程回执。</strong>当时代码、合同、测试、报告与文档同步后的全量 QA 为 `217 passed, 4 warnings`；Ruff、format、compileall 和 `git diff --check` 均通过。该回执只证明当时工程一致性，不改变 V3/V4 质量未通过、V5 待授权或 RAG `proposal-only` 的边界；当前回执见 17.24。</span>
+
+#### 17.23.1 实现矩阵
+
+| 产品/治理能力 | 当前状态 | 证据 | 边界 |
+|---|---|---|---|
+| V3/V4 过程完整性 | 已验证 | `rag_fair_process_audit_v1`，V3 36/36、V4 48/48 | 过程通过不代表内容质量通过 |
+| 双轨 Gold 连接 | 已完成 | `rag_fair_gold_join_v2.json/.html` | 仅聚合、不输出 case 级结果 |
+| 编译轨与检索轨分离 | 已实现 | `score_fair_gold_join.py` 与合同 | 编译 Route 是临时代理，需后续 slot-level Gold |
+| V5 泛化质量 | 已完成一次聚合；质量未通过 | `rag_v5_holdout_gold_aggregate.html`、失败分析 | 需公开候选 + 新 V6 证明泛化 |
+| RAG 执行权限 | 未改变 | `execution_authorized=false` | 仍不可调用图片 Provider |
+
+### 17.24 2026-09-03 产品设计：V5 Gold join 暴露的真实失败层与不可作弊的迭代边界
+
+<span style="color:#C00000"><strong>背景与问题。</strong>在前几轮迭代中，我发现“分数变化”不一定代表系统真的变好了：早期 no-op 只改了最终 Prediction 的文字或关系标签，真实候选池没有变化；多操作请求时，前几名证据可能被一个操作占满，另一个操作的已审核资料被挤出；V3/V4 解冻后的高分是诊断副本成绩，不能冒充新的泛化成绩，旧 Holdout 快照也不能补写、改名或重跑。若不先纠正这些过程问题，继续增加题目或调 Top-K 会浪费数据，也无法回答“究竟是哪一层出了问题”。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong>我先冻结 V0 active baseline，把每一轮候选改动放在真实的“自然语言→查询→候选池→排序→证据关系”链路，而不是结果整理层；为多操作请求增加 operation coverage，只从已审核、有效、未过期知识中给每个 operation/provider 保留代表候选；让独立过程监督先检查每道题是否完整运行且没有答案/标签注入，再允许负责人审核后的 Gold 只在内存连接。之后把“自然语言理解”和“真实知识检索”分开评分，并保留固定 Precision、覆盖式/返回式诊断指标，防止单一指标掩盖任务失败。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong>接受一次性、聚合-only 的 V5 Gold join：只把负责人审核通过的答案与已经封存的 60 题 answerless 运行对照，报告不写题目、案例编号、答案或私有答案键。V5 结果中 hard-safety=`PASS`，但项目质量 Gate=`FAIL`：Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`。因此 RAG 继续 `proposal-only`，不 promotion；V5 快照封存，不在同一题集上反复试错。</span>
+
+<span style="color:#C00000"><strong>失败模式与下一步 SOP。</strong>逐题答案不对外展示，只沉淀总量：50/60 路由不一致，59/60 证据集合不一致，54/60 关系不一致，只有 2/60 在前五条完全找不到相关证据；33 题没有可靠的上游投影，另有 20 题虽已有结构化投影却在下游回退到 BASELINE。主要修正方向是：让“已识别意图→允许路由”显式可追踪；按操作分配证据槽位后再加入通用规则；关系标签由来源类型、能力状态和生命周期确定，不能默认标为参考；继续把理解、召回、关系和路由分轨评测。下一轮候选只能先在公开开发/回归集验证；如需使用 V5 失败模式验证泛化，必须新建未参与诊断的独立 Holdout。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>这次没有把高 Hit@5 写成“系统已经正确”：它说明相关资料常常能被找回来，但系统不会稳定地选对路由、证据集合和证据关系。V5 的过程门与安全门都通过，质量门未通过；诊断报告和看板现在可以展示失败模式与 SOP，但不具备自动改权限、自动改 active baseline 或读取隐藏答案调参的能力。</span>
+
+#### 17.24.1 实现矩阵
+
+| 产品/治理能力 | 当前状态 | 可复核证据 | 边界 |
+|---|---|---|---|
+| V5 Gold join | 已完成一次 | `reports/rag_v5_holdout_gold_aggregate.json/.html` | 仅聚合，不输出题目/答案 |
+| V5 失败模式分析 | 已完成 | `reports/rag_v5_failure_analysis_v1.json/.html` | 只输出总量/模式，不反复调 V5 |
+| 过程与安全完整性 | 已通过 | 60/60 Trace、治理干净、hard-safety 0 违规 | 不等于内容质量通过 |
+| 公开候选验证 | 待下一轮 | 公开开发/回归报告 | 未过回归不得 promotion |
+| RAG 执行权限 | 未改变 | Policy/Contract `proposal-only` | 不得授权图片出站或 Provider |
+
+<span style="color:#C00000"><strong>本轮最终工程回执（2026-09-03）。</strong>V5 Gold join 失败分析模块、聚合看板入口及测试完成同步后，全量 QA 为 `220 passed, 4 warnings`；Ruff check、format、compileall 与 `git diff --check` 均通过。4 条 warning 是既有 Pillow 弃用提示。该回执只证明代码、合同、测试和文档一致，不改变 V5 质量 Gate=`FAIL` 或 RAG `proposal-only`。</span>
+
+## 17.25 2026-09-03 产品设计：用真实多样本 E3 收口 Web Demo，但把“调用成功”和“效果泛化”分开
+
+<span style="color:#C00000"><strong>背景与问题。</strong>产品负责人批准开始 E3，并提供了四张真实、已授权的 JPEG。项目的当日目标不是继续堆功能，而是让用户在网页上传一张照片后，看到腾讯特效 Web 的真实处理结果并能够录制 Demo。与此同时，四张图处理成功并不能自动证明“每张照片都更像母版”，如果把浏览器回执、视觉效果、供应商条款和 Card promotion 混写，Demo 会失去可信边界。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong>我先用本地质量/可编辑性预检读取四张 JPEG，并加入一张带透明通道的 PNG 作为故意失败样本；预检只保存哈希、尺寸、人脸数、质量路由和角度/光线/表情分层，不保存原图。随后在已部署的 Streamlit 精确域名上逐张执行 Web SDK，记录真实 Browser Receipt、耗时、输入/输出哈希和浏览器结果交接；并把既有 8 个离线合同回归样例、批量失败隔离和每张样本的证据合并成 `effect_web_e3_evidence_v1`，让报告能够被看板和后续审计复用。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong>四张真实 JPEG 的 Web 运行结果作为 E3 候选证据保留；透明通道 PNG 继续作为异常隔离样例，不进入真实效果结论。E3 报告必须明确区分：`4/4` 浏览器回执成功、输入哈希全部与预检绑定、结果交接标记完整、离线合同回归和批量隔离通过；但视觉效果泛化仍为 `not_established`，人工盲化前后复核、request_ref 完整抄录、供应商地区/费用证据和最终 Card promotion 仍是独立 Gate。真实成功不改变 RAG `proposal-only`，也不把 Web candidate 自动改成 verified。</span>
+
+<span style="color:#C00000"><strong>带来的效果与边界。</strong>产品现在拥有一份可回放、可下载、无图片 payload 的 E3 证据报告和独立看板，可以支持“网页上传→SDK 处理→结果展示→脱敏回执”的录屏；面试时可以解释为什么把真实运行成功、合同安全、视觉效果和供应商准入拆成四类证据。当前 Web Card 仍是 `candidate`，正式主流程仍以已审核的 Tencent BeautifyPic 为 baseline；没有供应商条款、费用/地区和视觉复核证据时，不宣称 Web 已上线、细项五官已可用、批量视觉已通过或母版一致性已泛化。</span>
+
+### 17.25.1 当前实现矩阵
+
+| 产品/工程能力 | 当前状态 | 可复核证据 | 边界 |
+|---|---|---|---|
+| E3 样本预检 | 已实现并运行 | `effect_web_e3_preflight_v1.json/.html`；5 个样本、4 张真实 JPEG + 1 个异常 PNG | 预检是可处理性路由，不是效果结论 |
+| 真实 Web 多样本回执 | 已完成候选试验 | `effect_web_e3_live_manifest_v1.json`；4/4 succeeded，哈希匹配 | 手工 manifest 尚缺每条 request_ref 完整记录 |
+| Web 结果交接证据 | 已实现并记录 | 每条 receipt 有 output hash，结果只留浏览器会话 | 共同 VerificationResult 的真实图片几何复测仍需单独跑 |
+| E2 合同与批量隔离 | 已验证 | `tencent_effect_web_regression_v1.json/.html`；8/8 | 是合同可靠性，不是视觉泛化 |
+| E3 汇总看板 | 已实现 | `pages/8_腾讯特效Web_E3证据看板.py` | 只读脱敏报告，不加载密钥 |
+| Web Card promotion | candidate | Card 的 E3 evidence 与 blocker 列表 | 需视觉复核、供应商证据和负责人单独批准 |
+
+### 17.25.2 可回放 Trace（不含图片）
+
+```text
+真实 JPEG 进入本地预检
+→ 计算输入 SHA-256 / 单脸 / 质量路由 / 分层标签
+→ 精确域名浏览器加载 Tencent Effect Web SDK
+→ 真实静态图处理成功
+→ Browser Receipt + output hash 返回
+→ 结果仅保留浏览器会话；报告保存 receipt/hash/耗时/状态
+→ E3 报告保持 visual_generalization=not_established
+→ Card 保持 candidate，等待独立准入 Gate
+```
+
+### 17.25.3 Demo 收尾 Prompt
+
+本轮执行规范已另存为 [E3 收尾与可录制 Demo 执行 Prompt](E3_FINALIZATION_EXECUTION_PROMPT.md)，其中固定了任务树、每步五项交付物、权限/留存边界、继续推进条件和必须停下的准入门。

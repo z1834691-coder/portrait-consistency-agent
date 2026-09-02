@@ -1,0 +1,130 @@
+<!doctype html><html lang='zh-CN'><meta charset='utf-8'><title>腾讯特效 Web E3 真实证据</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;max-width:1200px;margin:32px auto;color:#1f2024}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #d9d9df;padding:8px;text-align:left}th{background:#f2eff8}.meta{background:#faf8f2;border-left:4px solid #7b61a8;padding:14px;margin:16px 0}.ok{color:#087f23}.warn{color:#9a6700}code{font-size:12px;word-break:break-all}</style><body><h1>腾讯特效 Web｜E3 真实多样本证据</h1><div class='meta'><p><strong>当前结论：</strong>真实浏览器回执 4/4 成功；Card 仍为 <strong>candidate</strong>。</p><p>这份报告证明的是回执、哈希绑定、结果交接和失败隔离；它不把一次或多次 SDK 成功调用当作母版视觉一致性已经泛化。</p><p>报告不含图片 bytes、data URL 或本地路径；输出哈希只用于证据关联。</p></div><h2>实时回执</h2><table><thead><tr><th>样本</th><th>receipt</th><th>状态</th><th>耗时</th><th>结果交接</th><th>request_ref</th><th>复测状态</th></tr></thead><tbody><tr><td>e3_reference_001</td><td>web_receipt_effect_web_c83e83d54d8e4b1d</td><td>succeeded</td><td>2302 ms</td><td>是</td><td>否</td><td>metadata_only</td></tr><tr><td>e3_target_001</td><td>web_receipt_effect_web_0710c27460e34a32</td><td>succeeded</td><td>1397 ms</td><td>是</td><td>否</td><td>metadata_only</td></tr><tr><td>e3_target_002</td><td>web_receipt_effect_web_9563c0fb46aa4f3f</td><td>succeeded</td><td>1583 ms</td><td>是</td><td>否</td><td>metadata_only</td></tr><tr><td>e3_target_003</td><td>web_receipt_effect_web_0046d91ec02a4e08</td><td>succeeded</td><td>1340 ms</td><td>是</td><td>否</td><td>metadata_only</td></tr></tbody></table><h2>证据摘要</h2><pre><code>{
+  &quot;blockers&quot;: [
+    &quot;request_ref_not_recorded_for_every_manual_receipt&quot;,
+    &quot;visual_effect_generalization_not_established&quot;,
+    &quot;region_approved&quot;,
+    &quot;estimated_cost_known&quot;,
+    &quot;product_owner_promotion_approved&quot;,
+    &quot;product_owner_promotion_approval_required&quot;
+  ],
+  &quot;evidence_version&quot;: &quot;effect_web_e3_evidence_v0.1&quot;,
+  &quot;formal_admission_evidence&quot;: {
+    &quot;adapter_ready&quot;: true,
+    &quot;estimated_cost_known&quot;: false,
+    &quot;exact_domain_bound&quot;: true,
+    &quot;license_active&quot;: true,
+    &quot;multi_sample_visual_review_complete&quot;: false,
+    &quot;outbound_data_policy_approved&quot;: true,
+    &quot;product_owner_promotion_approved&quot;: false,
+    &quot;provider_permission_granted&quot;: true,
+    &quot;region_approved&quot;: false,
+    &quot;static_image_smoke_succeeded&quot;: true
+  },
+  &quot;live_summary&quot;: {
+    &quot;all_target_receipts_present&quot;: true,
+    &quot;failed&quot;: 0,
+    &quot;handoff_accepted&quot;: 4,
+    &quot;request_refs_recorded&quot;: false,
+    &quot;result_payloads_persisted&quot;: false,
+    &quot;sample_hashes_match_preflight&quot;: true,
+    &quot;succeeded&quot;: 4,
+    &quot;success_rate&quot;: 1.0,
+    &quot;total_receipts&quot;: 4
+  },
+  &quot;next_actions&quot;: [
+    &quot;把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult&quot;,
+    &quot;对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功&quot;,
+    &quot;补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据&quot;,
+    &quot;在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion&quot;
+  ],
+  &quot;offline_contract_regression&quot;: {
+    &quot;batch_failure_isolation_verified&quot;: true,
+    &quot;passed&quot;: true
+  },
+  &quot;preflight_summary&quot;: {
+    &quot;batch_failure_isolation_ready&quot;: true,
+    &quot;eligible_samples&quot;: 2,
+    &quot;ready_for_candidate_trials&quot;: true,
+    &quot;reference_present&quot;: true,
+    &quot;rejected_samples&quot;: 1,
+    &quot;target_samples&quot;: 3,
+    &quot;total_samples&quot;: 5,
+    &quot;warning_samples&quot;: 2
+  },
+  &quot;promotion_status&quot;: &quot;candidate&quot;,
+  &quot;receipts&quot;: [
+    {
+      &quot;data_url_saved&quot;: false,
+      &quot;elapsed_ms&quot;: 2302,
+      &quot;handoff_accepted&quot;: true,
+      &quot;image_bytes_saved&quot;: false,
+      &quot;input_sha256&quot;: &quot;b6a298c7072f721829752763c9f8ae3ae9396262ddd50cc88517eea4aa72b129&quot;,
+      &quot;note&quot;: &quot;真实浏览器静态图处理成功；结果仍保留在浏览器会话，未写入 Python 数据库。&quot;,
+      &quot;output_dimensions&quot;: null,
+      &quot;output_sha256&quot;: &quot;c05054c8eddbfbc5e09fad7c66a461f688469520139b7458d015b9801adff171&quot;,
+      &quot;receipt_id&quot;: &quot;web_receipt_effect_web_c83e83d54d8e4b1d&quot;,
+      &quot;request_ref&quot;: null,
+      &quot;request_ref_recorded&quot;: false,
+      &quot;result_retention&quot;: &quot;browser_session_only&quot;,
+      &quot;sample_id&quot;: &quot;e3_reference_001&quot;,
+      &quot;status&quot;: &quot;succeeded&quot;,
+      &quot;verification_status&quot;: &quot;metadata_only&quot;
+    },
+    {
+      &quot;data_url_saved&quot;: false,
+      &quot;elapsed_ms&quot;: 1397,
+      &quot;handoff_accepted&quot;: true,
+      &quot;image_bytes_saved&quot;: false,
+      &quot;input_sha256&quot;: &quot;6bd38fcfc79d81edf8b91f75af8191545e43eac64417766737f6c276ca419bc9&quot;,
+      &quot;note&quot;: &quot;真实浏览器静态图处理成功；该样本预检为质量提醒，不能据此宣称视觉效果通过。&quot;,
+      &quot;output_dimensions&quot;: null,
+      &quot;output_sha256&quot;: &quot;b00005f2b618888de37cc8c9a4ed6b2d83f7145ae9e9fa035c86380a28832811&quot;,
+      &quot;receipt_id&quot;: &quot;web_receipt_effect_web_0710c27460e34a32&quot;,
+      &quot;request_ref&quot;: null,
+      &quot;request_ref_recorded&quot;: false,
+      &quot;result_retention&quot;: &quot;browser_session_only&quot;,
+      &quot;sample_id&quot;: &quot;e3_target_001&quot;,
+      &quot;status&quot;: &quot;succeeded&quot;,
+      &quot;verification_status&quot;: &quot;metadata_only&quot;
+    },
+    {
+      &quot;data_url_saved&quot;: false,
+      &quot;elapsed_ms&quot;: 1583,
+      &quot;handoff_accepted&quot;: true,
+      &quot;image_bytes_saved&quot;: false,
+      &quot;input_sha256&quot;: &quot;513bddd89f6b52eb3dc508db5e4485a10a8ffc66db5e2296bdf2ac6772046006&quot;,
+      &quot;note&quot;: &quot;真实浏览器静态图处理成功；当前记录只证明回执和结果哈希，不证明母版一致性。&quot;,
+      &quot;output_dimensions&quot;: null,
+      &quot;output_sha256&quot;: &quot;0ae08586785a59c009e8cc59251ca80aa5f4453ee938d460e36b4ffa304b49a7&quot;,
+      &quot;receipt_id&quot;: &quot;web_receipt_effect_web_9563c0fb46aa4f3f&quot;,
+      &quot;request_ref&quot;: null,
+      &quot;request_ref_recorded&quot;: false,
+      &quot;result_retention&quot;: &quot;browser_session_only&quot;,
+      &quot;sample_id&quot;: &quot;e3_target_002&quot;,
+      &quot;status&quot;: &quot;succeeded&quot;,
+      &quot;verification_status&quot;: &quot;metadata_only&quot;
+    },
+    {
+      &quot;data_url_saved&quot;: false,
+      &quot;elapsed_ms&quot;: 1340,
+      &quot;handoff_accepted&quot;: true,
+      &quot;image_bytes_saved&quot;: false,
+      &quot;input_sha256&quot;: &quot;1c24aaaf290d7e66b754595d846037c996375f77ac7e1ec00bfe89a04bbd3a4c&quot;,
+      &quot;note&quot;: &quot;真实浏览器静态图处理成功；三分之四侧脸/微笑样本仍需独立视觉复核。&quot;,
+      &quot;output_dimensions&quot;: &quot;1600x2442&quot;,
+      &quot;output_sha256&quot;: &quot;acd09781dadf34ec28ee61a137265bbfacf14b84a9e11fc1ab8b7ae3f4cccdf5&quot;,
+      &quot;receipt_id&quot;: &quot;web_receipt_effect_web_0046d91ec02a4e08&quot;,
+      &quot;request_ref&quot;: null,
+      &quot;request_ref_recorded&quot;: false,
+      &quot;result_retention&quot;: &quot;browser_session_only&quot;,
+      &quot;sample_id&quot;: &quot;e3_target_003&quot;,
+      &quot;status&quot;: &quot;succeeded&quot;,
+      &quot;verification_status&quot;: &quot;metadata_only&quot;
+    }
+  ],
+  &quot;reference_sample_id&quot;: &quot;e3_reference_001&quot;,
+  &quot;report_contains_data_urls&quot;: false,
+  &quot;report_contains_image_bytes&quot;: false,
+  &quot;report_contains_local_paths&quot;: false,
+  &quot;visual_generalization_status&quot;: &quot;not_established&quot;
+}</code></pre><h2>仍未闭合的 Gate</h2><ul><li>request_ref_not_recorded_for_every_manual_receipt</li><li>visual_effect_generalization_not_established</li><li>region_approved</li><li>estimated_cost_known</li><li>product_owner_promotion_approved</li><li>product_owner_promotion_approval_required</li></ul><h2>下一步</h2><ul><li>把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult</li><li>对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功</li><li>补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据</li><li>在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion</li></ul></body></html>

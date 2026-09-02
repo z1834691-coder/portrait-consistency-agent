@@ -236,8 +236,33 @@ V4 的 G0→G5 结果为：baseline → 既有查询编译 → 通用同义词/�
 
 ### 9.3 V5 公平过程门
 
-V5 运行前答案键必须封存；运行器只接收题目，过程监督器逐题检查：输入计数、Trace 计数、Prediction 计数、合法查询、实际检索、`route_source=evidence`、`finalized=true`、无答案/标签/题干泄露、无网络/LLM/Provider/照片/向量副作用。过程门通过后才可做一次 Gold join；评分失败或负责人未授权时，结果保持 `READY_AFTER_SEPARATE_GOLD_JOIN`。
+V5 运行前答案键必须封存；运行器只接收题目，过程监督器逐题检查：输入计数、Trace 计数、Prediction 计数、合法查询、实际检索、`route_source=evidence`、`finalized=true`、无答案/标签/题干泄露、无网络/LLM/Provider/照片/向量副作用。过程门通过后才可做一次 Gold join；本项目已完成该授权连接，结果与后续失败模式见 9.6。
 
 ### 9.4 回滚与停止
 
 如果公开回归退化、hard-safety 出现未知或错误放行、候选 Trace 不能证明真实检索改变，立即删除候选 profile，恢复上一版 baseline。若连续两代没有新的真实预测变化，停止在该层补丁，转向知识覆盖或输入理解审计。当前 operation coverage 候选公开检索指标无退化，故保留为 proposal-only 诊断分支，尚未 promotion。
+
+### 9.5 V3/V4 双轨基线回执
+
+公平过程门通过后，V3/V4 答案键只在内存按哈希与封存的 answerless 运行连接一次，输出 `rag_fair_gold_join_v2` 聚合。V3 真实检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 分别为 `41.32%`、`24.65%`；两代 hard-safety 均 PASS、质量未通过。连接结果用于区分“自然语言理解失败”和“真实召回/关系失败”，不能回写 Holdout 或继续按 case 调参。V5 已由负责人审核后完成一次授权 Gold join，当前聚合结果见 9.6。
+### 9.6 V5 Gold join 后的失败分析 SOP
+
+负责人授权后，V5 只做一次 Gold join；结果为聚合诊断，不把 V5 题目变成训练样本。当前观察到的顺序是：
+
+```text
+过程完整性/治理先过
+→ 聚合评分，不输出题目与答案
+→ 分离理解、召回、关系、路由错误
+→ 形成一个候选修正假设
+→ 只在公开开发/回归集验证
+→ 安全或回归退化就回滚
+→ 泛化需要新 V6，不重跑 V5
+```
+
+V5 的聚合根因是：路由不一致 `50/60`、证据集合不一致 `59/60`、关系不一致 `54/60`，而前五条
+完全 miss 只有 `2/60`。因此下一轮优先修“意图到路由的传递、按操作分配证据、关系规则化”，不再
+机械增加 Top-K。特别禁止三种 Goodhart 操作：改结果整理层冒充候选变化；用无关证据抬 Precision；
+在已经看过答案的 V5 上反复试错。
+
+本轮 SOP、聚合失败分析、registry/看板与测试同步后的全量工程 QA 为 `220 passed, 4 warnings`；Ruff check、
+format、compileall 与 `git diff --check` 均通过。该回执证明流程可复核，不代表 V5 质量 Gate 通过。

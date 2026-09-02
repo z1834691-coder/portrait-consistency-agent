@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Archive Ribbon E01 入口</title>
+  <desc id="desc">黑色左侧导航、米白工作区、紫色档案游线和母版上传入口。</desc>
+  <rect id="canvas" width="1440" height="900" fill="#F2F1E6"/>
+  <g id="nav" font-family="PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif">
+    <rect width="96" height="900" fill="#000000"/>
+    <rect x="24" y="26" width="48" height="48" rx="15" fill="#A855F7" stroke="#F2F1E6" stroke-width="2"/>
+    <path d="M38 50h20M48 40v20" stroke="#121212" stroke-width="3" stroke-linecap="round"/>
+    <g fill="#F2F1E6" font-size="12" text-anchor="middle">
+      <rect x="13" y="116" width="70" height="70" rx="18" fill="#A855F7"/>
+      <text x="48" y="146" fill="#121212">对齐</text><text x="48" y="166" fill="#121212" font-size="10">当前</text>
+      <text x="48" y="242">母版</text><text x="48" y="318">记录</text>
+    </g>
+    <path d="M28 374h40" stroke="#F2F1E6" stroke-opacity=".28"/>
+    <g fill="#F2F1E6" font-size="10" text-anchor="middle" opacity=".78"><text x="48" y="790">帮助</text><text x="48" y="842">设置</text></g>
+  </g>
+  <g id="context" font-family="PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif" fill="#121212">
+    <rect x="96" width="250" height="900" fill="#F2F1E6"/>
+    <path d="M346 0v900" stroke="#121212" stroke-opacity=".2"/>
+    <text x="126" y="65" font-size="12" letter-spacing="2" fill="#121212" opacity=".55">PROJECT 01</text>
+    <text x="126" y="108" font-size="22" font-weight="700">人像一致性项目</text>
+    <g font-size="13">
+      <rect x="122" y="144" width="152" height="38" rx="19" fill="#C084FC" stroke="#121212" stroke-width="1.5"/>
+      <text x="143" y="168">建立模板</text>
+      <rect x="122" y="194" width="112" height="34" rx="17" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+      <text x="143" y="216">模板库</text>
+      <rect x="122" y="240" width="124" height="34" rx="17" fill="none" stroke="#A855F7" stroke-width="1.5"/>
+      <text x="143" y="262">新建对象</text>
+    </g>
+    <path d="M126 342h162" stroke="#121212" stroke-opacity=".22"/>
+    <text x="126" y="380" font-size="12" opacity=".58">当前状态</text>
+    <text x="126" y="414" font-size="16" font-weight="600">尚未建立母版</text>
+    <circle cx="133" cy="451" r="5" fill="#36FF9B"/>
+    <text x="148" y="456" font-size="13">可以从一张照片开始</text>
+    <text x="126" y="815" font-size="12" opacity=".55">数据只在本轮任务中使用</text>
+  </g>
+  <g id="workspace" font-family="PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif" fill="#121212">
+    <text x="394" y="76" font-size="12" letter-spacing="2" opacity=".52">ALIGNMENT / 01</text>
+    <text x="394" y="132" font-size="38" font-weight="700">建立母版</text>
+    <text x="394" y="166" font-size="16" opacity=".62">上传一张你认可的本人照片。</text>
+    <g id="trajectory" fill="none" stroke-linecap="round">
+      <path d="M502 404 C620 330 700 470 820 395 S1065 320 1140 410" stroke="#A855F7" stroke-width="14" opacity=".88"/>
+      <path d="M502 404 C620 330 700 470 820 395 S1065 320 1140 410" stroke="#121212" stroke-width="1.5" stroke-dasharray="4 12" opacity=".55"/>
+      <circle cx="502" cy="404" r="10" fill="#A855F7" stroke="#121212" stroke-width="3"/>
+      <circle cx="1140" cy="410" r="10" fill="#36FF9B" stroke="#121212" stroke-width="3"/>
+    </g>
+    <g id="photo-placeholders">
+      <rect x="426" y="270" width="190" height="270" rx="26" fill="#F2F1E6" stroke="#121212" stroke-width="3"/>
+      <rect x="1025" y="276" width="190" height="270" rx="26" fill="#F2F1E6" stroke="#121212" stroke-width="3"/>
+      <path d="M472 418c18-48 82-48 100 0M490 361c0-24 42-24 42 0" fill="none" stroke="#121212" stroke-width="3" opacity=".34"/>
+      <path d="M1071 424c18-48 82-48 100 0M1089 367c0-24 42-24 42 0" fill="none" stroke="#121212" stroke-width="3" opacity=".22"/>
+      <text x="446" y="578" font-size="12" letter-spacing="1.5">母版</text><text x="1045" y="584" font-size="12" letter-spacing="1.5">当前照片</text>
+      <rect x="426" y="604" width="190" height="38" rx="19" fill="#A855F7" stroke="#121212" stroke-width="1.5"/>
+      <text x="474" y="628" font-size="13">上传母版照片</text>
+    </g>
+    <g id="composer">
+      <rect x="394" y="654" width="822" height="104" rx="24" fill="#F2F1E6" stroke="#121212" stroke-width="2"/>
+      <text x="423" y="699" font-size="16" opacity=".52">告诉我想保留什么……</text>
+      <circle cx="1168" cy="706" r="25" fill="#A855F7" stroke="#121212" stroke-width="2"/>
+      <path d="M1159 706h18M1168 697v18" stroke="#121212" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="394" y="802" font-size="14" fill="#121212" opacity=".62">已有母版，开始对齐</text>
+      <path d="M570 797h18" stroke="#A855F7" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

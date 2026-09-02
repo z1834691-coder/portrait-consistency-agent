@@ -319,6 +319,14 @@ permissions, persistence, Trace, RAG, or the claim that Streamlit UI migration i
 See `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md` and
 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`.
 
+The latest visual execution candidate is the Getty × Thread Track 1 under
+`design/visual-tracks/getty-thread-party-rock/` with its detailed rules in
+`docs/UI_VISUAL_DESIGN_SPEC_DETAILED.md`. It keeps only E01 `/align` and E02
+`/align/:session`, uses the three-column black-nav/ivory-stage/ivory-thread shell,
+and adds Image 2 surreal ambient art as a decorative layer. The track's HTML and
+Figma-importable SVG are review assets only; they do not change the Streamlit
+implementation, consent, Provider, persistence, Trace, RAG or privacy boundaries.
+
 ## 2026-09-02 latest Tencent Web Meta-Agent integration override
 
 The current integration slice adds a read-only `ToolRegistry` and a
@@ -352,3 +360,22 @@ is `215 passed, 4 warnings`; the four warnings are existing Pillow deprecation
 warnings. Ruff, compileall and diff checks also pass. This remains engineering
 evidence only: Web Card is `candidate`, E3 is not approved, and RAG remains
 proposal-only.
+
+## 2026-09-03 current E3 evidence override
+
+E3 has now run four owner-authorized real JPEG candidate trials on the deployed
+exact-domain page 6. All four browser calls returned `succeeded`; the input
+hashes match the preflight manifest, all four handoff flags are present, and
+the offline Web contract/batch-isolation regression is green. A redacted
+summary is in `reports/effect_web_e3_evidence_v1.json/.html` and the read-only
+page 8 dashboard. The manifest intentionally does not invent `request_ref`
+values; the report therefore keeps `request_ref_not_recorded_for_every_manual_receipt`
+as an open blocker.
+
+This is not visual generalization, common `VerificationResult` evidence, or
+vendor admission. Do not promote `tencent_effect_web` from `candidate`, do not
+claim the four images became more like the reference, and do not describe
+supplier region/cost/retention as verified. Results and data URLs remain
+browser-session-only; reports contain hashes and metadata, never image bytes or
+paths. The next gate is human visual review plus common verification handoff
+and supplier evidence, followed by explicit product-owner promotion.

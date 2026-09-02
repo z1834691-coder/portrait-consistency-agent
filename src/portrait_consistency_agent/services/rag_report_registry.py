@@ -151,6 +151,22 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description="V5 60 题答案盲运行的完整性与泄露检查聚合，不含题目和质量分数。",
         scope="answerless_process_integrity_only",
     ),
+    RagReportArtifact(
+        key="v5_holdout_gold_aggregate",
+        title="RAG｜V5 独立 Holdout Gold 聚合评分",
+        filename="rag_v5_holdout_gold_aggregate.html",
+        description=(
+            "负责人授权后的 V5 一次性聚合评分；不展示题目、案例编号、Gold 答案或私有答案键。"
+        ),
+        scope="owner_authorised_private_gold_aggregate_only",
+    ),
+    RagReportArtifact(
+        key="v5_failure_analysis",
+        title="RAG｜V5 失败模式聚合分析",
+        filename="rag_v5_failure_analysis_v1.html",
+        description=("V5 Gold join 的脱敏失败模式、根因和下一步 SOP；不输出逐题内容，不自动调参。"),
+        scope="owner_authorised_aggregate_diagnosis_only",
+    ),
 )
 
 

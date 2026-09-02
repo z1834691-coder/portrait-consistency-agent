@@ -83,3 +83,15 @@
 ## 成功标准
 
 过程监督成功不等于 RAG 质量成功。只有同时满足“过程门通过、独立 Gold 未被泄露、两条轨道分别评分、公开回归和安全门不回退、独立 Holdout 质量达到冻结门槛”时，才可讨论 RAG promotion。若过程门失败，必须先修复评测流程，不得继续调检索参数。
+## 2026-09-02 当前执行回执
+
+本 Prompt 已用于 V3/V4 无答案过程监督：每道题均有完整输入、查询、真实检索、Prediction 和 Trace，过程门通过；随后答案键只在内存按哈希连接，拆分编译轨与真实检索轨并仅输出聚合。V3/V4 真实检索 Recall@5=`34.72%`/`41.32%`、Evidence relation=`16.67%`/`24.65%`，质量均未通过。该段记录 V5 尚未连接答案时的状态；负责人现已授权完成一次聚合，任何过程 PASS 仍不能写成 RAG 产品化通过。
+## 2026-09-03｜V5 Gold join 后监督回执
+
+负责人已审核 V5 答案并授权一次连接。监督要求继续有效：先确认 60/60 运行完整，再只输出聚合；不得
+把 Gold route/evidence 放进被测输入或 Prediction；不得在同一 V5 快照上反复运行。V5 hard-safety=`PASS`、
+project quality Gate=`FAIL`，失败聚合已写入 `rag_v5_failure_analysis_v1`。如果下一轮候选使用这些模式，
+必须在公开回归和全新 V6 上验证，不能把 V5 的诊断分数写成泛化成绩。
+
+本轮过程监督器、Gold join 连接器、聚合失败分析和测试同步后的全量工程 QA 为 `220 passed, 4 warnings`；
+Ruff check、format、compileall 与 `git diff --check` 均通过。过程监督通过不等于 V5 质量通过。

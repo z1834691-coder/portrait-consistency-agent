@@ -255,6 +255,35 @@ def test_missing_critical_slots_stops_before_dense_or_reranker_work(tmp_path) ->
     assert [item["step"] for item in run.trace] == ["query_contract", "route"]
 
 
+def test_operation_coverage_reorders_existing_evidence_without_creating_knowledge(tmp_path) -> None:
+    store = _store(tmp_path)
+    seed_reviewed_provider_knowledge(store)
+    query = build_plan_edit_query(
+        query_id="rag_p0b_operation_coverage",
+        requested_features=[],
+        allowed_features=[],
+    ).model_copy(
+        update={
+            "stage": RagStage.QUALITY_GATE,
+            "operation_candidates": ["CompareFace", "ImageModeration"],
+        }
+    )
+
+    run = RagP0BHybridRetriever(
+        store=store,
+        dense_index=LocalDenseIndex(tmp_path / "knowledge_vectors.sqlite3"),
+        embedding_backend=DeterministicTokenEmbeddingBackend(),
+        reranker_backend=TokenOverlapReranker(),
+        operation_coverage=True,
+    ).retrieve(query)
+
+    coverage = next(row for row in run.trace if row["step"] == "operation_coverage")
+    assert set(coverage["requested_operations"]) == {"CompareFace", "ImageModeration"}
+    assert set(coverage["found_operations"]) == {"CompareFace", "ImageModeration"}
+    assert coverage["does_not_create_evidence"] is True
+    assert coverage["does_not_bypass_lifecycle_or_permission"] is True
+
+
 def test_outbound_denial_and_unsafe_knowledge_still_cannot_be_adopted(tmp_path) -> None:
     store = _store(tmp_path)
     seed_reviewed_provider_knowledge(store)

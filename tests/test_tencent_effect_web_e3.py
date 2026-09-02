@@ -98,3 +98,125 @@ def test_e3_missing_or_unsupported_file_is_redacted_rejection(tmp_path: Path) ->
     assert item["status"] == "rejected"
     assert "path_saved" in item and item["path_saved"] is False
     assert "unsupported_file_suffix" in item["reason_codes"]
+
+
+def _preflight_projection() -> dict[str, object]:
+    return {
+        "reference_sample_id": "reference_001",
+        "items": [
+            {
+                "sample_id": "reference_001",
+                "role": "reference_candidate",
+                "status": "eligible",
+                "sha256": "a" * 64,
+            },
+            {
+                "sample_id": "target_001",
+                "role": "target",
+                "status": "warning",
+                "sha256": "b" * 64,
+            },
+        ],
+    }
+
+
+def test_e3_live_evidence_joins_hashes_and_keeps_card_candidate() -> None:
+    report = e3.build_e3_evidence_report(
+        _preflight_projection(),
+        (
+            e3.E3LiveReceipt(
+                sample_id="reference_001",
+                receipt_id="receipt_reference_001",
+                input_sha256="a" * 64,
+                status="succeeded",
+                elapsed_ms=100,
+                output_sha256="c" * 64,
+                handoff_accepted=True,
+                verification_status="metadata_only",
+            ),
+            e3.E3LiveReceipt(
+                sample_id="target_001",
+                receipt_id="receipt_target_001",
+                input_sha256="b" * 64,
+                status="succeeded",
+                elapsed_ms=120,
+                output_sha256="d" * 64,
+                handoff_accepted=True,
+                verification_status="metadata_only",
+            ),
+        ),
+        offline_contract_regression_passed=True,
+        batch_failure_isolation_verified=True,
+        formal_admission_evidence={
+            "license_active": True,
+            "exact_domain_bound": True,
+            "provider_permission_granted": True,
+        },
+    )
+    payload = report.projection()
+    assert report.live_success_count == 2
+    assert report.sample_hashes_match_preflight is True
+    assert report.all_target_receipts_present is True
+    assert report.promotion_status == "candidate"
+    assert report.visual_generalization_status == "not_established"
+    assert "visual_effect_generalization_not_established" in report.blockers
+    assert payload["report_contains_data_urls"] is False
+    assert payload["report_contains_image_bytes"] is False
+
+
+def test_e3_live_evidence_rejects_hash_mismatch_and_duplicate_sample() -> None:
+    receipt = e3.E3LiveReceipt(
+        sample_id="reference_001",
+        receipt_id="receipt_reference_002",
+        input_sha256="f" * 64,
+        status="succeeded",
+        elapsed_ms=100,
+        output_sha256="c" * 64,
+    )
+    report = e3.build_e3_evidence_report(
+        _preflight_projection(),
+        (receipt,),
+        offline_contract_regression_passed=True,
+        batch_failure_isolation_verified=True,
+    )
+    assert report.sample_hashes_match_preflight is False
+    assert "live_receipt_input_hash_not_linked_to_preflight" in report.blockers
+
+    duplicate = e3.E3LiveReceipt(
+        sample_id="reference_001",
+        receipt_id="receipt_reference_003",
+        input_sha256="a" * 64,
+        status="succeeded",
+        elapsed_ms=100,
+        output_sha256="e" * 64,
+    )
+    try:
+        e3.build_e3_evidence_report(
+            _preflight_projection(),
+            (receipt, duplicate),
+            offline_contract_regression_passed=True,
+            batch_failure_isolation_verified=True,
+        )
+    except ValueError as exc:
+        assert "one live receipt per sample" in str(exc)
+    else:
+        raise AssertionError("duplicate sample receipts must be rejected")
+
+
+def test_e3_manifest_row_rejects_unknown_payload_field() -> None:
+    try:
+        e3.E3LiveReceipt.from_mapping(
+            {
+                "sample_id": "target_001",
+                "receipt_id": "receipt_target_001",
+                "input_sha256": "a" * 64,
+                "status": "succeeded",
+                "elapsed_ms": 100,
+                "output_sha256": "b" * 64,
+                "raw_output_data_url": "data:image/png;base64,not-persisted",
+            }
+        )
+    except ValueError as exc:
+        assert "unsupported fields" in str(exc)
+    else:
+        raise AssertionError("raw output payload must never enter the E3 manifest")

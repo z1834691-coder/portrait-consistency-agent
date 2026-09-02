@@ -1,0 +1,147 @@
+{
+  "batch_failure_isolation_ready": true,
+  "eligible_samples": 2,
+  "harness_version": "effect_web_e3_harness_v0.1",
+  "items": [
+    {
+      "bytes_read": 172872,
+      "dimensions": "704x1024",
+      "editability_confidence": 0.9326,
+      "face_count": 1,
+      "file_name": "11753155794804705.jpg",
+      "image_bytes_saved": false,
+      "image_format": "JPEG",
+      "path_saved": false,
+      "quality_confidence": 0.8076,
+      "quality_flags": [],
+      "reason_codes": [],
+      "role": "reference_candidate",
+      "sample_id": "e3_reference_001",
+      "sha256": "b6a298c7072f721829752763c9f8ae3ae9396262ddd50cc88517eea4aa72b129",
+      "status": "eligible",
+      "strata": {
+        "angle": "front",
+        "expression": "neutral",
+        "lighting": "studio"
+      }
+    },
+    {
+      "bytes_read": 2554461,
+      "dimensions": "1808x1402",
+      "editability_confidence": 0.0,
+      "face_count": 1,
+      "file_name": "Screenshot 2026-08-25 at 2.06.58 PM.png",
+      "image_bytes_saved": false,
+      "image_format": "PNG",
+      "path_saved": false,
+      "quality_confidence": 0.0,
+      "quality_flags": [
+        "provider_unsupported_input"
+      ],
+      "reason_codes": [
+        "alpha_channel_not_supported_by_provider"
+      ],
+      "role": "target",
+      "sample_id": "e3_negative_001",
+      "sha256": "b512fdfd91aa5be7142e896a4c99319c6b69f9bda579bf053f552d9270214a77",
+      "status": "rejected",
+      "strata": {
+        "angle": "not_applicable",
+        "expression": "not_applicable",
+        "lighting": "not_applicable"
+      }
+    },
+    {
+      "bytes_read": 237137,
+      "dimensions": "1550x2176",
+      "editability_confidence": 0.8597,
+      "face_count": 1,
+      "file_name": "817927755169448506.jpg",
+      "image_bytes_saved": false,
+      "image_format": "JPEG",
+      "path_saved": false,
+      "quality_confidence": 0.599,
+      "quality_flags": [],
+      "reason_codes": [],
+      "role": "target",
+      "sample_id": "e3_target_001",
+      "sha256": "6bd38fcfc79d81edf8b91f75af8191545e43eac64417766737f6c276ca419bc9",
+      "status": "warning",
+      "strata": {
+        "angle": "front",
+        "expression": "neutral",
+        "lighting": "indoor"
+      }
+    },
+    {
+      "bytes_read": 937765,
+      "dimensions": "1280x960",
+      "editability_confidence": 0.9903,
+      "face_count": 1,
+      "file_name": "Weixin Image_2026-07-25_225135_458.jpg",
+      "image_bytes_saved": false,
+      "image_format": "JPEG",
+      "path_saved": false,
+      "quality_confidence": 0.9724,
+      "quality_flags": [],
+      "reason_codes": [],
+      "role": "target",
+      "sample_id": "e3_target_002",
+      "sha256": "513bddd89f6b52eb3dc508db5e4485a10a8ffc66db5e2296bdf2ac6772046006",
+      "status": "eligible",
+      "strata": {
+        "angle": "front",
+        "expression": "smile",
+        "lighting": "indoor"
+      }
+    },
+    {
+      "bytes_read": 2552458,
+      "dimensions": "1600x2442",
+      "editability_confidence": 0.8839,
+      "face_count": 1,
+      "file_name": "Weixin Image_2026-07-25_225126_140.jpg",
+      "image_bytes_saved": false,
+      "image_format": "JPEG",
+      "path_saved": false,
+      "quality_confidence": 0.7081,
+      "quality_flags": [],
+      "reason_codes": [],
+      "role": "target",
+      "sample_id": "e3_target_003",
+      "sha256": "1c24aaaf290d7e66b754595d846037c996375f77ac7e1ec00bfe89a04bbd3a4c",
+      "status": "warning",
+      "strata": {
+        "angle": "three_quarter",
+        "expression": "neutral",
+        "lighting": "studio"
+      }
+    }
+  ],
+  "ready_for_candidate_trials": true,
+  "reference_present": true,
+  "reference_sample_id": "e3_reference_001",
+  "rejected_samples": 1,
+  "report_contains_image_bytes": false,
+  "report_contains_local_paths": false,
+  "strata": {
+    "angle": {
+      "front": 3,
+      "not_applicable": 1,
+      "three_quarter": 1
+    },
+    "expression": {
+      "neutral": 3,
+      "not_applicable": 1,
+      "smile": 1
+    },
+    "lighting": {
+      "indoor": 2,
+      "not_applicable": 1,
+      "studio": 2
+    }
+  },
+  "target_samples": 3,
+  "total_samples": 5,
+  "warning_samples": 2
+}

@@ -198,6 +198,10 @@ BeautifyPic 主链、RAG proposal-only 边界和现有隐私承诺的前提下�
 
 **E3：人工准入 Gate。** 只有静态图真实回执、多样本/批量回归、精确域名、License、Provider 权限、图片出站/地区/留存、费用/预算、Adapter readiness 和负责人批准同时具备，才允许把 Card 从 `candidate` 改为 `verified`。代码不得自动 promotion。
 
+## 2026-09-03｜E3 真实样本回执覆盖
+
+四张负责人授权 JPEG 已在精确域名 page 6 逐张完成 Web SDK 候选试验，真实 Browser Receipt 为 4/4 `succeeded`，输入哈希全部绑定预检，结果交接标记完整；透明 PNG 作为异常隔离样本被拒绝。该结果只证明浏览器处理和回执关联，不证明视觉效果、母版一致性、共同 `VerificationResult` 或批量泛化。手工 manifest 未记录完整 `request_ref` 时不得推断；供应商地区/费用/留存和负责人 promotion 仍未闭合。Web Card 继续 `candidate`，RAG 继续 `proposal-only`。
+
 ### 输出和回滚要求
 
 每个单元必须交付中文解释、输入/输出/规则表、产品决策点、3—5 个案例和一条完整 Trace；同时更新执行版 PRD 的“产品设计”、专项文档、合同、Prompt、`DECISION_LOG.md`、`DEVELOPMENT_PROGRESS.md`、README、代码和测试。若真实 SDK 或供应商证据失败，只追加失败回执并恢复到 Beautify baseline，不删除历史证据、不放宽校验、不重复无意义调用。

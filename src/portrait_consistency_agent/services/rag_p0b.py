@@ -650,6 +650,7 @@ class RagP0BHybridRetriever:
                     "candidate_count_after_reorder": len(reranked),
                     "output_limit": P0B_RRF_OUTPUT_LIMIT,
                     "does_not_create_evidence": True,
+                    "does_not_bypass_lifecycle_or_permission": True,
                 }
             )
 

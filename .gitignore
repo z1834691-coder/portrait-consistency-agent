@@ -33,6 +33,13 @@ data/local/
 # reports and answer keys stay outside the GitHub deployment repository.
 .obsidian/
 reports/*
+# The E3 dashboard needs only these redacted evidence artifacts at deploy time;
+# they contain hashes/metadata, never image bytes, data URLs, paths or secrets.
+!reports/effect_web_e3_preflight_v1.json
+!reports/effect_web_e3_preflight_v1.html
+!reports/effect_web_e3_live_manifest_v1.json
+!reports/effect_web_e3_evidence_v1.json
+!reports/effect_web_e3_evidence_v1.html
 data/evaluation/*
 !data/evaluation/rag_safety_event_catalog_v0.json
 !data/evaluation/rag_gold_v2_public.json

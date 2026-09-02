@@ -261,3 +261,22 @@ prepared request
 `EffectWebBrowserResult` 不是 `ProviderRun` 的持久化字段。`accept_effect_web_browser_result()` 只有在显式候选试验开关、执行 scope、质量/同意/幂等检查都通过时，才把真实 Receipt 转成共同 `ProviderRun`；失败或错位一律 fail-closed。Trace 只留 request/receipt/hash/尺寸/状态和原因码，不留 data URL、图片、Token 或隐藏推理。
 
 E1 已由 `tests/test_execution.py` 和 `scripts/smoke_effect_web_b_handoff.py` 验证 handoff → Web ProviderRun → 共同 `verify_result`；E2 由 `scripts/run_effect_web_regression.py` 覆盖 8 个成功/失败/异常案例，报告见 `reports/tencent_effect_web_regression_v1.json/.html`。结果为 `8/8`，但均为 fixture/合同证据，不是视觉泛化或 Provider promotion。Web Card 继续 `candidate`。
+
+## 17. 2026-09-03｜E3 四张真实 JPEG 回执与证据汇总
+
+负责人批准 E3 并提供四张真实 JPEG。它们先经过 `run_effect_web_e3_preflight.py` 的内存预检，再在已部署的精确域名 page 6 上逐张执行 Web SDK。脱敏回执如下：
+
+| 样本 | Receipt | 状态 | 耗时 | 输出哈希 | 复测 |
+|---|---|---:|---:|---|---|
+| `e3_reference_001` | `web_receipt_effect_web_c83e83d54d8e4b1d` | succeeded | 2302 ms | `c05054c8…adff171` | metadata-only |
+| `e3_target_001` | `web_receipt_effect_web_0710c27460e34a32` | succeeded | 1397 ms | `b00005f2…28832811` | metadata-only |
+| `e3_target_002` | `web_receipt_effect_web_9563c0fb46aa4f3f` | succeeded | 1583 ms | `0ae08586…304b49a7` | metadata-only |
+| `e3_target_003` | `web_receipt_effect_web_0046d91ec02a4e08` | succeeded | 1340 ms | `acd09781…3f4cccdf5` | metadata-only |
+
+当前 E3 证据为：4/4 真实回执成功；4/4 输入哈希与预检样本绑定；4/4 结果交接标记；离线 E2 合同回归和批量失败隔离通过。完整脱敏报告见 `reports/effect_web_e3_evidence_v1.json/.html`，看板入口为 page 8。手工 manifest 尚未抄录四条完整 `request_ref`，所以报告保留该缺口，不把 receipt ID 猜成 request_ref。
+
+这组结果证明“真实浏览器 SDK 能处理这些输入并产生可追溯结果”，不证明“结果已经更像母版”或“Web 已可作为正式主流程 Provider”。共同 Python `VerificationResult` 的真实图像几何复测、供应商图片出站/地区/留存/费用证据、批量视觉效果和产品负责人最终 promotion 仍是独立 Gate；Card 继续 `candidate`，RAG 继续 `proposal-only`。
+
+### 17.1 2026-09-03｜E3 同步后复核
+
+预检、证据汇总、Web E2 回归和 B handoff smoke 已重新执行：5 个样本为 2 eligible、2 warning、1 rejected；4 条真实 Browser Receipt 全部成功，输入哈希全部绑定，handoff 标记 4/4；E2 合同回归 8/8。完整工程 QA 为 `226 passed, 4 warnings`。手工 manifest 仍缺完整 `request_ref`，所以报告保留该缺口；视觉复测、供应商地区/费用/留存和 Card promotion 不得由这些结果自动推断。

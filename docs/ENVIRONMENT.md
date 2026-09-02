@@ -137,4 +137,23 @@ RAG 内容正确或产品化通过；下一步只能把已封存的新运行包�
 
 Cloud page 6 仍是独立候选试验入口；一次历史成功回执只证明浏览器 SDK 运行，不等于 E3 promotion。Web Card 仍 `candidate`，RAG/Meta-Agent 的 proposal 不授权，正式主流程继续走 BeautifyPic。若真实回放失败，保留脱敏 Browser Receipt 并回退 baseline，不放宽 handoff 校验。
 
-本轮集成测试后的最新环境回执：全量 `pytest`=`216 passed, 4 warnings`，Ruff/format/compileall/diff check 均通过；E1/E2 仍是 fixture/合同证据，不能替代真实视觉样本或供应商准入。
+本轮集成测试后的历史环境回执：全量 `pytest`=`216 passed, 4 warnings`，Ruff/format/compileall/diff check 均通过；E1/E2 仍是 fixture/合同证据，不能替代真实视觉样本或供应商准入。RAG 候选和 V5 过程完成后的最新全量 QA 为 `217 passed, 4 warnings`；本轮还完成 V3/V4 双轨 Gold 聚合连接，RAG 仍为 `proposal-only`。
+## 2026-09-03｜V5 Gold join 与失败分析环境回执
+
+在负责人显式授权后，`score_rag_v5_holdout_private.py` 成功生成
+`reports/rag_v5_holdout_gold_aggregate.json/.html`；`analyze_rag_v5_failures_private.py` 成功生成
+`reports/rag_v5_failure_analysis_v1.json/.html`。两个脚本均不联网、不调用 LLM/Provider、不读取照片或
+向量；答案键只在内存使用，输出不含题目、case 行或私有路径。V5 hard-safety=`PASS`、project
+Gate=`FAIL`，RAG 继续 `proposal-only`。本轮代码/文档同步后的全量 QA 已完成：`220 passed, 4 warnings`；Ruff check、format、compileall 与
+`git diff --check` 均通过。4 条 warning 仍是既有 Pillow 弃用提示，不影响 V5 聚合或失败分析。
+
+## 2026-09-03｜E3 真实 Web 运行环境当前覆盖
+
+已部署的 Streamlit 精确域名 page 6 能加载 Tencent Effect Web SDK；负责人授权的四张 JPEG 已完成真实候选试验，4/4 返回成功。page 8 读取脱敏 `effect_web_e3_evidence_v1.json`，不加载 Secret、不读取结果图、不联网；结果图只在浏览器会话内存中存在。E3 预检与汇总命令为：
+
+```bash
+uv run python scripts/run_effect_web_e3_preflight.py
+uv run python scripts/build_effect_web_e3_evidence.py
+```
+
+环境事实不能替代供应商条款、地区、费用或视觉泛化证据。若继续做共同 Python `VerificationResult` 的真实 handoff，必须保持一次性内存边界；任何 `request_ref` 缺失都应报告为缺口而不是推断。Web Card 仍 `candidate`，正式主流程仍为 BeautifyPic。

@@ -125,3 +125,17 @@ E02 追加：让米白工作区承接照片对齐，右侧米白面板承接连�
 7. 执行交互扫描：每套只有 E01/E02 两张主关键帧；每个状态只有一个默认 CTA；后台检查无前台确认按钮；外部处理只有一次有界授权；不声称 Streamlit、Figma 原生 `.fig` 或真实用户结果已实现。
 
 最终报告必须同时列出：生成的文件、PNG 与 HTML/SVG 的边界、浏览器/图像/SVG/元数据检查结果、历史资产归档位置，以及仍明确标记为“尚未实现/尚未真实验证”的部分。
+
+## 2026-09-03｜E3 Demo 与证据页的当前边界
+
+page 6 是腾讯特效 Web 的独立候选试验入口，当前可支持“上传一张明确授权的图片→浏览器 SDK 处理→页面展示结果”；page 8 是只读 E3 脱敏证据看板。UI 设计不得把 page 8 的 receipt、hash、准入 blocker 或 Trace 原样塞进 C 端首屏；它们属于管理/审计层。页面文案必须区分“结果已返回”与“视觉差异已复测”，不得显示未经证据支持的分数、概率或泛化结论。
+
+E3 当前有 4/4 真实 Web 回执成功，但视觉效果、共同 `VerificationResult`、供应商条款和 Card promotion 未闭合；Web Card 继续 `candidate`，正式主流程仍使用 BeautifyPic。后续 UI 映射只能消费这些真实状态，不得用候选样张替换真实结果或隐藏失败/未知状态。
+
+## 9. Getty × Thread Track 1（2026-09-02 最新视觉稿级覆盖）
+
+在以上产品语义与 Party Rock/苹方硬约束之上，新的执行入口是 [UI_VISUAL_DESIGN_SPEC_DETAILED.md](UI_VISUAL_DESIGN_SPEC_DETAILED.md)。它把用户提供的三栏 Agent 截图抽象为黑色稳定导航、中央任务舞台和右侧连续线程，并把 Getty `Tracing Art` 的路径叙事压缩成真实的“母版 → 当前照片 → 检查 → 结果”轨迹；不复制品牌、网站资产、摄影、Logo 或历史内容。
+
+Track 1 只交付两个产品画面：E01 `/align`（`建立母版`、一个上传动作、一个自然语言 composer）与 E02 `/align/:session`（母版/当前照片占位、关键事实轨迹、短 Agent 消息、一次有界授权和同线程结果）。三张 Image 2 环境素材 `orbit-paper`、`folded-window`、`ink-garden` 仅作无人物氛围层，禁止遮挡标题、上传和 composer；素材来源、prompt、尺寸与商用复核边界写在 `design/visual-tracks/getty-thread-party-rock/assets/*.prompt.md`。
+
+评审/交付入口为 [`design/visual-tracks/getty-thread-party-rock/visual-review.html`](../design/visual-tracks/getty-thread-party-rock/visual-review.html)，可切换 E01/E02、三张素材和暂停动效；分层矢量源为同目录 `figma-import/e01-entry.svg` 与 `e02-session.svg`。SVG 可导入 Figma 后继续编辑，但它们与 HTML/PNG 都是候选视觉资产，不是原生 `.fig`、Streamlit 迁移或真实用户结果。候选方向仍需产品负责人选择，之后才进入 Impeccable Critical/Audit、WCAG 2.2 AA 与 Frontend UI Gate。

@@ -201,4 +201,17 @@ V5 不应只是把 V3/V4 换同义词。建议覆盖：隐含目标、双重任�
 
 ### 11.3 当前停止条件
 
-候选在公开回归中没有回退，且 operation coverage 对公开 Evidence relation、Recall@5、MRR、nDCG@5 均有小幅真实改善；继续在同一层增加同义词或排序补丁的边际收益已很低。因此本轮不再盲目叠加规则，等待 V5 负责人审核和一次性 Gold join。无论 V5 分数如何，过程门、质量门、RAG `proposal-only` 和产品化结论都必须分开记录。
+候选在公开回归中没有回退，且 operation coverage 对公开 Evidence relation、Recall@5、MRR、nDCG@5 均有小幅真实改善；继续在同一层增加同义词或排序补丁的边际收益已很低。因此当时停止叠加规则并等待 V5 Gold join。无论 V5 分数如何，过程门、质量门、RAG `proposal-only` 和产品化结论都必须分开记录；当前 V5 结果已在 11.5 追加。
+
+### 11.4 V3/V4 双轨 Gold 连接回执（2026-09-02）
+
+在进入 V5 质量门前，已按本 Prompt 的“先过程、后一次性 Gold join”规则，将已封存的 V3/V4 answerless 运行包与工作区外受控答案键连接一次。连接器只在内存中按哈希对齐并输出聚合：V3 编译 Route=`30.56%`、真实检索 Recall@5=`34.72%`、Evidence relation=`16.67%`；V4 编译 Route=`12.50%`、真实检索 Recall@5=`41.32%`、Evidence relation=`24.65%`；两代 hard-safety 均 PASS，质量仍未通过。该结果用于建立双轨基线，不回写旧快照、不用于同一 Holdout 继续调参、不改变 active baseline 或 RAG `proposal-only`。V5 质量评分仍须负责人审核答案键并显式授权，最新全量 QA=`217 passed, 4 warnings`。
+## 11.5 2026-09-03｜V5 Gold join 后的下一轮执行约束
+
+负责人审核通过后，V5 只连接一次。聚合结果为 Route=`16.67%`、Recall@5=`73.89%`、Evidence relation=`26.39%`、
+hard-safety=`PASS`、project Gate=`FAIL`。失败分析显示 50/60 路由不一致、59/60 证据集合不一致、54/60
+关系不一致，只有 2/60 前五条完全 miss。新的候选不得在 V5 上试错；先把“投影后仍回退 BASELINE”“通用卡挤占操作卡”“关系默认 reference”转为公开 SOP，
+跑 public/regression，再按需要新建 V6。所有候选继续 proposal-only，不能自动 promotion。
+
+本轮按上述约束完成代码、测试、报告和文档同步后的工程 QA 为 `220 passed, 4 warnings`；Ruff check、format、
+compileall 与 `git diff --check` 均通过。该 QA 只证明执行器和治理边界一致，不把 V5 质量 Gate 改为通过。

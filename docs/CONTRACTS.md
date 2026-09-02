@@ -580,4 +580,36 @@ Web Provider 最新失败回执仍按 `EffectWebBrowserReceipt → ProviderRun` 
 
 ## 2026-09-02｜合同回归最新覆盖
 
-补充的 Meta-Agent→Web `EditPlan` provider/Card 绑定测试通过；E2 报告的安全拦截与批量隔离现在是两个独立事实，避免把“坏样本在末尾”误判为安全失败。随后补齐输入哈希错位和结果大小上限案例。最新全量回归为 `216 passed, 4 warnings`；Web handoff、共同 `VerificationResult` 和 8 个 E2 样例仍不保存结果 payload，Card 仍 `candidate`。
+补充的 Meta-Agent→Web `EditPlan` provider/Card 绑定测试通过；E2 报告的安全拦截与批量隔离现在是两个独立事实，避免把“坏样本在末尾”误判为安全失败。随后补齐输入哈希错位和结果大小上限案例。该段 `216 passed` 为历史回执；RAG 候选和 V5 过程后的最新全量回归为 `217 passed, 4 warnings`；Web handoff、共同 `VerificationResult` 和 8 个 E2 样例仍不保存结果 payload，Card 仍 `candidate`。
+
+## 2026-09-02｜RAG 公平 Gold 连接合同回执（当前）
+
+`score_fair_gold_join.py` 只允许在公平过程门通过后读取工作区外 V3/V4 答案键；答案键仅在内存使用，输出为双轨聚合，不含题目、Gold、case 级结果或私有路径。编译轨只衡量自然语言→查询的临时路由代理；真实检索轨只使用实际召回的知识引用，路由字段置为不适用，避免把上游理解失败混入检索质量。V3/V4 连接均 hard-safety PASS 但质量未通过；V5 随后已由负责人授权完成一次独立 Gold join，当前结果见下方 2026-09-03 合同。
+
+## 2026-09-03｜V5 Gold join 与聚合失败分析合同
+
+`score_rag_v5_holdout_private.py` 和 `analyze_rag_v5_failures_private.py` 只有在负责人显式传入
+`--owner-approved` 后才会读取工作区外 V5 答案键；答案只在内存使用。两者输出合同均拒绝题目、case
+级行、Gold 事实和私有路径，且记录 `hidden_answer_key_read=true` 与
+`questions_or_case_rows_in_output=false`。V5 过程 Trace 仍必须先通过 `60/60` 完整性/治理检查；Gold
+join 的质量 Gate 独立于过程 Gate。
+
+本轮聚合合同结果为 hard-safety=`PASS`、project quality Gate=`FAIL`。失败分析只输出模式计数、聚合
+路由混淆、证据多余/缺失和关系错误类型，不允许把 V5 快照当逐题训练集或自动改变 Policy、Adapter、
+Provider 权限；RAG 的执行授权字段继续为 `false`。
+本轮代码/合同/测试/报告同步后的全量 QA 为 `220 passed, 4 warnings`；Ruff check、format、compileall 与
+`git diff --check` 均通过。该回执只证明合同实现一致，不能改变 V5 `FAIL` 或 `proposal-only`。
+
+## 2026-09-03｜E3 真实 Web 回执与证据报告合同
+
+本轮新增 `E3LiveReceipt` 与 `E3EvidenceReport`，它们是 Web 候选准入证据合同，不是第七个图片处理业务合同，也不改变 `ProviderRun`/`VerificationResult` 的既有字段。`E3LiveReceipt` 只允许安全的样本 ID、receipt ID、输入/输出 SHA-256、状态、耗时、可选输出尺寸、结果交接状态和复测状态；禁止 raw data URL、图片 bytes、Token、完整本地路径和任意未知字段。成功回执必须有输出 hash，失败回执不得带输出 hash；一条样本只能对应一条 E3 manifest 回执。
+
+`build_e3_evidence_report()` 先按样本 ID/预检输入 hash 做 fail-closed 关联，再统计所有目标是否都有回执、哈希是否匹配、离线合同回归/批量隔离是否通过和结果交接数量。它固定输出 `visual_generalization_status=not_established` 与 `promotion_status=candidate`，不能因为真实 SDK 成功而自动创建 promotion 或修改 Card。手工回执没有完整 `request_ref` 时报告必须保留 `request_ref_not_recorded_for_every_manual_receipt`，不能猜测或用 receipt ID 代替。
+
+当前真实 E3 证据为 4/4 `succeeded`、输入哈希 4/4 匹配、结果交接标记 4/4；E2 离线合同/批量隔离通过。该事实只证明真实浏览器处理和证据关联，不证明共同 `VerificationResult` 的四张真实图片几何效果、母版一致性泛化、供应商条款或费用。报告见 `reports/effect_web_e3_evidence_v1.json/.html`，page 8 仅只读展示；Web Card 继续 `candidate`，RAG 继续 `proposal-only`。
+
+### 2026-09-03｜E3 收口合同回执
+
+本轮文档同步后重新执行 E3 预检、证据汇总、Web E2 回归和 B handoff smoke：预检 5 个样本为 2 eligible、2 warning、1 rejected；真实浏览器回执 4/4 成功、输入 hash 4/4 绑定、handoff 标记 4/4；E2 回归 8/8，批量失败隔离通过；全量测试为 `226 passed, 4 warnings`。这些是工程/回执合同事实，不是视觉效果或供应商准入事实。
+
+E3 manifest 未记录完整 `request_ref` 时，合同必须输出 `request_ref_not_recorded_for_every_manual_receipt`；不能把 receipt ID 当 request_ref。`E3EvidenceReport` 固定 `visual_generalization_status=not_established`、`promotion_status=candidate`，结果 payload 只在浏览器会话内存，不进入合同持久化、数据库、Trace、RAG 或 Git。

@@ -1109,8 +1109,45 @@ Web 的纵向链路现已由合同和 fixture 回放覆盖：RAG advisory → Me
 
 <span style="color:#C00000"><strong>真实结果。</strong>开发集 28 题的候选 Evidence relation=`100%`、Recall@5=`100%`、MRR=`100%`、nDCG@5=`99.43%`；公开回归 52 题的候选 Evidence relation=`100%`、Recall@5=`100%`、MRR=`93.27%`、nDCG@5=`95.30%`。相对同一轮 multi-operation 候选，公开 Evidence relation 从 `99.36%` 提升到 `100%`，Recall@5 从 `99.36%` 提升到 `100%`，MRR 从 `92.31%` 提升到 `93.27%`，nDCG@5 从 `94.51%` 提升到 `95.30%`；hard-safety 仍为 `PASS`。这些是开发/公开检索轨的候选证据，不是独立泛化或产品化通过。</span>
 
-<span style="color:#C00000"><strong>过程监督和新 Holdout。</strong>当前生成了 60 题的 V5 独立 Holdout。候选在不读答案、不读标注、不读照片/向量、不调用 LLM/网络/Provider 的条件下完成 `60/60` 检索，输入、Trace、Prediction 均为 60，过程门为 `PASS`；质量状态仅为 `READY_AFTER_SEPARATE_GOLD_JOIN`。答案键位于工作区外受限目录，负责人审核前不得评分，评分前不得把 V5 题目用于规则修正。</span>
+<span style="color:#C00000"><strong>过程监督和新 Holdout（当时的交接状态）。</strong>生成的 60 题 V5 独立 Holdout 在不读答案、不读标注、不读照片/向量、不调用 LLM/网络/Provider 的条件下完成 `60/60` 检索，过程门为 `PASS`；随后负责人已审核答案并完成一次独立 Gold join，当前质量结论见 §42。</span>
 
-<span style="color:#C00000"><strong>当前结论。</strong>本轮候选是“有真实改变、公开回归无退化”的 proposal-only 候选，`active_baseline_changed=false`，没有 promotion。下一道唯一交接门是负责人审核 V5 逐题答案（每题紧跟答案的审阅表）并明确授权一次 Gold join；在这之前，不得报告 V5 质量分数或宣称 RAG 产品化。</span>
+<span style="color:#C00000"><strong>当时结论。</strong>该段记录的是 Gold join 前的交接；现在已由 §42 覆盖。候选仍 `active_baseline_changed=false`、没有 promotion，RAG 仍不得宣称产品化。</span>
 
 可复核入口：[候选检索报告](../reports/rag_policy_coverage_candidate_v2.html)、[逐题候选诊断](../reports/rag_candidate_diagnostics_v1.html)、[V5 过程监督报告](../reports/rag_v5_holdout_process_audit.html)。
+## 41. 2026-09-02｜V3/V4 双轨 Gold 连接与下一道 V5 门（当前）
+
+已完成一次公平 Gold 连接：V3/V4 的答案键只在工作区外受控路径读取，并在内存中按哈希与此前封存的 answerless 运行包对齐；输出仅为 `reports/rag_fair_gold_join_v2.json/.html` 的聚合，不含题目、答案、case 级结果或私有路径。编译轨与真实检索轨分开，避免把“没听懂用户”误算成“没找到资料”。
+
+| 数据集 | 编译轨 Route | 真实检索 Recall@5 | 真实检索 Evidence relation | Hard-safety | 质量结论 |
+|---|---:|---:|---:|---|---|
+| V3 validation copy | 30.56% | 34.72% | 16.67% | PASS | 未通过 |
+| V4 independent holdout | 12.50% | 41.32% | 24.65% | PASS | 未通过 |
+
+这次连接只建立双轨基线，不回写旧盲测、不改变 active baseline、不让 RAG 获得图片执行权限。该段记录的是 V5 Gold join 前状态；完成后的质量与失败模式见 §42，RAG 仍 `proposal-only`。
+
+## 42. 2026-09-03｜V5 Gold join 与失败层定位（当前）
+
+<span style="color:#C00000"><strong>为什么先做这一步。</strong>早期迭代曾出现“看起来有优化、实际没有变化”的 no-op：代码只重写已经产出的 Prediction，没有改变真正的候选池；多操作请求又可能让一个操作的证据占满前几名。与此同时，V3/V4 解冻后的高分只能用于诊断，不能改写旧 Holdout 或证明泛化。因此本轮先把 V5 answerless 运行封存，再在负责人审核并授权后只做一次 Gold join。</span>
+
+<span style="color:#C00000"><strong>V5 聚合回执。</strong>60/60 题都有运行、检索、Prediction 和 Trace；答案只在内存连接，输出不含题目、case、Gold 或私有路径。hard-safety=`PASS`（0 违规），但项目质量 Gate=`FAIL`：Route=`16.67%`、Evidence exact=`1.67%`、Evidence relation=`26.39%`、Recall@5=`73.89%`、MRR=`90.33%`、nDCG@5=`75.36%`。Hit@5=`96.67%` 表明很多题能碰到相关资料，但不能代替路由、集合和关系正确。</span>
+
+### 42.1 脱敏失败模式
+
+| 模式 | 聚合证据 | 根因解释 | 下一步 SOP |
+|---|---:|---|---|
+| 路由回退 | 50/60 路由不一致；33 题没有可靠投影；20 题已有结构化投影仍回退 BASELINE | 用户目标没有稳定传到最终路由 | 把“意图→允许路由”做显式映射；仅在缺槽位/安全不确定时回退，并记录原因 |
+| 证据过度打包 | 59/60 集合不一致；24 题同时有多余和缺失证据 | 通用策略卡挤占操作所需工具卡 | 先按 operation/provider 分配证据槽位，再补通用规则，并留采用/淘汰原因 |
+| 关系默认过弱 | 54/60 关系不一致 | 直接证据被大量标成参考，或关系缺失 | 关系由来源类型、能力状态、生命周期确定；相似度只能排序，不能升级关系 |
+| 召回不是全部 | 仅 2/60 在前五条完全 miss；MRR=`90.33%` | 找到资料不等于选对资料、用对关系或走对路由 | 继续拆分理解、召回、关系、路由四条指标，不能用 Hit@5 抵消 P0 错误 |
+
+<span style="color:#C00000"><strong>冻结边界。</strong>V5 结果是一次独立质量诊断，不是新 Holdout 泛化通过；V5 快照不用于逐题调参。下一轮候选必须先在公开开发/回归集验证并通过 hard-safety，之后如需泛化证明再新建 V6（不得重跑/补写 V5）。RAG 继续 `proposal-only`，active baseline、权限和图片 Provider 均不变。</span>
+
+可复核入口：[V5 聚合评分](../reports/rag_v5_holdout_gold_aggregate.html)、[V5 失败模式聚合](../reports/rag_v5_failure_analysis_v1.html)。
+
+<span style="color:#C00000"><strong>本轮工程交叉校验。</strong>Gold join 失败分析模块、聚合看板入口、registry 和隐私回归已同步；全量 `pytest`=`220 passed, 4 warnings`，Ruff check、format、compileall 与 `git diff --check` 均通过。此处只记录工程一致性，不把 V5 质量 Gate 改写为通过。</span>
+
+## 43. 2026-09-03｜E3 Web 真实回执对 RAG 边界的覆盖
+
+E3 已在四张负责人授权 JPEG 上完成真实 Tencent Effect Web 候选试验，4/4 Browser Receipt 成功，输入哈希全部绑定预检，结果交接标记 4/4。该证据只说明 Web SDK 返回了结果，不改变 RAG 的职责：RAG/Meta-Agent 仍只能检索已审核 Card、提出候选工具或复测策略，`execution_authorized=false`，不能因为 Web 回执成功而 promotion。
+
+E3 报告和 page 8 看板只读展示脱敏 receipt、hash、尺寸、耗时、状态和 blocker；不把图片 bytes/data URL 放入 RAG。视觉泛化、共同 `VerificationResult`、供应商地区/费用/留存和 Card promotion 尚未闭合，因此 Web Card 继续 `candidate`，正式主流程仍使用 BeautifyPic baseline。RAG 当前仍保持 `proposal-only`，任何后续 Web 证据都必须先通过独立准入和产品负责人批准。
