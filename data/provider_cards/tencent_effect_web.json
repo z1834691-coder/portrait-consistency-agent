@@ -11,7 +11,7 @@
   "sdk_url": "https://webar-static.tencent-cloud.com/ar-sdk/resources/latest/webar-sdk.umd.js",
   "platform": "web",
   "static_image": {
-    "status": "documented_not_live_verified",
+    "status": "live_smoke_succeeded_candidate",
     "input": "one image element or data URL in the browser",
     "output": "browser-side canvas/data URL",
     "batch_status": "not_verified",
@@ -24,7 +24,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Web generic face lifting field; exact effect on this project image is pending smoke."
     },
     {
@@ -33,7 +33,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Web generic face narrowing field; do not infer fine-grained jaw controls."
     },
     {
@@ -42,7 +42,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Web generic eye field; fine-grained eye width/height/spacing remains unverified."
     },
     {
@@ -51,7 +51,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Web generic chin field; exact product mapping remains pending smoke."
     },
     {
@@ -60,7 +60,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Supported by the Web surface but product-default 0; only explicit user consent may enable it."
     },
     {
@@ -69,7 +69,7 @@
       "product_range": [0, 100],
       "sdk_range": [0, 1],
       "default": 0,
-      "status": "documented_candidate_not_live_verified",
+      "status": "documented_candidate_live_smoke_only",
       "notes": "Supported by the Web surface but product-default 0; only explicit user consent may enable it."
     }
   ],
@@ -122,13 +122,32 @@
     "cloud_build_status": "rebuilt_after_cached_import_error",
     "cloud_build_checked_at": "2026-09-01",
     "cloud_secrets_status": "configured_observed_in_cloud",
-    "browser_smoke_blocker": "sdk_auth_failed_code_100",
-    "live_smoke_status": "failed",
-    "live_receipt_ref": "web_receipt_effect_web_fa6f0765ad924597",
-    "live_error_code": "SDK_RUNTIME_ERROR",
-    "sdk_error_code_observed": "100",
-    "live_error_context": "Browser SDK auth verification returned code 100; no output image was produced.",
-    "last_review_note": "Cloud page 6 loads and Effect Web Secrets are configured. The first post-fix official-sample smoke reached the browser SDK but failed during authentication; verify the numeric Tencent account APPID (not the bound domain URL), then retry."
+    "browser_smoke_blocker": null,
+    "live_smoke_status": "succeeded_candidate",
+    "live_receipt_ref": "web_receipt_effect_web_4d58ea15a0794370",
+    "live_error_code": null,
+    "sdk_error_code_observed": null,
+    "live_success_context": "The latest explicit Cloud page 6 run completed the browser SDK path after the separate-result-canvas fix; status succeeded, output hash saved, and no image was persisted by Python.",
+    "previous_live_failure_receipt_refs": [
+      "web_receipt_effect_web_fa6f0765ad924597",
+      "web_receipt_effect_web_3a3c71bec3f24557"
+    ],
+    "previous_live_receipt_refs": [
+      "web_receipt_effect_web_fa6f0765ad924597",
+      "web_receipt_effect_web_3a3c71bec3f24557"
+    ],
+    "latest_live_attempt": {
+      "attempted_at": "2026-09-02T16:45:00+08:00",
+      "attempt_number_in_request_generation": 4,
+      "request_generation_reused": true,
+      "receipt_ref": "web_receipt_effect_web_4d58ea15a0794370",
+      "elapsed_ms": 2601,
+      "normalized_error_code": null,
+      "sdk_error_code": null,
+      "output_hash_saved": true,
+      "note": "A real explicit click on Cloud page 6 completed successfully. The SDK output remained in the browser session; Python received only the redacted receipt metadata."
+    },
+    "last_review_note": "Live browser static-image processing is now proven for one explicit run. Keep review_status=candidate: exact-domain admission, vendor retention/region/cost evidence, broader image regression and product-owner approval are still separate gates."
   },
   "source": {
     "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",
