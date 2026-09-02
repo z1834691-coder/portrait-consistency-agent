@@ -264,8 +264,21 @@ def main() -> None:
         return
 
     try:
-        receipt = adapter.validate_browser_receipt(receipt_value, request=request)
         result_value = _component_result_value(result, "result")
+        # Components v2 can coalesce multiple trigger updates into the
+        # completed event.  Accept the compatibility envelope emitted by the
+        # browser bridge, but strip the raw data URL before receipt validation
+        # so the persisted contract remains metadata-only.
+        receipt_payload = dict(receipt_value)
+        if not isinstance(result_value, dict):
+            embedded_handoff = receipt_payload.pop("result_handoff", None)
+            if isinstance(embedded_handoff, dict):
+                result_value = embedded_handoff
+        else:
+            # Never let an accidental duplicate handoff reach the receipt
+            # model; result bytes are validated separately and kept in memory.
+            receipt_payload.pop("result_handoff", None)
+        receipt = adapter.validate_browser_receipt(receipt_payload, request=request)
         result_bytes: bytes | None = None
         if receipt.status == "succeeded":
             if not isinstance(result_value, dict):

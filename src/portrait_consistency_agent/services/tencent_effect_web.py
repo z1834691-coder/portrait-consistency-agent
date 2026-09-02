@@ -887,7 +887,25 @@ def render_tencent_effect_web(
                     result_retention: "python_memory_only",
                     created_at: new Date().toISOString(),
                   });
-                  setTriggerValue("completed", receipt);
+                  // Streamlit Components v2 may deliver only one trigger from
+                  // a browser event.  Keep the result trigger for the normal
+                  // path, and carry the same one-time handoff inside the
+                  // completed transport envelope as a compatibility fallback.
+                  // Python strips this field before validating the redacted
+                  // receipt and never writes the data URL to a trace or DB.
+                  setTriggerValue("completed", {
+                    ...receipt,
+                    result_handoff: {
+                      request_ref: data.request_ref,
+                      input_sha256: data.input_sha256 || null,
+                      output_sha256: outputHash,
+                      output_data_url: outputUrl,
+                      output_width: resultCanvas.width,
+                      output_height: resultCanvas.height,
+                      result_retention: "python_memory_only",
+                      created_at: new Date().toISOString(),
+                    },
+                  });
                 } catch (error) {
                   emitFailure("OUTPUT_CAPTURE_FAILED", error, performance.now() - started);
                 }
