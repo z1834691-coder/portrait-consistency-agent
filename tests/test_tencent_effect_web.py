@@ -409,3 +409,4 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     assert "errorCodeOf" in source
     assert "SDK 鉴权缺少必要参数" in source
     assert "runButton.disabled = false" in source
+    assert "on_result_change=lambda: None" in source

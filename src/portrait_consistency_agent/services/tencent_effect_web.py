@@ -923,5 +923,10 @@ def render_tencent_effect_web(
         data=payload.data,
         key=key,
         on_completed_change=lambda: None,
+        # ``result`` is a separate, short-lived trigger.  Without registering
+        # its change callback Streamlit receives the metadata receipt but drops
+        # the one-time result handoff, leaving E1 unable to run the common
+        # VerificationResult path.
+        on_result_change=lambda: None,
         on_status_change=lambda: None,
     )
