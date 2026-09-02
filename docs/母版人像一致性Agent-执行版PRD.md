@@ -1610,3 +1610,13 @@ Cloud 已拉取最新代码并完成一次重建；page 6 的旧模块缓存 Imp
 Streamlit 重跑时随机生成新的 `request_ref`。`reset_token` 与签名时间解耦，旧回执会安全忽略，不写入
 `ProviderRun`。新增回归覆盖同代次复用、参数变化开新代次、参数顺序稳定和签名刷新不重置组件。
 本轮修复后的 Web 专项测试为 `11 passed`；Cloud 尚未取得新的 Browser Receipt，Card 继续为 `candidate`。
+
+## 2026-09-02｜产品设计：从回执错位到鉴权阻塞的真实重试闭环
+
+<span style="color:#C00000"><strong>背景与问题。</strong>第一轮 Web 试验暴露了两个连续问题：Streamlit 重跑曾使浏览器回执与准备请求的 `request_ref` 错位；修复后，真实重试已经能够到达腾讯 Web SDK，但 SDK 返回鉴权错误，且组件在失败后把按钮保持为禁用，用户无法判断“是否真的重试过”。这说明产品验收不能只看页面能否加载，必须把请求代次、真实回执、可重试性和供应商鉴权分别验证。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>对照腾讯 Web 静态图教程和 SDK 错误码，错误码 100 表示鉴权缺少必要参数；浏览器日志中的 `appid` 值呈现为当前 Streamlit 域名，而产品配置中的 APPID 应是腾讯账号数字 APPID，绑定域名只承担 License 域名校验。由此将问题从“回执合同是否过严”改判为“Cloud Secret 的配置形态错误”，不能通过放宽合同或重复调用来掩盖。</span>
+
+<span style="color:#C00000"><strong>产品决策。</strong>同一请求代次继续使用稳定 `request_ref`；任何失败回执都必须保留为失败 ProviderRun，并允许用户重新点击执行；服务端在签名前拒绝 URL 形式 APPID；浏览器只向页面展示有限的 `error_code` 和安全中文解释，原始 SDK 对象、Token、图片和密钥不进入 Trace。真实图片未成功前，Web Card 继续为 `candidate`，不能进入主流程或被 RAG 自动放行。</span>
+
+<span style="color:#C00000"><strong>带来的效果与下一步。</strong>本轮真实重试证明回执关联修复有效，但也证明 Web Provider 尚未通过图片处理准入；失败证据已可追溯、可重试、可解释。下一步由负责人在 Streamlit Cloud → App Settings → Secrets 将 `TENCENT_EFFECT_APP_ID` 改为腾讯账号数字 APPID，保留 License Key/Token，Reboot 后只运行一次官方示例图；只有取得成功 Browser Receipt 并完成隐私、区域、成本和负责人审核，才讨论 Card promotion。</span>

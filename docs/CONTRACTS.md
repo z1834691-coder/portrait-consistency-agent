@@ -509,3 +509,13 @@ V3 的原始 Holdout-A answerless 运行合同仍保持“一次性、不可重�
 每个 G0–G5 代次必须输出逐题 `Prediction`、失败码、根因/SOP、评分、查询投影和完整安全 Trace。Trace 允许保留题干/Gold 是因为这是负责人授权的内部 validation 报告，但仍不得含照片、向量、密钥或隐藏链路；必须明确 `network_called=false`、`llm_called=false`、`provider_api_called=false`、`photo_or_face_vector_read=false`。`RagAdvisoryDecision.execution_authorized` 继续为 `false`，诊断候选不得写入六个业务合同或生成 `ProviderRun`。
 
 当前最终 G3 保守候选的 validation Route=100%、Evidence relation=97.22%、Recall@5=100%；G2 虽为 100% 但因 public regression 退化而不采纳，G4/G5 无增益。固定 Precision/project Gate 仍 `FAIL`，hard-safety `PASS`；只能用新建且与 V3 不重叠的 V4 Holdout 讨论 promotion。
+
+## 2026-09-02｜Tencent Effect Web 真实重试合同证据
+
+真实重试已证明稳定 `request_ref` 能正确关联浏览器回执；腾讯 Web SDK 随后返回失败回执（SDK
+鉴权错误码 100），未产生输出图。该失败仍按 `EffectWebBrowserReceipt` → `ProviderRun` 合同入账，
+不允许用页面状态或模型判断替代真实回执。
+
+失败回执之后组件必须可重试，服务端必须拒绝 URL 形式 `TENCENT_EFFECT_APP_ID`，页面只能展示
+脱敏 `error_code/safe_error`。原始 SDK 错误对象、License Token、图片 data URL 和密钥不进入
+合同持久化或 Trace；Card 继续 `candidate`，直到数字 APPID 修正后取得成功回执并完成准入清单。

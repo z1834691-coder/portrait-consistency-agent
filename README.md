@@ -6,7 +6,7 @@
 
 本机用明确授权照片完成的真实 IMS smoke 返回 `status=succeeded`、`Pass`、RequestId=`c95e1359-9ecb-45ac-aa94-3776fbccc0ad`；这证明本机服务链可用，但不代替 Cloud 新版本回执。提交并重建后，请刷新 Private App、重新执行一次内容安全检查；如果仍失败，只回传页面显示的 `error_code` 和 `RequestId`。
 
-当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created / Tencent Web License normal / Effect Web browser smoke blocked by missing Cloud Secrets`
+当前阶段：`Contract v0.4 frozen / Checkpoint 8A + 8B + 8C-1/8C-2 offline Gates passed / RAG P0-A + P0-B + P0-C + governance + optimization dashboards verified / Gold Set v2 public+private aggregate baseline FAIL / two Provider candidates fail-closed / private GitHub package pushed / Streamlit Cloud Private app created / Tencent Web License normal / Effect Web browser smoke reached SDK but failed auth code 100; APPID configuration pending`
 
 > **最新状态（2026-09-01）：** 产品负责人已审核 v3 Holdout 36 题并完成一次私有聚合盲测；Route=30.56%、Recall@5=59.72%、MRR=77.78%、nDCG@5=63.81%、hard-safety=PASS，但 project quality Gate=`FAIL`。第一位用户已完成母版/目标照 IMS、Profile 建立和 CompareFace；目标照原始分 `56.231842041015625` 为 `uncertain`，旧页面在 8A 因缺少本人/编辑权确认入口而暂停。代码已补齐一次性确认路径，Cloud 重建后可继续 8A→8B→8C；尚无真实 BeautifyPic ProviderRun/VerificationResult。
 
@@ -66,7 +66,7 @@ RAG P0-A/P0-B/P0-C 与只读治理 Dashboard 已完成本地可审计闭环；Go
 
 failure analyzer 已把“公开指标、隐藏聚合、错误模式、候选修正、回归差值、SOP”串成可重放链路。当前候选 `rag-correction-candidate-v0.1` 只做经审核的同义词归一化，公开回归 `regression_gate=PASS`，但 project Gate 仍为 `FAIL`，所以没有写入现役检索或权限逻辑。报告和 Dashboard 都是本机只读治理工具，不是生产监控、自动修复器、训练 Dataset 或图片编辑器。
 
-候选 Provider 当前状态为：火山 V2 `not_run`；腾讯特效 Web `candidate / browser-smoke-ready-pending-receipt`。Cloud 已完成最新代码重建，page 6 可加载且 Effect Web Secrets 已配置；本轮尚未取得新的 Browser Receipt，不能声称 Web 图片、细项五官或批量已验证。两条路线均须按 Card → Adapter → 权限/预算/隐私 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进；只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执，火山 V0 仍不购买/接入。
+候选 Provider 当前状态为：火山 V2 `not_run`；腾讯特效 Web `candidate / browser-smoke-failed-auth-config`。Cloud page 6 已取得真实失败 Browser Receipt（未生成输出图）；原 `request_ref` 错位已修复，但 SDK 鉴权码 100 暴露出 `TENCENT_EFFECT_APP_ID` 需要改为腾讯账号数字 APPID，不能使用绑定域名。修正 Secret 后再运行一次官方示例图；在成功回执及准入清单完成前，不能声称 Web 图片、细项五官或批量已验证。两条路线均须按 Card → Adapter → 权限/预算/隐私 → live receipt → Gold 回归 → 产品负责人冻结的顺序推进；只有当前 Tencent BeautifyPic/IMS 路径有既有真实回执，火山 V0 仍不购买/接入。
 
 ## 当前项目树
 

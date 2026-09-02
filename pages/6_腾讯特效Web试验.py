@@ -263,6 +263,8 @@ def main() -> None:
                 "provider_request_id": run.provider_request_id,
                 "sdk_version": receipt.sdk_version,
                 "elapsed_ms": receipt.elapsed_ms,
+                "error_code": receipt.error_code,
+                "safe_error": receipt.safe_error,
                 "result_retention": "browser_session_only",
                 "output_hash_saved": run.result_artifact_sha256 is not None,
                 "card_review_status_still": card["review_status"],

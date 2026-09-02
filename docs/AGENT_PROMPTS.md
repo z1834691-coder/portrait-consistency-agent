@@ -415,3 +415,11 @@ fingerprint 维护同一输入/参数代次的 `request_ref`，签名可刷新�
 必须校验 `request_ref` 与 `input_sha256`。旧代次或 hash 不一致的回执只能安全忽略并提示重新运行，
 不得写入 `ProviderRun`。该修复不改变 Web Card 的 `candidate` 状态，也不改变 RAG proposal-only、
 Token 不出站和图片不落库边界。
+## 2026-09-02｜Tencent Effect Web 鉴权失败与重试 Prompt 边界
+
+真实重试已通过稳定 `request_ref` 关联，但 Web SDK 返回鉴权错误码 100，未生成图片。Prompt/LLM
+不得把失败解释成成功，也不得自行修改 APPID、License、权限或再次生成 ProviderRun。页面可以
+根据受限错误码显示安全中文提示；服务端先拒绝 URL 形式的 `TENCENT_EFFECT_APP_ID`，再允许进入
+浏览器组件。失败后重新启用按钮，重试仍须产生新的真实回执并按合同校验；原始 SDK 对象、Token、
+图片和密钥不进入 Prompt 或 Trace。修正 Cloud Secret 为腾讯账号数字 APPID 后，只运行一次官方
+示例图，Card 在成功回执和人工准入完成前保持 `candidate`。

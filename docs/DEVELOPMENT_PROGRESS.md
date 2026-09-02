@@ -1882,3 +1882,31 @@ Tencent Effect Web 专项测试       → 11 passed
 4 条 warning 仍为既有 Pillow 弃用提示；本轮只修复回执关联生命周期，没有新增网络调用或图片
 持久化。Cloud page 6 已显示三项 Effect Secrets 已配置并进入组件区，待用户点击当前版本组件后
 取得真实 Browser Receipt。
+
+## 2026-09-02｜真实重试、鉴权定位与可重试组件修复
+
+### 本轮完成
+
+- 在 Cloud page 6 重新执行了一次真实浏览器调用；原来的 `request_ref` 合同错位不再出现，
+  说明请求代次修复已经生效。
+- 腾讯 Web SDK 返回失败回执 `web_receipt_effect_web_fa6f0765ad924597`，约 965ms，未生成
+  输出图，ProviderRun 已保存为失败状态，Card 仍为 `candidate`。
+- 浏览器日志出现官方 SDK 鉴权错误码 `100`。结合 SDK 日志中显示的 `appid` 为 Streamlit 域名，
+  将下一处阻塞定位为 Cloud Secret 中 APPID 的形态/配置，而不是回执关联问题。
+- Web bridge 失败后重新启用执行按钮，服务端拒绝 URL 形式的 `TENCENT_EFFECT_APP_ID`，页面显示
+  脱敏 `error_code` 与 `safe_error`，不展示原始 SDK 错误对象或密钥。
+
+### 交叉验证
+
+```text
+.venv/bin/pytest -q                 → 181 passed, 4 warnings
+ruff check                          → passed
+ruff format --check                 → passed
+compileall                          → passed
+git diff --check                    → passed
+Tencent Effect Web 专项测试         → 12 passed
+```
+
+4 条 warning 仍是既有 Pillow 弃用提示。本轮没有把失败回执写成成功，也没有升级 Card 或主流程
+权限。下一步只需在 Streamlit Cloud → App Settings → Secrets 将 `TENCENT_EFFECT_APP_ID` 修正为
+腾讯账号数字 APPID（License Key/Token 保持不变），Reboot 后再跑一次官方示例图。

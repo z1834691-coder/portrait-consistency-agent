@@ -323,6 +323,10 @@ class TencentEffectWebAdapter:
         timestamp = int(now_epoch_seconds if now_epoch_seconds is not None else time.time())
         token = self.settings.tencent_effect_license_token.get_secret_value()  # type: ignore[union-attr]
         app_id = self.settings.tencent_effect_app_id.strip()  # type: ignore[union-attr]
+        if app_id.startswith(("http://", "https://")):
+            raise TencentEffectWebConfigurationError(
+                "TENCENT_EFFECT_APP_ID must be the Tencent account APPID, not the bound domain URL"
+            )
         signature = _sha256_hex(f"{timestamp}{token}{app_id}{timestamp}").upper()
         license_key = self.settings.tencent_effect_license_key.get_secret_value()  # type: ignore[union-attr]
         sdk_url = self.settings.tencent_effect_sdk_url.strip() or EFFECT_WEB_SDK_DEFAULT_URL
@@ -591,13 +595,30 @@ def render_tencent_effect_web(
             status.textContent = text;
             status.dataset.tone = tone || "info";
           };
-          const safeError = (error) => {
-            const message = error && error.message
-              ? String(error.message)
-              : "浏览器 SDK 未返回详细原因";
-            return message.slice(0, 180);
+          const errorCodeOf = (error, fallback) => {
+            const candidate = error && (error.code ?? error.Code ?? error.errorCode);
+            return candidate === undefined || candidate === null || candidate === ""
+              ? fallback
+              : String(candidate).slice(0, 96);
+          };
+          const safeError = (error, code) => {
+            const known = {
+              "100": "SDK 鉴权缺少必要参数，请检查账号 APPID、License Key 和签名",
+              "101": "SDK 签名已超时，请重新生成签名",
+              "102": "SDK 未找到对应账号，请检查账号 APPID",
+              "103": "SDK 签名错误，请检查服务端签名公式和 Token",
+              "104": "当前域名与 License 绑定不匹配",
+              "20001001": "SDK 鉴权失败，请检查 License 和签名",
+              "10000005": "SDK 无法解析输入图片",
+              "10001103": "SDK 特效强度参数不正确",
+              "10001104": "SDK 尚未启用，无法设置特效",
+              "10001105": "SDK 收到无效特效 ID",
+            };
+            return known[code] || "浏览器 SDK 返回运行时错误，请检查 SDK 初始化、"
+              + "License、域名和输入图片";
           };
           const emitFailure = (code, error, elapsed) => {
+            const normalizedCode = errorCodeOf(error, code);
             const receipt = {
               status: "failed",
               receipt_id: `web_receipt_${data.request_ref}`,
@@ -611,13 +632,17 @@ def render_tencent_effect_web(
               output_width: null,
               output_height: null,
               elapsed_ms: Math.max(0, Math.round(elapsed || 0)),
-              error_code: code,
-              safe_error: safeError(error),
+              error_code: normalizedCode,
+              safe_error: safeError(error, normalizedCode),
               result_retention: "browser_session_only",
               created_at: new Date().toISOString(),
             };
             show(`处理失败：${code}`, "error");
             state.running = false;
+            // A failed attempt must remain retryable.  The previous bridge
+            // left the button disabled after an SDK error, forcing a full
+            // Streamlit rerun and hiding whether a retry actually happened.
+            runButton.disabled = false;
             setStateValue("status", "failed");
             setTriggerValue("completed", receipt);
           };
@@ -679,7 +704,7 @@ def render_tencent_effect_web(
               state.sdk = sdk;
               sdk.on("error", (event) => {
                 if (state.running) {
-                  emitFailure("SDK_RUNTIME_ERROR", event, performance.now() - started);
+                emitFailure("SDK_RUNTIME_ERROR", event, performance.now() - started);
                 }
               });
               sdk.on("ready", async () => {

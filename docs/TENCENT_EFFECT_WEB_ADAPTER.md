@@ -132,3 +132,30 @@ Python 页面会再次执行；旧页面每次重跑都随机生成新的 `reque
 新增测试覆盖：同一代重跑复用 request reference、参数改变时开启新代次、签名刷新不改变 reset token、
 参数顺序变化仍得到相同 fingerprint。真实 Browser Receipt 仍须在 Cloud Secrets 配齐后取得；本修复
 解决的是回执关联一致性，不等于 Web Provider 已通过准入。
+
+## 10. 2026-09-02｜真实重试回执与当前鉴权阻塞
+
+本轮已在 Cloud page 6 执行一次真实浏览器重试。此前的
+`browser receipt request_ref does not match the prepared request` 已不再出现，说明同一代次
+`request_ref` 修复生效；请求确实进入了腾讯 Web SDK，但没有生成结果图。
+
+脱敏回执如下：
+
+```text
+status=failed
+receipt_id=web_receipt_effect_web_fa6f0765ad924597
+error_code=SDK_RUNTIME_ERROR（SDK 事件映射前的历史回执）
+elapsed_ms=965
+output_hash_saved=false
+card_review_status=candidate
+```
+
+浏览器开发日志同时记录到腾讯 SDK 鉴权错误码 `100`。官方错误码中，`100` 表示鉴权缺少必要
+参数。日志里的 SDK `appid` 值呈现为当前 Streamlit 域名，而 `TENCENT_EFFECT_APP_ID` 必须是
+腾讯账号的数字 APPID；绑定域名只用于 License 域名校验，不能填入 APPID。当前代码已在服务端
+签名前拒绝 `http(s)` 形式的 APPID，并将已知 SDK 错误映射为不泄漏原始 SDK 信息的安全提示。
+
+因此本次重试的结论是：回执关联问题已修复，但 Provider 仍未通过真实图片处理准入。请在
+Streamlit Cloud → App Settings → Secrets 中只把 `TENCENT_EFFECT_APP_ID` 改为腾讯账号数字 APPID，
+保留现有 License Key/Token，不要在聊天中发送任何密钥；修改后 Reboot/刷新，再用官方示例图运行
+一次。成功前 Card 必须继续保持 `candidate`，不得写入主流程。

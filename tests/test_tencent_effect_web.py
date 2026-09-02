@@ -120,6 +120,20 @@ def test_payload_mints_signature_without_exposing_license_token() -> None:
     }
 
 
+def test_effect_app_id_rejects_bound_domain_url() -> None:
+    adapter = TencentEffectWebAdapter(
+        AppSettings(
+            _env_file=None,
+            tencent_effect_app_id="https://portrait-consistency-agent.streamlit.app",
+            tencent_effect_license_key="license_public_key",
+            tencent_effect_license_token="token_only_server_side_123",
+        )
+    )
+    request, _, _ = _request(adapter)
+    with pytest.raises(TencentEffectWebConfigurationError, match="account APPID"):
+        adapter.build_component_payload(request, input_value="data:image/png;base64,QUJD")
+
+
 def test_request_generation_is_stable_across_streamlit_reruns() -> None:
     adapter = TencentEffectWebAdapter(_settings_with_effect_credentials())
     state: dict[str, object] = {}
@@ -300,3 +314,6 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     source = inspect.getsource(render_tencent_effect_web)
     assert "takePhoto" in source
     assert "getOutput" not in source
+    assert "errorCodeOf" in source
+    assert "SDK 鉴权缺少必要参数" in source
+    assert "runButton.disabled = false" in source

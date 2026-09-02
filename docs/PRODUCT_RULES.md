@@ -642,3 +642,8 @@ Gold Set v2 离线评测器、public/annotations/holdout 三包隔离、盲审�
 ## 2026-09-02｜Web 回执关联规则补充
 
 Streamlit 重跑不能导致同一浏览器请求换用新的 `request_ref`。page 6 以输入 hash/引用、参数、来源和 Card 版本形成非敏感 fingerprint，同一代次复用引用，参数或输入变化才开新代次；签名时间可刷新但不触发组件重置。旧代次或 hash 不一致回执安全忽略，不进入 `ProviderRun`。该规则只修复交互生命周期，不放宽 Web Card、图片出站或 RAG 权限。
+## 2026-09-02｜Tencent Effect Web 真实重试边界
+
+<span style="color:#C00000"><strong>本轮产品事实。</strong>真实重试已不再出现 `request_ref` 错位，说明同代次回执关联修复生效；但腾讯 Web SDK 返回鉴权错误码 100，未生成图片结果。当前 Card 继续为 `candidate`，不能因为页面可加载、License 存在或失败回执已保存，就宣称 Web 图片能力可用。</span>
+
+<span style="color:#C00000"><strong>安全与可重试规则。</strong>失败后组件必须重新启用执行按钮；服务端拒绝 URL 形式的 `TENCENT_EFFECT_APP_ID`，因为 APPID 必须是腾讯账号数字 APPID，绑定域名只用于 License 域名校验。页面仅显示脱敏错误码和安全解释；原始 SDK 错误对象、Token、图片和密钥不得进入 Trace。修正 Secret 后只运行一次官方示例图，成功回执仍需完成隐私、区域、成本和负责人准入。</span>
