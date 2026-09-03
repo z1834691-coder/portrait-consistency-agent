@@ -666,9 +666,9 @@ def accept_effect_web_browser_result(
     The browser performs the image edit.  This function is the server-side
     half of the contract: it validates the prepared request and receipt,
     decodes the result once, creates the common ``ProviderRun`` and returns
-    bytes only to the current caller for 8C.  The Web Card may be used here
-    only for an explicit candidate trial; normal execution requires a later
-    ``candidate -> verified`` admission decision.
+    bytes only to the current caller for 8C.  Candidate evidence runs must set
+    ``allow_candidate_trial=True``.  Normal execution is allowed only after
+    the Card is promoted to the explicitly scoped ``private_demo_beta`` state.
     """
 
     from portrait_consistency_agent.services.tencent_effect_web import (
@@ -680,15 +680,28 @@ def accept_effect_web_browser_result(
     policy = policy or build_v0_execution_policy()
     now = now or utc_now()
     trace: list[dict[str, object]] = []
+    execution_mode = "candidate_trial"
     if confirmed_plan.provider != "tencent_effect_web":
         raise ValueError("Web browser results require a tencent_effect_web EditPlan")
 
     try:
-        if not allow_candidate_trial:
-            raise ExecutionBlockedError(
-                ("web_card_not_promoted",),
-                "腾讯特效 Web 工具尚未完成正式准入；当前只允许独立候选试验。",
+        if allow_candidate_trial:
+            execution_mode = "candidate_trial"
+        else:
+            from portrait_consistency_agent.services.provider_cards import (
+                load_tencent_effect_web_card,
             )
+
+            card = load_tencent_effect_web_card()
+            if not (
+                card.get("review_status") == "verified"
+                and card.get("promotion_scope") == "private_demo_beta"
+            ):
+                raise ExecutionBlockedError(
+                    ("web_card_not_promoted",),
+                    "腾讯特效 Web 工具尚未完成私有 Demo 准入；当前只允许独立候选试验。",
+                )
+            execution_mode = "private_demo_beta"
         _ensure_execution_allowed(
             confirmed_plan=confirmed_plan,
             execution_intent=execution_intent,
@@ -786,7 +799,7 @@ def accept_effect_web_browser_result(
                 "status": "failed",
                 "provider_request_id": receipt.receipt_id,
                 "error_code": receipt.error_code,
-                "execution_mode": "candidate_trial",
+                "execution_mode": execution_mode,
                 "result_handoff": "none",
             }
         )
@@ -877,7 +890,7 @@ def accept_effect_web_browser_result(
                 "status": "succeeded",
                 "provider_request_id": receipt.receipt_id,
                 "plan_revision": confirmed_plan.revision,
-                "execution_mode": "candidate_trial",
+                "execution_mode": execution_mode,
                 "result_handoff": "python_memory_only",
                 "next_step": "verification",
             },
@@ -899,7 +912,11 @@ def accept_effect_web_browser_result(
         trace=tuple(trace),
         user_message=(
             "腾讯特效 Web 结果图已通过一次性回传校验，并只在当前会话内存交给复测器；"
-            "它仍是 candidate 试验，不代表 Provider 已正式准入。"
+            + (
+                "当前属于受邀 private_demo_beta 范围。"
+                if execution_mode == "private_demo_beta"
+                else "当前属于 candidate 证据试验，不代表 Provider 已正式准入。"
+            )
         ),
     )
 

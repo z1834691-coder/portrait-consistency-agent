@@ -227,6 +227,15 @@ class E3LiveReceipt:
     handoff_accepted: bool = False
     result_retention: Literal["browser_session_only"] = "browser_session_only"
     verification_status: VerificationHandoffStatus = "not_run"
+    # These are redacted projections of the shared VerificationResult.  They
+    # let the E3 gate distinguish “the browser returned bytes” from “the
+    # returned bytes produced measurable, non-worsening evidence” without
+    # persisting a result image or raw landmarks.
+    verification_id: str | None = None
+    verification_decision: str | None = None
+    overall_trend: str | None = None
+    target_evidence_sufficient: bool | None = None
+    measured_feature_count: int | None = None
     note: str | None = None
 
     def __post_init__(self) -> None:
@@ -240,6 +249,8 @@ class E3LiveReceipt:
             raise ValueError("receipt_id must be a safe identifier")
         if self.request_ref is not None and not _SAFE_ID_RE.fullmatch(self.request_ref):
             raise ValueError("request_ref must be a safe identifier when present")
+        if self.verification_id is not None and not _SAFE_ID_RE.fullmatch(self.verification_id):
+            raise ValueError("verification_id must be a safe identifier when present")
         if not _SHA256_RE.fullmatch(self.input_sha256):
             raise ValueError("input_sha256 must be a lowercase SHA-256")
         if self.output_sha256 is not None and not _SHA256_RE.fullmatch(self.output_sha256):
@@ -256,6 +267,13 @@ class E3LiveReceipt:
             raise ValueError("output_height is outside the browser receipt limit")
         if self.status == "failed" and self.handoff_accepted:
             raise ValueError("a failed receipt cannot be marked as handed off")
+        if self.measured_feature_count is not None and self.measured_feature_count < 0:
+            raise ValueError("measured_feature_count cannot be negative")
+        if self.verification_status == "completed":
+            if self.verification_id is None or self.overall_trend is None:
+                raise ValueError(
+                    "completed verification receipts require verification_id and overall_trend"
+                )
 
     @classmethod
     def from_mapping(cls, value: dict[str, object]) -> E3LiveReceipt:
@@ -275,6 +293,11 @@ class E3LiveReceipt:
             "handoff_accepted",
             "result_retention",
             "verification_status",
+            "verification_id",
+            "verification_decision",
+            "overall_trend",
+            "target_evidence_sufficient",
+            "measured_feature_count",
             "note",
             "notes",
         }
@@ -311,6 +334,29 @@ class E3LiveReceipt:
             handoff_accepted=bool(value.get("handoff_accepted", False)),
             result_retention="browser_session_only",
             verification_status=value.get("verification_status", "not_run"),  # type: ignore[arg-type]
+            verification_id=(
+                value.get("verification_id")
+                if isinstance(value.get("verification_id"), str)
+                else None
+            ),
+            verification_decision=(
+                value.get("verification_decision")
+                if isinstance(value.get("verification_decision"), str)
+                else None
+            ),
+            overall_trend=(
+                value.get("overall_trend") if isinstance(value.get("overall_trend"), str) else None
+            ),
+            target_evidence_sufficient=(
+                bool(value.get("target_evidence_sufficient"))
+                if value.get("target_evidence_sufficient") is not None
+                else None
+            ),
+            measured_feature_count=(
+                int(value["measured_feature_count"])
+                if value.get("measured_feature_count") is not None
+                else None
+            ),
             note=note,
         )
 
@@ -334,6 +380,11 @@ class E3LiveReceipt:
             "handoff_accepted": self.handoff_accepted,
             "result_retention": self.result_retention,
             "verification_status": self.verification_status,
+            "verification_id": self.verification_id,
+            "verification_decision": self.verification_decision,
+            "overall_trend": self.overall_trend,
+            "target_evidence_sufficient": self.target_evidence_sufficient,
+            "measured_feature_count": self.measured_feature_count,
             "note": self.note,
             "image_bytes_saved": False,
             "data_url_saved": False,
@@ -508,6 +559,31 @@ def build_e3_evidence_report(
     live_success = sum(receipt.status == "succeeded" for receipt in receipts)
     live_failed = sum(receipt.status == "failed" for receipt in receipts)
     handoff_success = sum(receipt.handoff_accepted for receipt in receipts)
+    target_receipts = [receipt for receipt in receipts if receipt.sample_id in target_ids]
+    # “Visual generalization” is deliberately narrower than SDK success.  It
+    # is established only when every preflighted target has a completed shared
+    # verification, all measured trends are non-worsening, and at least one
+    # target contains positive geometry evidence.  An LLM or a browser status
+    # cannot manufacture this flag.
+    target_verification_complete = bool(target_receipts) and all(
+        receipt.status == "succeeded"
+        and receipt.handoff_accepted
+        and receipt.verification_status == "completed"
+        and receipt.overall_trend in {"improved", "no_change"}
+        and receipt.measured_feature_count is not None
+        and receipt.measured_feature_count > 0
+        for receipt in target_receipts
+    )
+    target_improvement_observed = any(
+        receipt.overall_trend == "improved" for receipt in target_receipts
+    )
+    visual_evidence_complete = (
+        all_targets_present
+        and linked
+        and request_refs_recorded
+        and target_verification_complete
+        and target_improvement_observed
+    )
     formal = {
         "license_active": False,
         "exact_domain_bound": False,
@@ -524,6 +600,10 @@ def build_e3_evidence_report(
         for key, value in formal_admission_evidence.items():
             if key in formal:
                 formal[key] = bool(value)
+    # A caller may supply the non-visual vendor checklist, but it may not
+    # override missing result→VerificationResult evidence.  This keeps the
+    # promotion gate tied to factual receipts rather than a copied boolean.
+    formal["multi_sample_visual_review_complete"] = visual_evidence_complete
     blockers: list[str] = []
     if not linked:
         blockers.append("live_receipt_input_hash_not_linked_to_preflight")
@@ -535,6 +615,8 @@ def build_e3_evidence_report(
         blockers.append("offline_contract_regression_not_passed")
     if not batch_failure_isolation_verified:
         blockers.append("batch_failure_isolation_not_verified")
+    if visual_evidence_complete:
+        formal["multi_sample_visual_review_complete"] = True
     if not formal["multi_sample_visual_review_complete"]:
         blockers.append("visual_effect_generalization_not_established")
     blockers.extend(

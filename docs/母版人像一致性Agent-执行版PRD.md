@@ -1149,7 +1149,7 @@ LLM 只能根据已有证据提出候选根因；最终标签由规则或开发�
 | Tencent BeautifyPic live smoke        | **已实现并验证**   | 授权内部单人照片的 IMS `Pass` 后，BeautifyPic 瘦脸/大眼各 5、美白/磨皮 0 得到真实 RequestId，1924 ms；结果仅内存引用 | 单样本既有 Provider 回执只证明当前工具链可用，不代表母版一致性效果、当前 UI 端到端或用户接受 |
 | 8B 确认后单次编辑/ProviderRun Gate        | **已实现并离线验证** | 确认作用域、hash/期限/Gate 校验、一次调用、脱敏回执、6 个初始执行案例与 fixture Trace；8C-2 子轮回执新增 `parent_run_id`/上一结果输入血缘 | 尚无新的 UI 真实照片回执；本地幂等不是宕机后的分布式 exactly-once；首轮外部调用需页面可见确认，后继子轮在同一有效 scope 内由 preflight 后自动执行，scope 变化才重新确认 |
 | Streamlit 本地壳                        | **已实现并验证**   | session、双图内存预览、质量门、显式安全/同人按钮、Profile v0、文本 IntentFrame、8A 草案、8B 确认/结果预览、8C 复测、子计划展示、点赞/点踩/文字反馈与回退预览；健康检查通过     | 首轮真实外部调用仅在用户勾选/点击后才允许；8C-2 同一有效 scope 内可受限自动续跑；没有完整多轮澄清、外部/混合复测或部署级会话恢复                     |
-| 视觉交互设计（轻量四区 Agent 工作台 + 对齐/母版/记录三空间）      | **设计已冻结待开发**   | 2026-08-30 Agent 结构决策；2026-09-02 冻结 Party Rock 原始 token、苹方、右侧 Agent 对话、短文案及紫色与米白共同大面积（紫色略强）、黑色结构、其余色少量点缀；活跃关键帧收敛为 E01 入口与 E02 Agent 对话；关键帧执行 Prompt 与可编辑源见 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`design/keyframes/party-rock-pingfang/` | 现有 Streamlit UI 尚未升级；E01/E02 HTML/SVG/PNG 已生成，UI Gate 仍待完成；不得把样张当成线上体验或改变权限、工具链与 Trace 边界 |
+| 视觉交互设计（轻量四区 Agent 工作台 + 对齐/母版/记录三空间）      | **设计已冻结待开发**   | 2026-08-30 Agent 结构决策；2026-09-02 冻结 Party Rock 原始 token、苹方、右侧 Agent 对话、短文案及 E01/E02 的黑导航+米白工作面；2026-09-04 明确 E01/E02 纯米白、旧环境素材归档，并新增独立 K00 封面候选（紫色主场、黑色顶部、已登记艺术照片墙）；关键帧 Prompt 与可编辑源见 `docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`docs/UI_COVER_KEYFRAME_PROMPT.md`、`design/visual-tracks/getty-thread-party-rock/` | 现有 Streamlit UI 尚未升级；E01/E02/K00 HTML/SVG/PNG 已生成并完成设计资产级 QA，UI Gate 仍待完成；不得把样张当成线上体验或改变权限、工具链与 Trace 边界 |
 | Reference Profile 真实建档               | **部分已实现并验证** | `reference_profile.py` + 4 个 Profile 测试 + Checkpoint 6 临时 SQLite 纵向测试   | V0 仅脸框/眼睛几何；无加密锚点和 UI                                 |
 | 内容安全 + subject/quality/editability 门 | **部分已实现并验证** | OpenCV/Pillow 质量门、Tencent Adapter、页面显式同意按钮、CompareFace live 成功；IMS 真实 `Pass` 与 `Block` 回执 | 两条安全路由已验证；完整状态机和多脸隔离尚未实现 |
 | 多脸隔离/裁剪/回贴/复测                        | **已冻结待开发**   | 产品链路与合同路由                                                               | 当前必须要求用户单脸/先裁剪                                        |
@@ -1688,7 +1688,7 @@ Streamlit 重跑时随机生成新的 `request_ref`。`reset_token` 与签名时
 
 <span style="color:#C00000"><strong>边界与实现状态。</strong>本决策只冻结视觉 token 的选用、正式字体和相对使用范围，不改变同意、权限、Provider、结果保留、RAG、审计或 Trace 合同。Streamlit 尚未完成视觉迁移；必须在 UI Gate 中验证真实状态、键盘/屏幕阅读器、reduced motion 和颜色使用范围后才能称为“已实现”。</span>
 
-### 29.1 2026-09-02 产品设计：活跃关键帧收敛为入口与 Agent 对话
+### 29.1 2026-09-02 产品设计：活跃关键帧收敛为入口与 Agent 对话（历史记录；最新执行以 29.3 为准）
 
 <span style="color:#C00000"><strong>产品负责人最新要求。</strong>视觉评审不再制作四张状态页面；活跃交付只保留两张主关键帧：E01「入口」和 E02「Agent 对话」。这不是删除底层状态机，而是把上传、自动检查、澄清、一次授权、结果与停止都收束到两个空间内，用对话消息、事实块、授权 Sheet 和结果块顺序呈现。</span>
 
@@ -1696,13 +1696,21 @@ Streamlit 重跑时随机生成新的 `request_ref`。`reset_token` 与签名时
 
 <span style="color:#C00000"><strong>耦合边界。</strong>本次收敛同步更新 `docs/前端与交互设计需求文档.md` 第 4、7、9、12、15 节、`docs/FRONTEND_UI_KEYFRAME_PROMPT.md`、`PRODUCT.md`、`PRODUCT_RULES.md`、`README.md`、`PROJECT_CONTEXT.md`、`DECISION_LOG.md` 与 `DEVELOPMENT_PROGRESS.md`；旧 K01—K04 资产移入 `design/keyframes/party-rock-pingfang/archive/v1-four-state/`，不再作为实现依据。业务合同、隐私/权限、Provider、结果保留、Trace 和 RAG 事实均未改变。</span>
 
-### 29.2 2026-09-02 产品设计：Getty × Party Rock 三套视觉候选（当前执行）
+### 29.2 2026-09-02 产品设计：Getty × Party Rock 三套视觉候选（历史记录；最新执行以 29.3 为准）
 
 <span style="color:#C00000"><strong>最新视觉覆盖。</strong>产品负责人否定 29.1 中间工作区的紫色暗流与紫黑暗影，明确当前候选统一采用“最左侧黑色导航书脊 + 中央/右侧米白工作面”。紫色/淡紫只通过柔性圆角框、标签、轨迹和焦点建立层次；荧光绿只作少量活动节点/进行中信号；黑色线框和文字承担结构。Party Rock 原始 token、苹方、两条主路由、四区语义、自然语言主链、后台自动门控、一次外部授权、结果保留和 Trace 边界均不变。</span>
 
 <span style="color:#C00000"><strong>候选范围。</strong>基于 Getty `Tracing Art` 的“先路径后数据、关系轨迹、编辑式留白、混合媒介证据”抽象，新增 A「档案游线」、B「柔性索引」、C「开放谱系」三套方向；每套严格两张关键帧：E01 入口 + E02 Agent 对话。它们只探索视觉叙事和边框/轨迹节奏，不新增页面、状态或业务能力。候选选择前不把任何一套写成最终视觉规范。</span>
 
-<span style="color:#C00000"><strong>当前资产与 Gate。</strong>候选评审页为 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`，风格原则为 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`。Image 2 PNG 仅用于材质/比例方向；同源分层 SVG 用于精确中文、布局和 Figma 导入。产品负责人选择方向后，才进入 Impeccable Critical/Audit、WCAG、浏览器/UI Gate 和 Streamlit 迁移；在此之前不修改应用代码。</span>
+<span style="color:#C00000"><strong>当前资产与 Gate（历史记录）。</strong>候选评审页为 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`，风格原则为 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`。Image 2 PNG 仅用于材质/比例方向；同源分层 SVG 用于精确中文、布局和 Figma 导入。该三套方向已被 2026-09-04 的 E01/E02 + K00 执行覆盖，不能作为本轮生产指令；在当前候选确认前，仍不得把任何方向写成最终 Streamlit 规范。</span>
+
+### 29.3 2026-09-04 产品设计：当前视觉执行覆盖——E01 / E02 + K00
+
+<span style="color:#C00000"><strong>当前视觉边界。</strong>产品负责人已明确移除 E01 `/align` 与 E02 `/align/:session` 中的 `orbit-paper`、`folded-window`、`ink-garden` 三张 Image 2 无人物环境素材。两张产品关键帧的中央与右侧必须保持纯 Party Rock 米白，不加载环境图、纹理、暗流、渐变或新插画；旧素材与 prompt 仅归档在 `design/visual-tracks/getty-thread-party-rock/archive/ambient-assets-v1/`，不得被活动 HTML/SVG 引用。左侧导航仍为黑色，紫色/淡紫只用于柔性框、关系轨迹和标签，荧光绿只作稀疏活动节点。</span>
+
+<span style="color:#C00000"><strong>K00 封面候选。</strong>在两张业务主关键帧之外，新增独立 K00 入口封面候选：紫色主场、黑色顶部细导航、左侧短标题、中央唯一“开始对齐”动作，以及下半部沿半弧排列的十张本地历史艺术缩略图。图片只来自 `design/visual-tracks/getty-thread-party-rock/cover/artwork/` 的 `SOURCES.md` 登记，不生成名画、不在线热链、不使用真实用户照片或结果图；照片卡最近邻只做轻微上移，须有键盘、触控、暂停和 `prefers-reduced-motion` 等价路径。K00 不是第三条业务路由，不新增报告页、作品详情或 Agent 状态。</span>
+
+<span style="color:#C00000"><strong>当前交付与状态。</strong>可交互评审入口为 `design/visual-tracks/getty-thread-party-rock/visual-review.html`；可编辑源为 E01/E02 两张纯矢量 SVG 与 `cover/figma-import/k00-cover.svg`；艺术来源与 provenance 见 `cover/artwork/SOURCES.md`、`PROVENANCE_PROMPT.md`。浏览器、SVG XML、资产扫描和响应式验收已完成并记录在 `docs/DEVELOPMENT_PROGRESS.md`；这些文件是设计评审/编辑源，不是原生 Figma `.fig`、已迁移的 Streamlit UI、Provider 效果或真实一致性证据。K00 是否成为正式品牌入口、艺术品商业上线许可和 Streamlit UI Gate 仍未冻结。</span>
 
 ## 附录 F. 2026-09-02 产品设计：完整 Web 试验的鉴权失败闭环
 
@@ -2045,3 +2053,25 @@ IntentFrame
 可以展示：上传/处理动作、结果图、脱敏 receipt、输入/输出哈希绑定、耗时、E1/E2 合同和“准入被安全拦截”的原因。不能展示或宣称：未经本轮复测的视觉改善、供应商真实区域/费用结论、Web 已替代主流程、RAG 自动执行或已达成母版一致。
 
 <span style="color:#C00000"><strong>同步后的工程校验。</strong>执行版 PRD 所对应的当前代码快照已通过全量 `pytest`=`240 passed, 4 warnings`、Ruff check/format、compileall 与 `git diff --check`。这些检查确认合同、实现、报告和安全边界可以回放；它们不替代被暂缓的新的浏览器真实回执、视觉复测、供应商地区/费用证据，也不触发 Web Card 晋级。</span>
+
+## 30.10 2026-09-04｜E3 收尾推进树、私有 Demo 准入与真实复测接线
+
+<span style="color:#C00000"><strong>产品设计：背景与问题。</strong>负责人决定继续完成 Web 候选的全部收尾工作，并在证据齐全后由系统自行验证、晋级，而不是再次停在“需要负责人手动改 JSON”。当前痛点是：历史浏览器 Receipt 只能证明 SDK 返回过结果，旧的 E3 manifest 还缺完整 `request_ref` 和共同 `VerificationResult`；如果直接晋级，会把“能处理图片”误写成“视觉效果已经泛化”。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>本轮回看了 E3 预检、Browser Receipt 合同、E1/E2 回归、腾讯官方 Web 静态图/License/价格/合规资料以及 Tool Registry。结果是：结果图可以在一次性、哈希绑定的 handoff 中进入现有 `VerificationResult`；腾讯公开资料足以支持受邀私有 Demo 的精确域名和测试 License 运行，但没有给出本项目可直接承诺的生产区域、留存 SLA 或单图成本校准。可执行的范围必须因此写成 `private_demo_beta`，不等于公网生产。</span>
+
+<span style="color:#C00000"><strong>产品负责人冻结的决策。</strong>继续沿用“真实证据 → 确定性准入脚本 → 原子晋级”的路径。E3 的视觉证据只有在每张目标图都有成功 Receipt、输入 hash/request_ref 可关联、结果 handoff 已进入共同 VerificationResult、趋势为 `improved` 或 `no_change`、至少一张目标图出现可验证改善且没有目标图恶化时才成立。RAG 仍然只能提议；Meta-Agent 可以选择已晋级的 Web 工具，但 `ToolProposal.execution_authorized` 仍固定为 `false`，最终图片调用仍由执行层的同意、scope、预算、幂等和 Adapter 校验控制。晋级后的 Card 只能在 `private_demo_beta` scope 可执行，域名、License、SDK、数据范围或证据退化时回退 candidate。</span>
+
+<span style="color:#C00000"><strong>带来的效果。</strong>新增 E3 真实闭环页面、`EffectWebE3FlowResult` 和脱敏回执合并脚本，把浏览器结果接到与 REST baseline 共用的 `ProviderRun → VerificationResult`；新增趋势推进树和供应商证据文档，明确“已证实/未证实/本次范围”。完成新的多样本浏览器回执后，系统可自动跑准入检查并在所有字段为真时把 Card 原子写成 `verified + private_demo_beta`，否则保留 candidate 并输出精确 blocker，不需要手工猜测或绕过证据。</span>
+
+### 30.10.1 当前实现矩阵（代码先行，真实回执待接入）
+
+| 环节 | 当前状态 | 证据/入口 | 产品边界 |
+|---|---|---|---|
+| E1 Web→共同复测 | 已实现 | `services/effect_web_e3_flow.py`、`tests/test_effect_web_e3_flow.py` | 结果 bytes 只在当前会话内存，不进入账本 |
+| E2 合同/异常/批量隔离 | 已验证 | `tests/test_tencent_effect_web_e3.py`、Web regression 8/8 | fixture 证据不等于视觉泛化 |
+| E3 真实多样本 | 待当前私有页新回执 | `pages/9_腾讯特效Web_E3真实闭环.py` | 每张目标图独立失败，不得伪造改善 |
+| 供应商范围证据 | 私有 Demo 口径已建立 | `docs/TENCENT_EFFECT_WEB_VENDOR_EVIDENCE_2026-09-04.md` | 生产区域/留存/单图成本仍未确认 |
+| Card 晋级 | 待 E3 Gate 全部通过 | `scripts/promote_effect_web_card.py` | 只允许 `private_demo_beta`，不等于生产 |
+
+<span style="color:#C00000"><strong>同步约束。</strong>本节与 `E3_CLOSEOUT_TREND.md`、`TENCENT_EFFECT_WEB_VENDOR_EVIDENCE_2026-09-04.md`、`CONTRACTS.md`、`PRODUCT_RULES.md`、`AGENT_PROMPTS.md`、`DECISION_LOG.md`、`DEVELOPMENT_PROGRESS.md` 和 README 一起维护；任何真实回执、供应商条款或 Card 状态变化都必须同时更新这些入口并重新执行全量 QA。</span>

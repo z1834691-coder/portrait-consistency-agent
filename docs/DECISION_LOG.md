@@ -425,3 +425,30 @@
 | D-PROD-162 | 2026-09-03 | 为满足当天 Demo 节奏，负责人明确暂缓当前浏览器手动上传/点击，但要求其余硬证据、测试和文档继续完成；旧真实回执只能作为历史证据，不能冒充本轮新的视觉复测。 | 已冻结 | 把“提速”定义为减少重复外部尝试并完成自动化收口，不降低证据门槛；Web Card 继续 candidate | 后续只需新的可关联 Browser Receipt/真实复测及供应商区域、成本事实 |
 | D-TECH-163 | 2026-09-03 | 新增 `promote_effect_web_card.py` 确定性准入命令、阻塞测试和 JSON/HTML 决定报告；用负责人批准真实运行后因 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed` fail-closed，未修改 Card。 | 已实现并验证 | 自动化替代手工改状态，原子写、无图片/密钥读取；缺证据时可回滚且保持 candidate | 证据全部齐全时才允许同一命令写 `verified`，不能由 RAG/LLM 绕过 |
 | D-TECH-164 | 2026-09-03 | 修正 E3 报告口径：只有未获负责人批准时才追加 owner blocker；视觉状态由 `multi_sample_visual_review_complete` 事实决定。重建报告仍为 4/4 历史成功、handoff 4/4、request_ref 不全、视觉未建立。 | 已实现并验证 | 报告不再重复声称“负责人未批准”，与当前授权一致；真实未完成项更清晰 | 下一轮新回执必须更新 manifest 与报告，不得手工猜 request_ref |
+
+## 2026-09-03 追加记录｜K00 封面与活动素材边界
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-165 | 2026-09-03 | 负责人要求 E01 `/align` 与 E02 `/align/:session` 保持纯米白中央/右侧，不再使用上一轮 `orbit-paper`、`folded-window`、`ink-garden` 环境素材；三份素材与 prompt 仅保留在 `archive/ambient-assets-v1/` 供回溯。 | 已冻结为当前视觉边界 | 活动 E01/E02 HTML/SVG 移除栅格环境依赖，上传、对齐轨迹和 Agent 线程成为唯一视觉重心；不改变产品合同、权限、Provider、Trace 或隐私 | 若未来重新启用任何环境素材，必须另立视觉变更请求并重做来源、性能与可访问性 Gate |
+| D-PROD-166 | 2026-09-03 | 在两张产品主关键帧之外建立独立 K00 封面候选：顶部黑色细导航、左侧短标题、中央唯一 `开始对齐` 入口、下半部半弧艺术照片墙。K00 不是第三条业务页面，点击后只进入 E01。 | 候选规范，未冻结品牌入口 | 允许在封面扩大紫色、黑色和少量荧光绿面积，与 E01/E02 的米白工作台形成对比；不引入额外 Agent 流程或子页面 | 负责人确认 K00 是否成为正式入口后，再进入 Frontend/Streamlit 映射 |
+| D-TECH-167 | 2026-09-03 | K00 照片墙只使用 `cover/artwork/` 中已下载并在 `SOURCES.md` 登记的 10 张历史艺术作品；不生成名画、不在线热链、不使用真实用户照片/结果图。照片墙支持最近卡片邻近抬升、键盘/触控等价反馈、暂停和 reduced-motion。 | 已实现并验证（视觉资产级） | 新增可追溯的来源/许可记录、`k00-cover.svg` 语义图层和 HTML 交互；公共领域标记不替代目标市场法务复核，不代表 Provider 或人像效果证据 | 逐张商用/地区/馆藏复制品复核完成后，才能讨论正式品牌使用 |
+| D-TECH-168 | 2026-09-03 | 新增 `docs/UI_COVER_KEYFRAME_PROMPT.md` 作为 K00 单一执行入口；同步详细视觉规范、风格说明、执行 PRD、项目上下文、README、进展和本日志。SVG/HTML/PNG 继续标记为候选评审源，不声称原生 Figma `.fig`、Streamlit 已迁移或真实效果。 | 已完成并验证 | 后续设计/Frontend 会从同一份 Prompt、token、文案、交互和验收清单继续，减少旧素材和旧构图回流 | K00 通过产品负责人方向选择、Impeccable Critical/Audit、WCAG 与 UI Gate 后再冻结 |
+
+## 2026-09-04 追加记录｜E3 收尾自动推进与私有 Demo 准入
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-TECH-169 | 2026-09-04 | 新增 `EffectWebE3FlowResult`，将浏览器 Web Receipt 经 `accept_effect_web_browser_result()` 一次性 handoff 到共同 `verify_result()`；结果 bytes 只在当前会话内存，Trace/账本只留脱敏事实。 | 已实现并通过专项测试 | Web 与 REST baseline 共用 `VerificationResult`，不再有第二套复测逻辑；失败/错位/缺结果仍 fail-closed | 新的真实 Browser Receipt 必须通过同一 handoff 并记录完整 request_ref |
+| D-TECH-170 | 2026-09-04 | `E3LiveReceipt` 增加共享复测的脱敏投影；视觉 Gate 由代码派生：目标全部成功、hash/request 关联、handoff 完成、趋势非恶化且至少一张 `improved`。LLM/RAG/浏览器不能填充该事实。 | 已实现并通过专项测试 | SDK 成功与视觉改善分开，任何目标恶化或不可测量都保留 candidate | 真实多样本回执完成后重建 E3 报告 |
+| D-PROD-171 | 2026-09-04 | 官方资料支持私有 Demo 的 Web 静态图、精确域名、测试 License、价格和同意告知；生产区域、供应商留存 SLA、单图成本仍未确认。准入范围冻结为 `promotion_scope=private_demo_beta`，不等于公网生产。 | 已冻结 | 可推进受邀 Demo，不把测试可运行夸写成商业/合规承诺 | License、域名、SDK、数据范围或供应商条款变化时重新评审 |
+| D-TECH-172 | 2026-09-04 | `ToolRegistry` 仅在 Card=`verified` 且 scope=`private_demo_beta` 时标记 Web `execution_allowed=true`；Meta-Agent 使用 `verified_tool_selected` 提案，但 `execution_authorized=false` 固定不变。 | 已实现并通过专项测试 | Card 晋级后可进入受限工具选择，仍不能由 RAG/LLM 绕过执行层同意、预算、幂等与 Adapter 校验 | Card promotion 后重跑全量 Registry/Meta-Agent QA |
+| D-TECH-173 | 2026-09-04 | 新增 E3 脱敏回执合并脚本和收尾趋势树；promotion 命令成功时原子写 `verified`、Web 私有 Demo 版本与 scope，失败保持 candidate。 | 已实现并通过静态审查 | 真实回执、准入证据、代码和文档可回放，避免手工猜 request_ref 或手工改状态 | 真实多样本和准入 Gate 完成后运行一次 promotion |
+
+## 2026-09-04 追加记录｜视觉交付同步与浏览器验收
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-PROD-174 | 2026-09-04 | 负责人最新视觉要求冻结为：E01 `/align` 与 E02 `/align/:session` 的中央/右侧保持纯米白，黑色只做最左导航与必要结构；`orbit-paper`、`folded-window`、`ink-garden` 不再进入活动关键帧，仅保留在 archive。两帧之外允许独立 K00 封面候选，使用紫色主场、黑色顶部细导航、少量荧光绿和已登记艺术照片墙。 | 当前视觉边界已冻结；K00 正式入口未冻结 | 统一活动 HTML/SVG、执行 PRD、PRODUCT_RULES、前端需求和视觉 Prompt，避免旧暗流/环境素材回流；不改变合同、权限、Provider、结果保留、Trace 或 RAG | 产品负责人确认 K00 是否成为正式品牌入口，并完成艺术品商业/地区复核后再进入 Streamlit UI Gate |
+| D-TECH-175 | 2026-09-04 | 将执行版 PRD 第 29 节、`PRODUCT_RULES.md` 和前端需求中的旧紫黑/A-B/C 描述标为历史，新增 E01/E02 + K00 当前覆盖；同步 `FRONTEND_UI_KEYFRAME_PROMPT.md`、`UI_COVER_KEYFRAME_PROMPT.md`、详细视觉规范、风格说明、README、DESIGN 与进展记录。 | 已同步并通过文本一致性检查 | 当前单一执行入口、资产树、文案、颜色职责、K00 交互和未冻结项可追溯；候选不会被误写成正式上线 UI | 若后续改变 K00 入口或 token，必须另立变更请求并同步全套文件 |
+| D-TECH-176 | 2026-09-04 | 完成视觉资产级 QA：浏览器 1280×720 完成 E01/E02/K00 切换、照片墙邻近/键盘焦点、CTA 回 E01、E01→E02 自然语言、一次确认结果和暂停；390×844 无页面级横向滚动；10 张本地艺术图全部加载且 provenance 扫描 `10 raster, 0 missing`；3 个 SVG XML、内联 JS、`git diff --check` 通过。 | 已验证（设计资产级） | 证明 HTML/SVG/本地素材和交互候选可评审；不证明 WCAG 全量、Figma 客户端导入、Streamlit 迁移、Provider 效果或真实用户改善 | 完成 Figma 客户端逐张导入、WCAG/屏幕阅读器和产品负责人方向确认后，才进入正式 UI 实现 |

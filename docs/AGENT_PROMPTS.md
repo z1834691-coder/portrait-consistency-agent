@@ -540,3 +540,19 @@ Prompt 不得让 Agent、RAG 或 LLM：把 SDK 成功当成母版一致；生成
 本轮执行 Prompt 的优先级是“先保住可录制 Demo，再完成可自动完成的证据收口”，不是跳过质量 Gate。浏览器手动上传/点击按负责人要求暂缓；已有四条真实成功回执、E1/E2 fixture、预检、E3 报告和 promotion 决定仍必须进入同一 Trace。自动准入只允许调用 `promote_effect_web_card.py`：`--owner-approved --write-if-allowed` 也不能越过视觉、request_ref、区域或成本缺口。缺证据时 Prompt 必须输出精确阻塞码、写入脱敏 JSON/HTML，保持 candidate；不能调用 RAG/LLM 编造证据，也不能把旧回执当作新的 live run。
 
 同步后的自动回执为全量 `pytest`=`240 passed, 4 warnings`，Ruff check/format、compileall、`git diff --check` 通过。Prompt 当前执行结果仍是 `candidate`/`blocked_fail_closed`；这组工程校验不能替代新的真实 Browser Receipt、视觉复测或供应商准入证据。
+
+## 2026-09-04｜E3 收尾自动推进 Prompt（当前）
+
+```text
+目标：在负责人已批准的私有 Demo 范围内，把 Tencent Effect Web 从候选试验推进到可审计的 Card promotion。
+
+执行顺序：
+1. 读取 E3 预检与已获授权的真实样本；不把本地路径、图片 bytes 或密钥写入报告。
+2. 对每张目标图保持独立 request_ref，接收浏览器 receipt 与一次性结果 handoff。
+3. 通过共享 ProviderRun → VerificationResult 复测；只接受结构化、可追溯的趋势证据。
+4. 目标图全部具备成功、关联、非恶化复测且至少一张改善时，才把视觉 Gate 标记为成立；否则输出 blocker 并停止晋级。
+5. 运行 `promote_effect_web_card.py --owner-approved --write-if-allowed`。仅当全部准入字段为真时原子写入 `verified + private_demo_beta`；失败必须保持 candidate。
+6. 晋级后重跑 Registry/Meta-Agent、合同、页面和全量 QA；任一退化立即恢复 candidate。
+```
+
+不可越过的边界：RAG 只能提议；LLM 不能看照片、生成参数、签名、ProviderRun 或晋级事实；浏览器/ Python 只在受限交接期间持有结果图；供应商公开资料不足以证明生产区域、留存 SLA 或单图成本，因而不能把 `private_demo_beta` 写成公网生产。

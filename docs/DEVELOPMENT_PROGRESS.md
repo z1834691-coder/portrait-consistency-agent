@@ -2401,3 +2401,89 @@ V5 已冻结，不能用它继续调参。本轮依据 V5 的聚合失败模式�
 ### 2026-09-03 最终自动 QA 回执
 
 文档补齐当前收尾覆盖后重新执行全量工程校验：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`python -m compileall -q src pages scripts tests` 与 `git diff --check` 全部通过。4 条 warning 仍为既有 Pillow 弃用提示。promotion 命令再次运行仍输出 `card_changed=false`、`blocked_fail_closed`，Web Card 保持 `candidate`。本回执是当前自动化收尾的最终数字；任何新增代码或规则都必须重新执行同一组校验。
+
+## 2026-09-03｜K00 封面关键帧与素材边界收口
+
+### 本轮目标
+
+按照负责人最新视觉要求，只保留两张产品主关键帧（E01 `/align`、E02 `/align/:session`），并在其外增加一张独立的 K00 入口封面候选。E01/E02 的中央与右侧继续使用纯 Party Rock 米白；上一轮三张 Image 2 无人物环境素材不再进入活动页面。K00 才允许更高比例的紫色、黑色和少量荧光绿，并使用有来源记录的历史艺术作品照片墙。
+
+### 已完成
+
+- 将 `orbit-paper`、`folded-window`、`ink-garden` 及 prompt sidecar 移入 `design/visual-tracks/getty-thread-party-rock/archive/ambient-assets-v1/`；活动 HTML 与 E01/E02 SVG 不再引用它们。
+- 在 `design/visual-tracks/getty-thread-party-rock/cover/figma-import/k00-cover.svg` 建立 1440×900 可导入 Figma 的语义分层源；图片以相对链接加载，未嵌入 base64。
+- 下载 10 张 Wikimedia Commons 历史艺术作品缩略图到 `cover/artwork/`，登记艺术家、作品、来源页、下载日期、尺寸和地域复核提醒；图片只承担封面文化材料，不是人像证据、结果图或 Provider 输出。
+- 在 `visual-review.html` 增加 K00 切换、唯一 `开始对齐` 入口、半弧照片墙、最近卡片邻近抬升、键盘 focus、触控静态反馈、暂停动效与 `prefers-reduced-motion` 行为。
+- 新增 [`UI_COVER_KEYFRAME_PROMPT.md`](UI_COVER_KEYFRAME_PROMPT.md)，把封面构图、精确文案、token、来源/许可、交互、响应式、性能、反模式和验收清单写成下一次会话可直接执行的单一入口。
+
+### 当前边界
+
+- K00 是视觉候选，不是第三条业务页面；点击后只回到 E01，不创建作品详情、报告或新的 Agent 流程。
+- SVG/HTML/PNG 是评审和编辑源，不是原生 Figma `.fig`、正式品牌首页或已迁移的 Streamlit UI。
+- Commons 的 Public Domain/PD-Art 标记不替代目标市场法务意见；正式上线前需逐张复核馆藏复制品、地区、商用和品牌用途。
+- 本轮只改变视觉资产与文档耦合，不改变 consent、scope、Provider、结果保留、Trace、RAG 或隐私合同；真实用户照片与 Provider 效果仍不能由关键帧推断。
+
+### 资产级验收清单（本轮结果）
+
+- [x] `xmllint`、SVG 渲染、HTML 内联脚本语法和 `git diff --check` 通过；
+- [x] `embed-prompt --scan cover/artwork` 无缺失；K00 每张图有 alt、尺寸与来源记录；
+- [x] 已实测 1280×720 桌面与 390×844 移动视口，无页面级横向滚动、标题裁切或焦点遮挡；1440×900 已完成 SVG 渲染检查，完整断点矩阵仍留给 UI Gate；
+- [x] E01/E02 活动文件无环境图引用，K00 hover/focus/click、暂停和 reduced-motion 有浏览器回执；
+- Impeccable detector 已按本轮规则运行 1 次；本机缺少 HTML parser，结果为 `DEGRADED regex`，初次仅命中播放三角的 `border-left` 误报。三角已改为 `clip-path`，并以静态扫描确认活动页面无侧边色条/渐变；该结果不等同于 WCAG 2.2 AA 或最终视觉 Gate。
+
+## 2026-09-04｜K00 浏览器与资产级 QA 收口
+
+### 已验证
+
+- `visual-review.html` 修正了壳层隐藏规则：切换 K00 时 E01/E02 产品壳真正 `display:none`，不再与封面纵向叠加；封面 CTA 命中区域位于照片墙之上，可用鼠标/键盘进入 E01。
+- 默认桌面视口（1280×720 浏览器窗口）完成 E01、E02、K00 三态切换；E01/E02 中央与右侧可见栅格图片为 `0`，活动文件没有旧环境素材引用。
+- K00 十张本地 JPG 均 `complete=true` 且 `naturalWidth=960`；浏览器截图确认照片墙可见。鼠标邻近第 6 张卡片时仅该卡片获得 `is-near` 与 `--lift:-24px`；键盘聚焦第 5 张卡片获得同等抬升。
+- K00 `开始对齐` 通过指针命中后返回 E01，并将焦点移到上传控件；E01 自然语言提交进入 E02；E02 一次确认后显示同线程结果状态。暂停动效后邻近卡片不再抬升。
+- `390×844` 移动视口完成 E01/E02/K00 检查，三态 `scrollWidth=innerWidth`，线程按规则收起，封面照片墙仍可触达；测试后已恢复默认视口。
+- `xmllint --noout`：E01、E02、K00 三个 SVG 均通过；`rsvg-convert` 可生成 `1440×900` K00 SVG 检查帧。`embed-prompt --scan cover/artwork` 为 `10 raster, 0 missing`；`git diff --check` 通过。
+- 新增 `.impeccable/review/desktop-k00.png`，并更新桌面 E01/E02 浏览器证据帧。该 PNG 仅为候选评审截图，不是原生 Figma 文件或产品结果。
+
+### 仍未完成的 Gate
+
+- 尚未在 Figma 客户端逐张执行导入回归；当前仅验证 SVG XML、语义图层、相对 `href`/`xlink:href` 和浏览器/渲染器可读取。若 Figma 不读取相对图片，按 `SOURCES.md` 逐张替换即可。
+- Impeccable detector 已在本轮 HTML 修改完成后运行 1 次；本机 parser 降级时以 regex 扫描并完成误报清理，不能替代 WCAG 2.2 AA、屏幕阅读器和最终视觉 Gate。
+- K00 是否成为正式品牌入口、艺术品商业使用许可、Streamlit 映射与真实 Provider/用户效果仍未冻结或验证。
+
+## 2026-09-04｜E3 收尾趋势与自动晋级准备（当前）
+
+### 本轮目标
+
+负责人批准继续完成 Web 候选的全部 E3 工作，并在证据齐全后自动执行确定性 promotion；不再把手工改 Card 状态作为流程。为防止“SDK 有输出”被误读为“视觉泛化”，本轮先把结果 handoff、共同复测、供应商事实和 scope 边界全部接线，再等待新的真实多样本回执。
+
+### 已完成的工程工作
+
+- 新增 `services/effect_web_e3_flow.py`：浏览器 Receipt 经过现有 `accept_effect_web_browser_result()` 后，使用共同 `verify_result()` 生成 `VerificationResult`；图片 bytes 只在当前会话内存，事件和 Trace 只写脱敏事实。
+- 新增 `pages/9_腾讯特效Web_E3真实闭环.py`：母版安全/Profile、目标安全/同人、Web EditPlan、每张图片独立 request generation、浏览器结果和共同复测在同一受邀页面串联。
+- 扩展 `E3LiveReceipt`：保存 verification ID、decision、trend、测量特征数等脱敏投影；E3 视觉 Gate 由代码派生，不接受浏览器/LLM 伪造。
+- 新增 `scripts/record_effect_web_e3_verification.py`：合并下载的脱敏回执，拒绝 data URL、图片 bytes 和本地路径。
+- 新增 `docs/E3_CLOSEOUT_TREND.md` 与官方资料证据 `docs/TENCENT_EFFECT_WEB_VENDOR_EVIDENCE_2026-09-04.md`。
+- `ToolRegistry`/Meta-Agent 已接入 promotion scope：只有 `verified + private_demo_beta` 才能被描述为可执行 Web 工具；提案路由为 `verified_tool_selected`，但 `execution_authorized=false` 仍固定。
+- promotion 脚本成功时会原子写 `review_status=verified`、`card_version=web_private_demo_2026-09-04`、`promotion_scope=private_demo_beta`；失败保持 candidate。
+
+### 当前趋势树
+
+```text
+E3
+├─ A 证据盘点/预检                         ✅
+├─ B 结果 handoff + 共同 VerificationResult ✅ 代码/fixture 已通过
+├─ C 真实多样本视觉证据                     ⏳ 等待新私有页回执
+├─ D 官方资料与私有 Demo scope              ✅ 已建立；生产条款仍未确认
+├─ E Card promotion                        ⏳ C + 所有准入字段通过后运行
+└─ F 全量 QA/Cloud 重建/回滚                ⏳ E 后重跑
+```
+
+### 当前不可夸写边界
+
+官方资料足以支持“精确域名的受邀私有 Demo 可以调用 Web 静态图 SDK”，不足以支持生产区域、供应商留存 SLA 或本项目单图成本已确认。`private_demo_beta` 不等于公网生产；RAG 仍只能提议；任何真实视觉效果必须来自共同 `VerificationResult` 和多样本证据，不能由 LLM、RAG、SDK 成功状态或历史 receipt 代替。
+
+### 下一步自动推进
+
+1. 在取得一次行动时传输确认后，运行 page 9 的真实参考图/目标图流程，保存每张脱敏 receipt 和完整 `request_ref`。
+2. 合并 manifest、重建 E3 JSON/HTML，看目标趋势、hash linkage、共同复测和失败隔离；任一恶化或无法测量都保持 candidate。
+3. 通过 `promote_effect_web_card.py --owner-approved --write-if-allowed` 评估；仅全部 Gate 为真时晋级并重跑 Registry/Meta-Agent。
+4. 执行全量 `pytest`、Ruff、compileall、`git diff --check`，更新 README/PRD/合同/Prompt/决策日志和趋势树；若任一检查失败，自动停止而不晋级。

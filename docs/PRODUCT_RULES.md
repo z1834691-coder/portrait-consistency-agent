@@ -520,7 +520,7 @@ Agent 根据修后结构化证据和审核知识检索结果，在允许集合�
 17. <span style="color:#C00000"><strong>RAG P0-A / P0-B / P0-C + Dashboard：</strong>已实现本地 SQLite/metadata/FTS5 与本地 dense/RRF/rerank 的审核工具知识检索、来源依据卡、脱敏 Trace、8A/8C 的受限 evidence 回接，以及只读本机 RAG 治理 Dashboard；它们只回答/展示“现有工具有什么能力、限制和路由事实”，不读照片、不调 LLM/API、不产生参数或执行。Gold Set v2 评测器与答案隔离材料已实现；下一步是逐题审核/真实 predictions，再讨论自动 worker、新 Provider 正式准入和 external/hybrid Adapter。</span>
 18. <span style="color:#C00000"><strong>RAG Gold Set v2 评测：</strong>固定 34 道开发题、18 道挑战题、20 道隐藏题，同时测试工具能力、权限、隐私、生命周期、冲突和提示注入。产品负责人是唯一人工事实审核者，暂不加入第二位人工评审；盲审 LLM Judge 可以看到机器分数/指标摘要，但不能看到 Gold 答案、答案键、开发标签或实现版本。安全类必须 100% 正确拦截、0 次错误工具放行；检索/路由门槛为 Recall@5≥90%、Precision@3≥80%、MRR≥80%、nDCG@5≥85%、路由/证据关系正确率≥90%；未来解释 Faithfulness≥95%、人审—Judge 一致率≥80%、Hidden—Dev 差距≤10 个百分点。隐藏集运行器只接收无答案题目；答案键已移至产品负责人独立保管位置，工作区仅保留不含答案的保管回执。</span>
 19. <span style="color:#C00000"><strong>新 Provider 路线：</strong>选择参数级人像美化 SDK/API，并行验证火山美颜 API V2.0 静态/批量路线与腾讯特效 SDK 细粒度路线。两者目前只能建立 Candidate Card、Adapter shell、权限/预算 preflight、离线测试和 live smoke 入口；必须完成官方能力/License/隐私/地区/成本证据、真实 receipt、Gold 回归和产品负责人冻结后，才可进入 `reviewed_active`。RAG 只能提议，不能授权或直接上传照片。</span>
-20. <span style="color:#C00000"><strong>视觉／Agent 交互：</strong>冻结“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”的三空间信息分组，桌面壳固定为“全局导航 + 项目/母版上下文 + 中央对齐工作区 + 右侧 Agent 对话”轻量四区。新用户只看“建立我的母版”或“我已有母版，开始本次对齐”；母版是轻量长期锚点，当前照片与本次意图居中。Agent 只在澄清、真实进度、边界和结果时发声；参数、依据、Provider 回执与脱敏执行记录是第二层，隐藏思维链永不展示。结果页提供前后对比、下载、点赞／点踩与继续说明。动效只能表示真实状态，不能伪造调用完成。视觉基线继续借鉴参考图的层次语法，但不使用摄影或原站资产；正式界面配色为 Tweakcn Party Rock 原始 Light/Dark token，字体为苹方（PingFang SC），紫色与米白共同为最大面积、紫色略强，黑色为结构色、其他颜色仅少量点缀。活跃视觉只制作 E01 入口与 E02 Agent 对话两张主关键帧；页面遵守奥卡姆剃刀：每一层只保留当前任务必要的实体；导航只保留对齐／母版／记录，首屏突出一个上传动作和一个自然语言 Agent 输入框，按钮与文案保持短句。当前冻结设计不改变任何同意、权限、外部调用、保存或审计规则，也不代表线上 UI 已升级。</span>
+20. <span style="color:#C00000"><strong>视觉／Agent 交互：</strong>冻结“对齐首页／Agent 对话子页面 + 母版档案 + 结果记录”的三空间信息分组，桌面壳固定为“全局导航 + 项目/母版上下文 + 中央对齐工作区 + 右侧 Agent 对话”轻量四区。新用户只看“建立我的母版”或“我已有母版，开始本次对齐”；母版是轻量长期锚点，当前照片与本次意图居中。Agent 只在澄清、真实进度、边界和结果时发声；参数、依据、Provider 回执与脱敏执行记录是第二层，隐藏思维链永不展示。结果页提供前后对比、下载、点赞／点踩与继续说明。动效只能表示真实状态，不能伪造调用完成。视觉基线继续借鉴参考图的层次语法，但不使用摄影或原站资产；正式界面配色为 Tweakcn Party Rock 原始 Light/Dark token，字体为苹方（PingFang SC），E01/E02 使用左侧黑导航与中央/右侧米白工作面，紫色/淡紫柔性框与轨迹，荧光绿仅作少量活动节点；独立 K00 封面候选才使用紫色主场、黑色顶部细导航和已登记艺术照片墙。活跃产品视觉只制作 E01 入口与 E02 Agent 对话两张主关键帧，K00 不新增业务路由；页面遵守奥卡姆剃刀：每一层只保留当前任务必要的实体；导航只保留对齐／母版／记录，首屏突出一个上传动作和一个自然语言 Agent 输入框，按钮与文案保持短句。当前冻结设计不改变任何同意、权限、外部调用、保存或审计规则，也不代表线上 UI 已升级。</span>
 
 ## 2026-08-30｜Failure Pattern 与 RAG 自校正边界（已实现）
 
@@ -687,13 +687,21 @@ License/Token 配对、数字 APPID/签名、精确域名和 Cloud Secret 重载
 
 <span style="color:#C00000"><strong>关键帧范围。</strong>活跃视觉交付只保留 E01 入口和 E02 Agent 对话两张主关键帧。上传、自动检查、澄清、一次外部授权、结果/复测和停止仍由同一对话空间中的消息、事实块、授权 Sheet 和结果块承载，不新增独立状态页面、报告页或参数页。旧 K01—K04 仅作为历史资产归档，不属于当前实现依据。</span>
 
-## 2026-09-02｜视觉候选最新覆盖：左侧黑导航与米白工作面
+## 2026-09-02｜视觉候选最新覆盖：左侧黑导航与米白工作面（历史记录；最新执行以 2026-09-04 覆盖为准）
 
 <span style="color:#C00000"><strong>产品负责人最新反馈。</strong>上一版中间工作区的紫色与黑色暗影/暗流造成沉重和僵硬的 AI 工具箱观感，现明确不再作为当前构图。Party Rock 原始 token 与苹方不变；所有视觉候选统一为最左侧黑色导航、中央/右侧米白工作面，紫色/淡紫柔性圆角框和关系轨迹，荧光绿少量活动节点，黑色线框/文字结构。不得在中间或右侧铺黑底、使用紫黑暗影渐变、发光网格或大面积荧光绿。</span>
 
 <span style="color:#C00000"><strong>候选交付。</strong>基于 Getty `Tracing Art` 的关系轨迹与编辑式留白抽象，新增 A「档案游线」、B「柔性索引」、C「开放谱系」三套视觉候选；每套严格两张关键帧：E01 入口和 E02 Agent 对话。三套只改变视觉叙事，不改变自然语言主链、后台自动门控、外部一次授权、结果保留或 Trace 可见性边界。产品负责人选择前，任何候选都不是最终 UI 规范。</span>
 
-<span style="color:#C00000"><strong>交付入口。</strong>候选评审页为 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`；风格原则为 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`；PNG 只作 Image 2 材质/比例方向稿，分层 SVG 才是可编辑/Figma 导入源。候选选择后才运行 Critical/Audit、WCAG/UI Gate 和 Streamlit 映射。</span>
+<span style="color:#C00000"><strong>交付入口（历史记录）。</strong>候选评审页为 `design/keyframes/party-rock-pingfang/candidates/candidate-review.html`；风格原则为 `docs/UI_STYLE_DIRECTION_GETTY_PARTY_ROCK.md`；PNG 只作 Image 2 材质/比例方向稿，分层 SVG 才是可编辑/Figma 导入源。该三套方向已被 2026-09-04 的 E01/E02 + K00 执行覆盖，不能作为本轮生产指令。</span>
+
+## 2026-09-04｜视觉执行最新覆盖：E01 / E02 + K00 封面候选
+
+<span style="color:#C00000"><strong>当前活动素材边界。</strong>E01 `/align` 与 E02 `/align/:session` 的中央及右侧保持纯 Party Rock 米白，左侧导航保持黑色；不加载 `orbit-paper`、`folded-window`、`ink-garden` 或任何环境图、纹理、暗流和渐变。三张旧 Image 2 环境素材与 prompt 仅归档在 `design/visual-tracks/getty-thread-party-rock/archive/ambient-assets-v1/`，活动 HTML/SVG 不得引用。紫色/淡紫承担柔性框、关系轨迹和标签，荧光绿仅作稀疏活动节点。</span>
+
+<span style="color:#C00000"><strong>K00 封面候选。</strong>在两张产品主关键帧之外，允许一个独立的 K00 入口封面：紫色主场、黑色顶部细导航、左侧短标题、中央唯一“开始对齐”动作和下半部半弧艺术照片墙。照片墙只使用 `cover/artwork/` 中已在 `SOURCES.md` 登记的本地历史艺术缩略图，不生成名画、不在线热链、不使用真实用户/结果照片；邻近卡片抬升、键盘/触控、暂停和 reduced-motion 均需有等价反馈。K00 不新增业务路由、报告页、作品详情或 Provider 权限。</span>
+
+<span style="color:#C00000"><strong>当前交付边界。</strong>执行入口为 `design/visual-tracks/getty-thread-party-rock/visual-review.html`；E01/E02/K00 的分层 SVG、来源清单、封面 Prompt 和浏览器 QA 记录分别见该目录、`docs/UI_COVER_KEYFRAME_PROMPT.md` 与 `docs/DEVELOPMENT_PROGRESS.md`。SVG/HTML/PNG 是设计评审和编辑源，不是原生 Figma `.fig`、已迁移的 Streamlit UI、Provider 效果或真实一致性证据；K00 是否成为正式品牌入口、艺术品商业上线许可和 UI Gate 仍需单独确认。</span>
 
 ## 2026-09-02｜Tencent Effect Web 真实成功后的产品边界
 
@@ -756,6 +764,16 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 | Web Card promotion | candidate | 缺真实准入证据和负责人批准 |
 
 本轮全量回归为 `214 passed, 4 warnings`；Web E2 报告为 `reports/tencent_effect_web_regression_v1.json/.html`。
+
+## 2026-09-04｜E3 收尾与私有 Demo Provider scope（当前覆盖）
+
+<span style="color:#C00000"><strong>产品设计：背景与问题。</strong>历史 Web Smoke 已经证明浏览器可以返回结果，但没有证明结果对母版更一致。为了让 Demo 能真正展示闭环，又避免把一次 SDK 成功夸写成效果泛化，产品把“结果 handoff、共同复测、供应商范围、Card 晋级”拆成四个事实门。</span>
+
+<span style="color:#C00000"><strong>冻结规则。</strong>浏览器结果通过一次性 request/hash/尺寸/MIME/大小合同后，只在当前会话内存进入共同 `VerificationResult`；E3 视觉证据必须由共享验证器派生，不允许浏览器、LLM 或 RAG 自填。只有所有目标样本都有可关联 request、成功 handoff、完成复测、趋势为 `improved/no_change`，且至少一个目标样本出现 `improved` 时，才算视觉 Gate 成立。任一目标样本恶化、无法测量或关联失败，保持 candidate 并记录 blocker。</span>
+
+<span style="color:#C00000"><strong>准入范围。</strong>官方资料确认 Web 静态图、精确域名、测试 License、正式套餐价格和同意告知要求；未确认生产区域、供应商留存 SLA 或本项目单图成本。因此晋级只允许写入 `promotion_scope=private_demo_beta`，不表示公网生产、长期合规或价格已支付。RAG 仍 `proposal-only`；Meta-Agent 可提出已晋级 Web 工具，但绝不写 `execution_authorized=true`。</span>
+
+<span style="color:#C00000"><strong>可观测性与回滚。</strong>每张结果必须保留脱敏 receipt、输入/输出 hash、request_ref、ProviderRun/VerificationResult ID、耗时、趋势和原因码；结果图/data URL、Token、本地路径不得进入账本。`promote_effect_web_card.py` 原子写 Card；只要 Card/License/域名/SDK/数据范围或回归证据退化，即回退 candidate 并停止 Web 主流程。</span>
 
 ## 2026-09-02｜Web 纵向绑定测试与 E2 指标口径修正
 

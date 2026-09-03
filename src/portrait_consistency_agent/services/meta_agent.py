@@ -39,6 +39,7 @@ class MetaAgentRoute(str, Enum):
     """Non-authorising outcomes of a tool selection attempt."""
 
     BASELINE_SELECTED = "baseline_selected"
+    VERIFIED_TOOL_SELECTED = "verified_tool_selected"
     CANDIDATE_PROPOSAL_ONLY = "candidate_proposal_only"
     MANUAL_SUGGESTION = "manual_suggestion"
     BLOCKED = "blocked"
@@ -68,8 +69,18 @@ class ToolProposal(BaseModel):
 
     @model_validator(mode="after")
     def validate_proposal_boundary(self) -> ToolProposal:
-        if self.route == MetaAgentRoute.BASELINE_SELECTED and self.selected_tool_id is None:
-            raise ValueError("baseline_selected proposals require a selected tool")
+        if (
+            self.route
+            in {
+                MetaAgentRoute.BASELINE_SELECTED,
+                MetaAgentRoute.VERIFIED_TOOL_SELECTED,
+            }
+            and self.selected_tool_id is None
+        ):
+            raise ValueError("selected-tool proposals require a selected tool")
+        if self.route == MetaAgentRoute.VERIFIED_TOOL_SELECTED:
+            if "verified_private_demo_scope" not in self.reason_codes:
+                raise ValueError("verified tool proposals must state verified_private_demo_scope")
         if self.route == MetaAgentRoute.CANDIDATE_PROPOSAL_ONLY:
             if self.selected_tool_id is None:
                 raise ValueError("candidate proposals require a selected candidate tool")
@@ -100,7 +111,9 @@ class MetaAgentToolSelector:
 
         ``preferred_tool_id`` represents a user/product route preference, not
         an instruction to bypass admission.  Candidate Web tools can be
-        surfaced with a baseline fallback, but are never marked executable.
+        surfaced with a baseline fallback.  A Web Card promoted only to the
+        private-demo scope can be selected as a verified tool, but this
+        proposal still never authorises a side effect.
         An unknown feature, RAG conflict/miss without a baseline, or an
         outbound restriction produces a fail-closed result.
         """
@@ -183,10 +196,10 @@ class MetaAgentToolSelector:
                 trace=trace,
             )
 
-        # A caller explicitly asking for Web gets an honest candidate proposal
-        # when the Card covers the requested features.  It may include the
-        # reviewed REST baseline as a fallback, but does not execute either
-        # tool here.
+        # A caller explicitly asking for Web gets a scoped verified proposal
+        # only when the Card has passed the separate E3 gate.  The proposal
+        # remains non-authorising; the execution layer still checks consent,
+        # budget, idempotency and the active request generation.
         if preferred is not None and preferred.tool_id == "tencent_effect_web":
             if not _covers(preferred, features):
                 return self._proposal(
@@ -199,6 +212,43 @@ class MetaAgentToolSelector:
                     required_checks=("manual_feature_mapping_review",),
                     trace=trace,
                 )
+            if preferred.execution_allowed:
+                if not outbound_allowed:
+                    return self._proposal(
+                        proposal_id=proposal_key,
+                        stage=stage_value,
+                        features=features,
+                        route=MetaAgentRoute.BLOCKED,
+                        reason_codes=(
+                            "verified_tool_outbound_not_approved",
+                            "execution_not_authorized",
+                        ),
+                        evidence_refs=(preferred.source_ref,),
+                        required_checks=("outbound_policy",),
+                        trace=trace,
+                    )
+                reasons = ["verified_private_demo_scope", "execution_not_authorized"]
+                trace.append(
+                    {
+                        "step": "tool_proposal",
+                        "route": MetaAgentRoute.VERIFIED_TOOL_SELECTED.value,
+                        "selected_tool_id": preferred.tool_id,
+                        "execution_authorized": False,
+                        "reason_codes": reasons,
+                    }
+                )
+                return self._proposal(
+                    proposal_id=proposal_key,
+                    stage=stage_value,
+                    features=features,
+                    selected=preferred,
+                    route=MetaAgentRoute.VERIFIED_TOOL_SELECTED,
+                    reason_codes=tuple(reasons),
+                    evidence_refs=(preferred.source_ref,),
+                    required_checks=preferred.required_checks,
+                    trace=trace,
+                )
+
             fallback_id = (
                 baseline.tool_id
                 if baseline is not None

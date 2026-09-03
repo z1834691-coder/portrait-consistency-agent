@@ -44,7 +44,15 @@ from portrait_consistency_agent.core.contracts import (
 from portrait_consistency_agent.core.settings import AppSettings
 
 EFFECT_WEB_CARD_ID = "tencent-effect-web"
-EFFECT_WEB_CARD_VERSION = "web_candidate_2026-09-01"
+# The candidate version remains accepted for replaying historical receipts;
+# new requests use the explicitly scoped, verified private-demo version after
+# the E3 promotion gate closes.
+EFFECT_WEB_CARD_VERSION_CANDIDATE = "web_candidate_2026-09-01"
+EFFECT_WEB_CARD_VERSION = "web_private_demo_2026-09-04"
+EFFECT_WEB_CARD_SUPPORTED_VERSIONS = (
+    EFFECT_WEB_CARD_VERSION_CANDIDATE,
+    EFFECT_WEB_CARD_VERSION,
+)
 EFFECT_WEB_OPERATION = "WebARImage"
 EFFECT_WEB_PROVIDER = "tencent_effect_web"
 EFFECT_WEB_SDK_DEFAULT_URL = (
@@ -95,7 +103,9 @@ class EffectWebRequest(BaseModel):
     parameters: TencentEffectWebParams
     input_source: Literal["sample_url", "data_url"]
     card_id: Literal["tencent-effect-web"] = EFFECT_WEB_CARD_ID
-    card_version: Literal["web_candidate_2026-09-01"] = EFFECT_WEB_CARD_VERSION
+    card_version: Literal["web_candidate_2026-09-01", "web_private_demo_2026-09-04"] = (
+        EFFECT_WEB_CARD_VERSION
+    )
 
 
 class EffectWebBrowserReceipt(BaseModel):

@@ -274,3 +274,13 @@ UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache .venv/bin/python scripts
 因此可录 Demo 的准确说法是“浏览器候选 SDK 的真实结果回执、受限结果交接和确定性准入”；不能说 Web 已正式上线、视觉效果已泛化、供应商区域/费用已确认或 RAG 已授权执行。最新决定回执见 [`reports/effect_web_promotion_decision_v1.html`](reports/effect_web_promotion_decision_v1.html)，E3 汇总见 [`reports/effect_web_e3_evidence_v1.html`](reports/effect_web_e3_evidence_v1.html)。
 
 本轮文档同步后的最终自动 QA：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；Ruff check/format、compileall 和 `git diff --check` 均通过。4 条 warning 为既有 Pillow 弃用提示。Web Card 仍 `candidate`，RAG 仍 `proposal-only`；这些工程数字不代表视觉效果或生产准入。
+
+## 2026-09-04｜E3 收尾状态（最新）
+
+本轮已把 Tencent Effect Web 的真实结果接到与 REST baseline 共用的 `ProviderRun → VerificationResult`：`services/effect_web_e3_flow.py` 负责一次性校验 request/hash/尺寸/MIME/大小后，在当前会话内存复测；结果图、data URL、Token 和本地路径不进入 SQLite、JSONL、Trace 或 Git。`pages/9_腾讯特效Web_E3真实闭环.py` 可用于受邀多样本运行，`scripts/record_effect_web_e3_verification.py` 可合并脱敏回执。
+
+本轮已建立 [E3 收尾趋势树](docs/E3_CLOSEOUT_TREND.md) 和 [腾讯 Web 官方证据](docs/TENCENT_EFFECT_WEB_VENDOR_EVIDENCE_2026-09-04.md)。官方资料确认精确域名、测试 License、静态图 `takePhoto()`、正式套餐价格和同意告知要求；生产区域、供应商留存 SLA、单图成本仍未确认。因此即使证据齐全，Card 也只会以 `promotion_scope=private_demo_beta` 晋级，不代表公网生产或商业合规完成。
+
+晋级后的控制面已经准备好：Registry 仅在 `review_status=verified` 且 scope=`private_demo_beta` 时允许 Web 进入受限工具目录；Meta-Agent 路由为 `verified_tool_selected`，但 `execution_authorized=false` 仍是硬边界。`promote_effect_web_card.py` 是唯一可写 Card 的命令，任何缺证据都会保持 candidate 并输出 blocker。
+
+当前仍需完成一次新的真实多样本浏览器回执和共同复测，然后运行 promotion 与全量 QA。结果改善必须来自结构化 `VerificationResult`；SDK 成功、RAG 命中或 LLM 解释不能替代视觉事实。RAG 继续 proposal-only。

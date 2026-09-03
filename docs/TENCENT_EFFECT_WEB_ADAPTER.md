@@ -288,3 +288,11 @@ E1 已由 `tests/test_execution.py` 和 `scripts/smoke_effect_web_b_handoff.py` 
 本轮已实际运行命令并生成 `reports/effect_web_promotion_decision_v1.json/.html`：`card_changed=false`，`blocked_fail_closed`，原因是 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed`。因此 Web Card 继续 candidate；这不是技术故障，而是证据不足的正确结果。当前 Demo 可以展示已有真实 receipt 和 E1/E2 工程链路，但不能说 Web 已正式上线或已证明母版一致。
 
 文档同步后最终自动 QA：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check` 均通过。该结果确认 Adapter、promotion fail-closed 和合同测试可回放，不改变真实视觉复测、供应商区域/费用或 Card promotion 的未闭合状态。
+
+## 18. 2026-09-04｜E3 共同复测与私有 Demo 晋级接线
+
+新增 `services/effect_web_e3_flow.py`，统一调用 `accept_effect_web_browser_result()` 和现有 `verify_result()`。因此 Web 与 REST baseline 使用同一套结果观察、趋势与停止策略；成功路径会留下脱敏 `ProviderRun`、`VerificationResult` 和 `web_to_verification_handoff` Trace，结果 bytes 仅在当前 Streamlit 会话内存。
+
+E3 页面 `pages/9_腾讯特效Web_E3真实闭环.py` 为每张目标照片独立保存请求代次，避免 Streamlit rerun 产生旧回执错配。页面下载的 E3 回执只含 sample/receipt/request/hash/耗时/复测投影；`scripts/record_effect_web_e3_verification.py` 会拒绝 data URL、图片 bytes 和路径。
+
+Card 晋级由 `scripts/promote_effect_web_card.py` 唯一负责。全部真实视觉与供应商 Gate 通过时，它会原子写 `review_status=verified`、`card_version=web_private_demo_2026-09-04`、`promotion_scope=private_demo_beta`；否则保持 candidate。Registry 只把该 scope 的 Web Card 标记为 `execution_allowed`，Meta-Agent 只输出 `verified_tool_selected` 提案，`execution_authorized` 仍为 `false`。这只是受邀私有 Demo 的准入，不是公网生产或供应商留存/区域的确认。

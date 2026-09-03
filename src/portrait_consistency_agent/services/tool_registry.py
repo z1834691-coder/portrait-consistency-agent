@@ -11,9 +11,10 @@ There are two deliberately different states in the default catalogue:
 * ``tencent_beautify_pic`` is the reviewed REST baseline and may be selected
   for the existing execution flow (the existing state machine still performs
   confirmation and policy checks).
-* ``tencent_effect_web`` has one successful browser smoke but its Card remains
-  ``candidate``.  It can be proposed for a future Web route, never authorised
-  by this registry.
+* ``tencent_effect_web`` is executable only after the E3 Card is promoted with
+  the explicit ``private_demo_beta`` scope.  A candidate Card remains visible
+  for explanation but is never authorised by this registry.  Promotion does
+  not mean public production readiness.
 
 Keeping this distinction in one place prevents an LLM or RAG result from
 turning a documented/candidate capability into a hidden side effect.
@@ -45,6 +46,7 @@ class ToolDescriptor(BaseModel):
     card_version: str = Field(min_length=1, max_length=96)
     review_status: str = Field(min_length=1, max_length=32)
     integration_kind: str = Field(min_length=1, max_length=64)
+    promotion_scope: str | None = Field(default=None, max_length=64)
     available_features: tuple[str, ...] = Field(default_factory=tuple, max_length=64)
     execution_allowed: bool = False
     required_checks: tuple[str, ...] = Field(default_factory=tuple, max_length=32)
@@ -146,17 +148,28 @@ def _descriptor_from_web(card: dict[str, Any]) -> ToolDescriptor:
         if isinstance(gate, dict)
         else ()
     )
+    review_status = str(card["review_status"])
+    promotion_scope = card.get("promotion_scope")
+    promotion_scope_value = str(promotion_scope) if promotion_scope is not None else None
+    is_private_demo_verified = (
+        review_status == "verified" and promotion_scope_value == "private_demo_beta"
+    )
+    if is_private_demo_verified:
+        reason_codes = ("verified_private_demo_scope",)
+    else:
+        reason_codes = ("candidate_not_admitted", "browser_receipt_only_smoke")
     return ToolDescriptor(
         tool_id="tencent_effect_web",
         provider=str(card["provider"]),
         operation=str(card["operation"]),
         card_id=str(card["card_id"]),
         card_version=str(card["card_version"]),
-        review_status=str(card["review_status"]),
+        review_status=review_status,
         integration_kind=str(card["integration_kind"]),
+        promotion_scope=promotion_scope_value,
         available_features=features,
-        execution_allowed=False,
+        execution_allowed=is_private_demo_verified,
         required_checks=required_checks,
-        reason_codes=("candidate_not_admitted", "browser_receipt_only_smoke"),
+        reason_codes=reason_codes,
         source_ref="data/provider_cards/tencent_effect_web.json",
     )

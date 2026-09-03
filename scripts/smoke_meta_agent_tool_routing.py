@@ -2,8 +2,9 @@
 
 This smoke intentionally makes no image, credential, browser, LLM or provider
 call.  It demonstrates the routing facts that should be visible in a Trace:
-the Web card is relevant but candidate-only, and the reviewed BeautifyPic card
-is available as a separately gated fallback.
+the Web card is relevant and is either a candidate proposal or a scoped
+verified proposal, while the reviewed BeautifyPic card remains a separate
+fallback/active baseline.
 """
 
 from __future__ import annotations

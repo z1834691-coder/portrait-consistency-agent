@@ -359,6 +359,34 @@ def test_web_candidate_trial_is_blocked_without_explicit_trial_flag() -> None:
     assert result.trace[0]["reason_codes"] == ["web_card_not_promoted"]
 
 
+def test_promoted_web_scope_allows_normal_handoff_without_candidate_flag(
+    monkeypatch,
+) -> None:
+    bundle = _web_bundle()
+    monkeypatch.setattr(
+        "portrait_consistency_agent.services.provider_cards.load_tencent_effect_web_card",
+        lambda: {"review_status": "verified", "promotion_scope": "private_demo_beta"},
+    )
+
+    result = accept_effect_web_browser_result(
+        confirmed_plan=bundle["confirmation"].confirmed_plan,
+        execution_intent=bundle["confirmation"].execution_intent,
+        target_image_bytes=bundle["target_bytes"],
+        target_photo_id=bundle["target"].photo_id,
+        profile=bundle["profile"],
+        quality_result=bundle["quality"],
+        prepared_request=bundle["request"].model_dump(mode="json"),
+        browser_receipt=bundle["receipt"].model_dump(mode="json"),
+        browser_result=bundle["result_payload"],
+        now=bundle["now"],
+        allow_candidate_trial=False,
+    )
+
+    assert result.route == "succeeded"
+    assert result.provider_run is not None
+    assert any(item.get("execution_mode") == "private_demo_beta" for item in result.trace)
+
+
 def test_uncertain_subject_ack_is_carried_by_scope_and_allows_one_execution(
     tmp_path: Path,
 ) -> None:

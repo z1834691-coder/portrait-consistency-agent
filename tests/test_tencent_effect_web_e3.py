@@ -220,3 +220,96 @@ def test_e3_manifest_row_rejects_unknown_payload_field() -> None:
         assert "unsupported fields" in str(exc)
     else:
         raise AssertionError("raw output payload must never enter the E3 manifest")
+
+
+def test_e3_visual_gate_requires_completed_non_worsening_verification() -> None:
+    preflight = {
+        "reference_sample_id": "reference_001",
+        "items": [
+            {
+                "sample_id": "reference_001",
+                "role": "reference_candidate",
+                "status": "eligible",
+                "sha256": "a" * 64,
+            },
+            {
+                "sample_id": "target_001",
+                "role": "target",
+                "status": "eligible",
+                "sha256": "b" * 64,
+            },
+        ],
+    }
+    receipt = e3.E3LiveReceipt(
+        sample_id="target_001",
+        receipt_id="receipt_target_001",
+        request_ref="request_target_001",
+        input_sha256="b" * 64,
+        status="succeeded",
+        elapsed_ms=100,
+        output_sha256="c" * 64,
+        handoff_accepted=True,
+        verification_status="completed",
+        verification_id="verification_target_001",
+        verification_decision="replan",
+        overall_trend="improved",
+        target_evidence_sufficient=False,
+        measured_feature_count=2,
+    )
+    report = e3.build_e3_evidence_report(
+        preflight,
+        (receipt,),
+        offline_contract_regression_passed=True,
+        batch_failure_isolation_verified=True,
+        formal_admission_evidence={
+            "license_active": True,
+            "exact_domain_bound": True,
+            "provider_permission_granted": True,
+        },
+    )
+    assert report.visual_generalization_status == "established"
+    assert report.formal_admission_evidence["multi_sample_visual_review_complete"] is True
+
+
+def test_e3_visual_gate_rejects_unverifiable_or_worsened_target() -> None:
+    preflight = {
+        "reference_sample_id": "reference_001",
+        "items": [
+            {
+                "sample_id": "reference_001",
+                "role": "reference_candidate",
+                "status": "eligible",
+                "sha256": "a" * 64,
+            },
+            {
+                "sample_id": "target_001",
+                "role": "target",
+                "status": "eligible",
+                "sha256": "b" * 64,
+            },
+        ],
+    }
+    receipt = e3.E3LiveReceipt(
+        sample_id="target_001",
+        receipt_id="receipt_target_002",
+        request_ref="request_target_002",
+        input_sha256="b" * 64,
+        status="succeeded",
+        elapsed_ms=100,
+        output_sha256="c" * 64,
+        handoff_accepted=True,
+        verification_status="completed",
+        verification_id="verification_target_002",
+        verification_decision="manual_review",
+        overall_trend="worsened",
+        target_evidence_sufficient=False,
+        measured_feature_count=2,
+    )
+    report = e3.build_e3_evidence_report(
+        preflight,
+        (receipt,),
+        offline_contract_regression_passed=True,
+        batch_failure_isolation_verified=True,
+    )
+    assert report.visual_generalization_status == "not_established"
+    assert "visual_effect_generalization_not_established" in report.blockers

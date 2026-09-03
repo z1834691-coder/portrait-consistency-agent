@@ -17,6 +17,7 @@ from portrait_consistency_agent.services.meta_agent import (
     MetaAgentStage,
     MetaAgentToolSelector,
 )
+from portrait_consistency_agent.services.tool_registry import ToolRegistry
 from tests.test_edit_planner import (
     make_intent,
     make_observation,
@@ -60,6 +61,40 @@ def test_explicit_web_route_is_proposal_only_with_baseline_fallback() -> None:
     assert all(
         "image" not in str(item).lower() or "bytes_read" in str(item) for item in proposal.trace
     )
+
+
+def test_verified_web_route_is_scoped_and_still_non_authorising() -> None:
+    registry = ToolRegistry.default()
+    web = registry.get("tencent_effect_web")
+    assert web is not None
+    verified_web = web.model_copy(
+        update={
+            "review_status": "verified",
+            "promotion_scope": "private_demo_beta",
+            "execution_allowed": True,
+            "reason_codes": ("verified_private_demo_scope",),
+        }
+    )
+    selector = MetaAgentToolSelector(
+        ToolRegistry(
+            tools=tuple(
+                verified_web if item.tool_id == "tencent_effect_web" else item
+                for item in registry.tools
+            )
+        )
+    )
+    proposal = selector.propose(
+        stage=MetaAgentStage.PLAN_EDIT,
+        requested_features=[EditableFeature.FACE_LIFTING],
+        preferred_tool_id="tencent_effect_web",
+        proposal_id="tool_proposal_verified_web_001",
+    )
+
+    assert proposal.route == MetaAgentRoute.VERIFIED_TOOL_SELECTED
+    assert proposal.selected_tool_id == "tencent_effect_web"
+    assert proposal.execution_authorized is False
+    assert "verified_private_demo_scope" in proposal.reason_codes
+    assert proposal.trace[-1]["provider_run_created"] is False
 
 
 def test_web_proposal_binds_to_web_edit_plan_without_authorizing_execution() -> None:

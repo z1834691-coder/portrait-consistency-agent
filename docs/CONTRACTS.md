@@ -634,6 +634,16 @@ E3 manifest 未记录完整 `request_ref` 时，合同必须输出 `request_ref_
 
 本轮同步后的工程回归为 `238 passed, 4 warnings`，Ruff check/format、compileall 和 `git diff --check` 全部通过；候选脚本生成 JSON、HTML 与脱敏 Trace。该回执只证明合同/代码/测试一致，不代表 RAG 质量 Gate 或产品化通过。
 
+## 2026-09-04｜E3 真实结果交接与私有 Demo 晋级合同（当前）
+
+`EffectWebE3FlowResult` 将 `accept_effect_web_browser_result()` 的真实浏览器结果交给既有共同 `verify_result()`；它不复制第二套几何规则，也不把浏览器成功状态当成一致性事实。成功路径必须同时留下 Web `ProviderRun`、共同 `VerificationResult`、request/receipt/hash 关联和 `web_to_verification_handoff` Trace；失败、错位、缺结果或无法测量时不创建共同成功事实。
+
+`E3LiveReceipt` 新增的 `verification_id`、`verification_decision`、`overall_trend`、`target_evidence_sufficient` 和 `measured_feature_count` 都是脱敏投影。它们只能由共享验证器结果生成，不能由浏览器或 LLM 自填。E3 视觉 Gate 由代码派生：全部非拒绝目标都有可关联 request、成功 handoff、完成复测、非恶化趋势，且至少一张出现 `improved`；任何一张恶化或无法测量都会保持 `visual_generalization_status=not_established`。
+
+`record_effect_web_e3_verification.py` 只接受上述脱敏 JSON，明确拒绝 data URL、图片 bytes 和本地路径；它替换同一 `sample_id` 的 manifest 行，不生成新的视觉事实。`promote_effect_web_card.py` 是唯一可写 Card 状态的入口：所有准入字段为真时，原子写入 `review_status=verified`、`card_version=web_private_demo_2026-09-04` 和 `promotion_scope=private_demo_beta`；否则输出 `blocked_fail_closed` 并保持 candidate。该 scope 仅代表受邀私有 Demo，不代表公网生产、供应商地区/留存已核验或正式套餐已购买。
+
+晋级后 `ToolRegistry` 只在 `review_status=verified` 且 `promotion_scope=private_demo_beta` 时将 Web 描述为 `execution_allowed`；Meta-Agent 使用 `verified_tool_selected` 作为受限提案路由，但 `execution_authorized` 仍固定为 `false`。RAG 不能授予权限，执行层仍需通过用户范围、隐私、预算、幂等与 Adapter 合同。
+
 ## 2026-09-03｜Web E3 收尾与自动准入合同
 
 `EffectWebBrowserReceipt`、`EffectWebBrowserResult` 和共同 `ProviderRun`/`VerificationResult` 的字段边界保持不变：回执是浏览器真实事实，结果 bytes 只在一次 handoff 的当前会话内存中存在。`scripts/promote_effect_web_card.py` 是唯一允许写 Card 状态的确定性入口；它读取脱敏 E3 报告和 Card，构造 `EffectWebAdmissionInput`，逐项执行 License、精确域名、Provider 权限、出站、区域、成本、Adapter、真实 smoke、视觉/批量回归、故障隔离和负责人批准检查。任何一项缺失都返回 `keep_candidate`，并不覆盖 Card。

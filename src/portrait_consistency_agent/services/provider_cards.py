@@ -161,9 +161,8 @@ def load_tencent_effect_web_card() -> dict[str, Any]:
     The broad mobile/PC Effect card remains a different candidate.  Keeping a
     separate Web card prevents a mobile parameter list from silently becoming
     a Web/Streamlit execution permission.  This loader accepts ``candidate``
-    while the browser smoke and admission evidence are being collected; the
-    Web adapter itself still fails closed unless its card is promoted by a
-    deliberate, versioned gate.
+    and the explicitly scoped ``verified`` state; the Web registry still
+    fails closed unless the card carries the approved promotion scope.
     """
 
     data = _load_json_card(TENCENT_EFFECT_WEB_CARD_PATH, "Tencent Effect Web")

@@ -24,6 +24,9 @@ SOURCE_ROOT = PROJECT_ROOT / "src"
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
+PROMOTION_SCOPE = "private_demo_beta"
+PROMOTED_CARD_VERSION = "web_private_demo_2026-09-04"
+
 from portrait_consistency_agent.services.tencent_effect_web import (  # noqa: E402
     EffectWebAdmissionInput,
     evaluate_effect_web_admission,
@@ -147,16 +150,20 @@ def main() -> int:
         "decision": decision.model_dump(mode="json"),
         "card_changed": False,
         "promotion_write": "not_requested",
+        "promotion_scope": PROMOTION_SCOPE,
         "images_or_secrets_read": False,
     }
     if decision.allowed and args.write_if_allowed:
         card["review_status"] = "verified"
+        card["card_version"] = PROMOTED_CARD_VERSION
+        card["promotion_scope"] = PROMOTION_SCOPE
         card["reviewed_at"] = now[:10]
         evidence_block = card.setdefault("evidence", {})
         if isinstance(evidence_block, dict):
             evidence_block["promotion_status"] = "verified"
             evidence_block["promotion_decision_ref"] = str(args.decision_output)
             evidence_block["promotion_evaluated_at"] = now
+            evidence_block["promotion_scope"] = PROMOTION_SCOPE
         _atomic_write_json(args.card, card)
         output["card_changed"] = True
         output["promotion_write"] = "card_promoted"
