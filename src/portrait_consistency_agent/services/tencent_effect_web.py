@@ -713,10 +713,16 @@ def render_tencent_effect_web(
             status.dataset.tone = tone || "info";
           };
           const errorCodeOf = (error, fallback) => {
-            const candidate = error && (error.code ?? error.Code ?? error.errorCode);
-            return candidate === undefined || candidate === null || candidate === ""
-              ? fallback
-              : String(candidate).slice(0, 96);
+            // Preserve only a short, provider-independent cause code.  The
+            // browser bridge intentionally exposes no stack or raw message,
+            // but retaining a known Error.message lets the server distinguish
+            // an empty rendered frame from a generic wrapper failure.
+            const candidate = error && (
+              error.code ?? error.Code ?? error.errorCode ?? error.message
+            );
+            if (candidate === undefined || candidate === null || candidate === "") return fallback;
+            const normalized = String(candidate).slice(0, 96);
+            return /^[A-Z][A-Z0-9_]{1,95}$/.test(normalized) ? normalized : fallback;
           };
           const safeError = (error, code) => {
             const known = {
