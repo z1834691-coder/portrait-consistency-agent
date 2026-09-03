@@ -410,6 +410,10 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     assert "OUTPUT_EMPTY_FRAME" in source
     assert "imageDataHasVisiblePixels" in source
     assert 'const resultCanvas = document.createElement("canvas")' in source
+    assert 'const sourceCanvas = document.createElement("canvas")' in source
+    assert "maxHandoffDimension = 1280" in source
+    assert 'toDataURL("image/jpeg", 0.9)' in source
+    assert 'download.download = "tencent-effect-result.jpg"' in source
     assert "canvas.width = imageData.width" not in source
     assert "canvas.height = imageData.height" not in source
     assert 'const sdkCanvas = document.createElement("canvas")' in source

@@ -955,13 +955,38 @@ def render_tencent_effect_web(
                   // "Cannot resize canvas after call to transfer..." error in
                   // some WebGL builds.  Keep the SDK canvas immutable and copy
                   // the returned ImageData into a fresh, browser-owned canvas.
+                  //
+                  // The browser display/download path may keep the original
+                  // resolution, but the one-time Python handoff must fit inside
+                  // the Components v2 trigger envelope.  A bounded JPEG copy
+                  // preserves enough visual evidence for the common verifier and
+                  // prevents a large portrait PNG from silently dropping the
+                  // receipt event.  This is a transport bound, not a claim that
+                  // the vendor processed a lower-resolution source image.
+                  const sourceCanvas = document.createElement("canvas");
+                  sourceCanvas.width = imageData.width;
+                  sourceCanvas.height = imageData.height;
+                  const sourceContext = sourceCanvas.getContext("2d");
+                  if (!sourceContext) throw new Error("CANVAS_CONTEXT_MISSING");
+                  sourceContext.putImageData(imageData, 0, 0);
+                  const maxHandoffDimension = 1280;
+                  const handoffScale = Math.min(
+                    1,
+                    maxHandoffDimension / Math.max(imageData.width, imageData.height),
+                  );
                   const resultCanvas = document.createElement("canvas");
-                  resultCanvas.width = imageData.width;
-                  resultCanvas.height = imageData.height;
+                  resultCanvas.width = Math.max(1, Math.round(imageData.width * handoffScale));
+                  resultCanvas.height = Math.max(1, Math.round(imageData.height * handoffScale));
                   const context = resultCanvas.getContext("2d");
                   if (!context) throw new Error("CANVAS_CONTEXT_MISSING");
-                  context.putImageData(imageData, 0, 0);
-                  const outputUrl = resultCanvas.toDataURL("image/png");
+                  context.drawImage(
+                    sourceCanvas,
+                    0,
+                    0,
+                    resultCanvas.width,
+                    resultCanvas.height,
+                  );
+                  const outputUrl = resultCanvas.toDataURL("image/jpeg", 0.9);
                   if (new TextEncoder().encode(outputUrl).byteLength > 8 * 1024 * 1024) {
                     throw new Error("RESULT_DATA_URL_TOO_LARGE");
                   }
@@ -969,6 +994,7 @@ def render_tencent_effect_web(
                   result.src = outputUrl;
                   result.style.display = "block";
                   download.href = outputUrl;
+                  download.download = "tencent-effect-result.jpg";
                   download.style.display = "inline-block";
                   const elapsed = Math.round(performance.now() - started);
                   const receipt = {
