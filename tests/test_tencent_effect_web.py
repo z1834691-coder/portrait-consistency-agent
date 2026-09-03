@@ -405,6 +405,7 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     assert "takePhoto" in source
     assert "getOutput" in source
     assert "display:block" in source
+    assert 'worker: "disable"' in source
     assert "zero client rectangle" in source
     assert "OUTPUT_EMPTY_FRAME" in source
     assert "imageDataHasVisiblePixels" in source

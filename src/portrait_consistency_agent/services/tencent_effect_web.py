@@ -52,7 +52,12 @@ EFFECT_WEB_SDK_DEFAULT_URL = (
 )
 # Visible in the redacted page payload only; it lets a deployed smoke test prove
 # that the browser bridge, rather than a cached old component, handled the run.
-EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v2"
+# Static image capture deliberately pins the SDK to its main-thread WebGL
+# path.  The SDK's WorkerCore transfers the output canvas to an OffscreenCanvas;
+# in the hosted Streamlit iframe that path produced an empty frame even though
+# auth and resource loading succeeded.  ``worker: \"disable\"`` is an official
+# SDK option and keeps the output canvas readable by ``takePhoto()``.
+EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v3_mainthread"
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
 # Browser → Python handoff is intentionally bounded.  The encoded data URL is
 # allowed to be a little larger than the decoded image because of Base64
@@ -913,6 +918,10 @@ def render_tencent_effect_web(
               sdkCanvas.style.height = `${renderHeight}px`;
               const sdk = new arGlobal.ArSdk({
                 module: { beautify: true },
+                // Static image mode is intentionally main-thread.  WorkerCore
+                // transfers the output canvas and can yield an empty frame in
+                // a hosted cross-origin Streamlit iframe.
+                worker: "disable",
                 auth: {
                   licenseKey: data.license_key,
                   appId: data.app_id,
