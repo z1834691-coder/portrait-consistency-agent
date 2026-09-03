@@ -57,7 +57,7 @@ EFFECT_WEB_SDK_DEFAULT_URL = (
 # in the hosted Streamlit iframe that path produced an empty frame even though
 # auth and resource loading succeeded.  ``worker: \"disable\"`` is an official
 # SDK option and keeps the output canvas readable by ``takePhoto()``.
-EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v3_mainthread"
+EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v4_bounded_jpeg"
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
 # Browser → Python handoff is intentionally bounded.  The encoded data URL is
 # allowed to be a little larger than the decoded image because of Base64
