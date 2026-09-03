@@ -419,6 +419,7 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     assert 'const sdkCanvas = document.createElement("canvas")' in source
     assert 'currentCanvas = document.createElement("canvas")' in source
     assert "recoverable DOM lifecycle race" in source
+    assert "the control remained disabled" in source
     assert "errorCodeOf" in source
     assert "SDK 鉴权缺少必要参数" in source
     assert "runButton.disabled = false" in source

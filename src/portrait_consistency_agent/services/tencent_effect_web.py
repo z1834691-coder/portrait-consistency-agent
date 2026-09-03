@@ -57,7 +57,7 @@ EFFECT_WEB_SDK_DEFAULT_URL = (
 # in the hosted Streamlit iframe that path produced an empty frame even though
 # auth and resource loading succeeded.  ``worker: \"disable\"`` is an official
 # SDK option and keeps the output canvas readable by ``takePhoto()``.
-EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v5_canvas_recovery"
+EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v6_rerun_recovery"
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
 # Browser → Python handoff is intentionally bounded.  The encoded data URL is
 # allowed to be a little larger than the decoded image because of Base64
@@ -1082,6 +1082,11 @@ def render_tencent_effect_web(
             state.resetToken = data.reset_token;
             state.running = false;
             state.disposed = false;
+            // A previous trigger can be consumed by a Streamlit rerun before
+            // the browser receives its success/failure callback.  Re-enable
+            // the button when the new request generation is ready, otherwise
+            // the page would look idle while the control remained disabled.
+            runButton.disabled = false;
             result.style.display = "none";
             download.style.display = "none";
             show("准备就绪：点击后才会发送图片到浏览器 SDK", "info");
