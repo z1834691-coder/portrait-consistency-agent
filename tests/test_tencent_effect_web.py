@@ -106,6 +106,7 @@ def test_payload_mints_signature_without_exposing_license_token() -> None:
     assert payload["input_sha256"] == input_hash
     assert payload["app_id"] == "app_123456"
     assert payload["license_key"] == "license_public_key"
+    assert payload["bridge_version"].startswith("bridge_2026-09-03")
     assert "license_token" not in payload
     assert "token_only_server_side_123" not in payload.values()
     assert re.fullmatch(r"[0-9A-F]{64}", str(payload["signature"]))
@@ -403,7 +404,8 @@ def test_browser_bridge_uses_static_image_capture_api() -> None:
     source = inspect.getsource(render_tencent_effect_web)
     assert "takePhoto" in source
     assert "getOutput" in source
-    assert "updateInputImage" in source
+    assert "display:block" in source
+    assert "zero client rectangle" in source
     assert "OUTPUT_EMPTY_FRAME" in source
     assert "imageDataHasVisiblePixels" in source
     assert 'const resultCanvas = document.createElement("canvas")' in source

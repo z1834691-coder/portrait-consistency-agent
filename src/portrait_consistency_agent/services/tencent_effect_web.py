@@ -50,6 +50,9 @@ EFFECT_WEB_PROVIDER = "tencent_effect_web"
 EFFECT_WEB_SDK_DEFAULT_URL = (
     "https://webar-static.tencent-cloud.com/ar-sdk/resources/latest/webar-sdk.umd.js"
 )
+# Visible in the redacted page payload only; it lets a deployed smoke test prove
+# that the browser bridge, rather than a cached old component, handled the run.
+EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v2"
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
 # Browser → Python handoff is intentionally bounded.  The encoded data URL is
 # allowed to be a little larger than the decoded image because of Base64
@@ -413,6 +416,7 @@ class TencentEffectWebAdapter:
                 "request_ref": request.request_ref,
                 "card_id": request.card_id,
                 "card_version": request.card_version,
+                "bridge_version": EFFECT_WEB_BRIDGE_VERSION,
                 "sdk_url": sdk_url,
                 "license_key": license_key,
                 "app_id": app_id,
@@ -676,7 +680,8 @@ def render_tencent_effect_web(
         html="""
         <div class="effect-shell">
           <div class="effect-status" data-role="status">等待开始</div>
-          <canvas data-role="canvas" style="display:none"></canvas>
+          <canvas data-role="canvas"
+            style="position:fixed;left:-10000px;top:-10000px;display:block"></canvas>
           <img data-role="result" alt="腾讯特效处理结果" style="max-width:100%;display:none" />
           <a data-role="download" download="tencent-effect-result.png" style="display:none">
             下载处理结果
@@ -791,7 +796,9 @@ def render_tencent_effect_web(
               .map((byte) => byte.toString(16).padStart(2, "0"))
               .join("");
           };
-          const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+          const sleep = (milliseconds) => new Promise((resolve) =>
+            setTimeout(resolve, milliseconds)
+          );
           const nextFrames = () => new Promise((resolve) => {
             requestAnimationFrame(() => requestAnimationFrame(resolve));
           });
@@ -828,27 +835,32 @@ def render_tencent_effect_web(
             return imageData;
           };
           const captureStaticImage = async (sdk) => {
-            // The official static-image API exposes getOutput(..., IMAGE) as a
-            // data URL.  Prefer it because it reads the SDK's own rendered
-            // canvas after the ticker has advanced.  takePhoto remains the
-            // compatibility path for WorkerCore/browser builds.
-            if (typeof sdk.getOutput === "function") {
-              try {
-                const outputUrl = await sdk.getOutput(undefined, 3);
-                if (typeof outputUrl === "string" && outputUrl.startsWith("data:image/")) {
-                  return await imageDataFromOutputUrl(outputUrl);
-                }
-              } catch (_) {
-                // Fall through to the ImageData path below.  The final error
-                // must still be OUTPUT_EMPTY_FRAME rather than a false success.
-              }
-            }
+            // Tencent's official static-image tutorial captures with
+            // takePhoto() after ready.  Prefer that path; getOutput(IMAGE) is
+            // retained as a compatibility fallback for SDK builds where
+            // takePhoto is worker-backed.
             let lastImageData = null;
-            for (let attempt = 0; attempt < 3; attempt += 1) {
+            for (let attempt = 0; attempt < 5; attempt += 1) {
               await nextFrames();
-              await sleep(150);
-              lastImageData = await sdk.takePhoto();
-              if (imageDataHasVisiblePixels(lastImageData)) return lastImageData;
+              await sleep(220);
+              if (typeof sdk.takePhoto === "function") {
+                try {
+                  lastImageData = await sdk.takePhoto();
+                  if (imageDataHasVisiblePixels(lastImageData)) return lastImageData;
+                } catch (_) {
+                  // Try the data-URL path below; final failure remains fail-closed.
+                }
+              }
+              if (typeof sdk.getOutput === "function") {
+                try {
+                  const outputUrl = await sdk.getOutput(undefined, 3);
+                  if (typeof outputUrl === "string" && outputUrl.startsWith("data:image/")) {
+                    return await imageDataFromOutputUrl(outputUrl);
+                  }
+                } catch (_) {
+                  // Keep polling for a rendered frame.
+                }
+              }
             }
             if (!lastImageData || !lastImageData.data) {
               throw new Error("STATIC_IMAGE_OUTPUT_MISSING");
@@ -879,10 +891,20 @@ def render_tencent_effect_web(
               if (!currentCanvas) throw new Error("CANVAS_MISSING");
               const sdkCanvas = document.createElement("canvas");
               sdkCanvas.dataset.role = "canvas";
-              sdkCanvas.style.display = "none";
+              // Do not use display:none: WebGL implementations may treat a
+              // zero client rectangle as an empty render target.  Keep the
+              // canvas off-screen but laid out with real dimensions.
+              sdkCanvas.style.position = "fixed";
+              sdkCanvas.style.left = "-10000px";
+              sdkCanvas.style.top = "-10000px";
+              sdkCanvas.style.display = "block";
               currentCanvas.replaceWith(sdkCanvas);
-              sdkCanvas.width = inputImage.naturalWidth || inputImage.width;
-              sdkCanvas.height = inputImage.naturalHeight || inputImage.height;
+              const renderWidth = inputImage.naturalWidth || inputImage.width;
+              const renderHeight = inputImage.naturalHeight || inputImage.height;
+              sdkCanvas.width = renderWidth;
+              sdkCanvas.height = renderHeight;
+              sdkCanvas.style.width = `${renderWidth}px`;
+              sdkCanvas.style.height = `${renderHeight}px`;
               const sdk = new arGlobal.ArSdk({
                 module: { beautify: true },
                 auth: {
@@ -903,20 +925,12 @@ def render_tencent_effect_web(
               sdk.on("ready", async () => {
                 if (!state.running) return;
                 try {
-                  // Official static-image flow: refresh the input after the
-                  // SDK is ready, let its ticker render, then capture a real
-                  // non-empty frame.  This is intentionally deterministic at
-                  // the boundary: a blank frame becomes a failed receipt.
-                  if (typeof sdk.updateInputImage === "function") {
-                    await sdk.updateInputImage({
-                      width: inputImage.naturalWidth || inputImage.width,
-                      height: inputImage.naturalHeight || inputImage.height,
-                      input: inputImage,
-                    });
-                  }
+                  // The official static-image flow initializes with an image,
+                  // waits for ready, then captures.  Calling updateInputImage
+                  // again here can reset the render target while it is being
+                  // transferred to WebGL, so it is intentionally not needed
+                  // for this one-shot instance.
                   await sdk.setBeautify(data.beautify);
-                  await nextFrames();
-                  await sleep(250);
                   const imageData = await captureStaticImage(sdk);
                   if (!imageData || !imageData.data || !imageData.width || !imageData.height) {
                     throw new Error("STATIC_IMAGE_OUTPUT_MISSING");

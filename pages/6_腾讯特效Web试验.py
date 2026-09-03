@@ -27,6 +27,7 @@ from portrait_consistency_agent.core.settings import AppSettings
 from portrait_consistency_agent.services.meta_agent import MetaAgentStage, MetaAgentToolSelector
 from portrait_consistency_agent.services.provider_cards import load_tencent_effect_web_card
 from portrait_consistency_agent.services.tencent_effect_web import (
+    EFFECT_WEB_BRIDGE_VERSION,
     MAX_DATA_URL_BYTES,
     TencentEffectWebAdapter,
     TencentEffectWebConfigurationError,
@@ -338,7 +339,9 @@ def main() -> None:
                 "status": run.status.value,
                 "provider": run.provider,
                 "operation": run.operation,
+                "bridge_version": EFFECT_WEB_BRIDGE_VERSION,
                 "provider_request_id": run.provider_request_id,
+                "request_ref": receipt.request_ref,
                 "sdk_version": receipt.sdk_version,
                 "elapsed_ms": receipt.elapsed_ms,
                 "error_code": receipt.error_code,
