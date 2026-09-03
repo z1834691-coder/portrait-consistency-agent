@@ -57,7 +57,7 @@ EFFECT_WEB_SDK_DEFAULT_URL = (
 # in the hosted Streamlit iframe that path produced an empty frame even though
 # auth and resource loading succeeded.  ``worker: \"disable\"`` is an official
 # SDK option and keeps the output canvas readable by ``takePhoto()``.
-EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v4_bounded_jpeg"
+EFFECT_WEB_BRIDGE_VERSION = "bridge_2026-09-03_static_capture_v5_canvas_recovery"
 MAX_DATA_URL_BYTES = 8 * 1024 * 1024
 # Browser → Python handoff is intentionally bounded.  The encoded data URL is
 # allowed to be a little larger than the decoded image because of Base64
@@ -898,8 +898,20 @@ def render_tencent_effect_web(
                 try { if (state.sdk.destroy) state.sdk.destroy(); } catch (_) {}
                 state.sdk = null;
               }
-              const currentCanvas = parentElement.querySelector('[data-role="canvas"]');
-              if (!currentCanvas) throw new Error("CANVAS_MISSING");
+              // Streamlit Components v2 can reconcile the component subtree
+              // between a file-uploader rerun and the next click.  If the
+              // previous canvas was removed, rebuild it instead of treating a
+              // recoverable DOM lifecycle race as an SDK/auth failure.
+              let currentCanvas = parentElement.querySelector('[data-role="canvas"]');
+              if (!currentCanvas) {
+                currentCanvas = document.createElement("canvas");
+                currentCanvas.dataset.role = "canvas";
+                currentCanvas.style.position = "fixed";
+                currentCanvas.style.left = "-10000px";
+                currentCanvas.style.top = "-10000px";
+                currentCanvas.style.display = "block";
+                parentElement.prepend(currentCanvas);
+              }
               const sdkCanvas = document.createElement("canvas");
               sdkCanvas.dataset.role = "canvas";
               // Do not use display:none: WebGL implementations may treat a
