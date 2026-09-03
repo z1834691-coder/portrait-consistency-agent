@@ -7,10 +7,10 @@ an owner-supplied set of real images and records only redacted preflight facts
 so live browser receipts can be joined to the correct sample without copying
 photos, result bytes or local paths into the repository.
 
-The harness never calls Tencent, promotes a Provider Card, or treats a good
-quality route as proof of visual improvement.  A successful preflight means
-only that a sample is eligible for a candidate Web trial; subject match,
-content safety, visual effect and vendor terms remain separate evidence.
+    The harness never calls Tencent, promotes a Provider Card, or treats a good
+    quality route as proof of visual improvement.  A successful preflight means
+    only that a sample is eligible for a candidate Web trial; subject match,
+    content safety, visual effect and vendor terms remain separate evidence.
 """
 
 from __future__ import annotations
@@ -346,7 +346,10 @@ class E3EvidenceReport:
 
     This is intentionally an evidence report rather than a promotion command.
     It can prove that browser calls returned and that sample hashes line up, but
-    it keeps visual generalization and vendor terms as explicit open gates.
+    it keeps visual generalization and vendor terms as explicit open gates.  The
+    separate ``promote_effect_web_card.py`` command evaluates the same evidence
+    with a fail-closed checklist and is the only code path allowed to write a
+    Card promotion.
     """
 
     evidence_version: str
@@ -532,13 +535,15 @@ def build_e3_evidence_report(
         blockers.append("offline_contract_regression_not_passed")
     if not batch_failure_isolation_verified:
         blockers.append("batch_failure_isolation_not_verified")
-    blockers.append("visual_effect_generalization_not_established")
+    if not formal["multi_sample_visual_review_complete"]:
+        blockers.append("visual_effect_generalization_not_established")
     blockers.extend(
         key
         for key, value in formal.items()
         if not value and key not in {"multi_sample_visual_review_complete"}
     )
-    blockers.append("product_owner_promotion_approval_required")
+    if not formal["product_owner_promotion_approved"]:
+        blockers.append("product_owner_promotion_approval_required")
     # Keep order stable while avoiding duplicate explanations when a caller
     # supplied the same missing evidence twice.
     blockers = list(dict.fromkeys(blockers))
@@ -575,7 +580,9 @@ def build_e3_evidence_report(
         handoff_success_count=handoff_success,
         batch_failure_isolation_verified=batch_failure_isolation_verified,
         offline_contract_regression_passed=offline_contract_regression_passed,
-        visual_generalization_status="not_established",
+        visual_generalization_status=(
+            "established" if formal["multi_sample_visual_review_complete"] else "not_established"
+        ),
         formal_admission_evidence=formal,
         promotion_status="candidate",
         blockers=tuple(blockers),

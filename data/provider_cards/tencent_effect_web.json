@@ -150,6 +150,7 @@
     "e3_live_evidence": {
       "report_ref": "reports/effect_web_e3_evidence_v1.json",
       "captured_at": "2026-09-03T00:00:00+08:00",
+      "latest_bridge_version": "bridge_2026-09-03_static_capture_v6_rerun_recovery",
       "preflight_sample_count": 5,
       "live_receipt_count": 4,
       "live_success_count": 4,
@@ -178,15 +179,15 @@
         "acd09781dadf34ec28ee61a137265bbfacf14b84a9e11fc1ab8b7ae3f4cccdf5"
       ],
       "promotion_status": "candidate",
+      "promotion_decision_ref": "reports/effect_web_promotion_decision_v1.json",
       "promotion_blockers": [
         "visual_effect_generalization_not_established",
         "request_ref_not_recorded_for_every_manual_receipt",
         "region_approved",
-        "estimated_cost_known",
-        "product_owner_promotion_approved"
+        "estimated_cost_known"
       ]
     },
-    "last_review_note": "Four owner-authorized browser sample trials returned successful receipts with matching input/output hashes. Keep review_status=candidate: request_ref transcription, visual generalization, vendor retention/region/cost evidence and product-owner promotion remain separate gates."
+    "last_review_note": "Four owner-authorized browser sample trials returned successful receipts with matching input/output hashes. The deterministic promotion command was run with owner approval and kept review_status=candidate because visual generalization, request_ref linkage, region and cost evidence remain incomplete."
   },
   "source": {
     "static_image_doc": "https://cloud.tencent.com/document/product/616/118039",

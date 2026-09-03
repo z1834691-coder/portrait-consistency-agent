@@ -3,9 +3,7 @@
     &quot;request_ref_not_recorded_for_every_manual_receipt&quot;,
     &quot;visual_effect_generalization_not_established&quot;,
     &quot;region_approved&quot;,
-    &quot;estimated_cost_known&quot;,
-    &quot;product_owner_promotion_approved&quot;,
-    &quot;product_owner_promotion_approval_required&quot;
+    &quot;estimated_cost_known&quot;
   ],
   &quot;evidence_version&quot;: &quot;effect_web_e3_evidence_v0.1&quot;,
   &quot;formal_admission_evidence&quot;: {
@@ -15,7 +13,7 @@
     &quot;license_active&quot;: true,
     &quot;multi_sample_visual_review_complete&quot;: false,
     &quot;outbound_data_policy_approved&quot;: true,
-    &quot;product_owner_promotion_approved&quot;: false,
+    &quot;product_owner_promotion_approved&quot;: true,
     &quot;provider_permission_granted&quot;: true,
     &quot;region_approved&quot;: false,
     &quot;static_image_smoke_succeeded&quot;: true
@@ -127,4 +125,4 @@
   &quot;report_contains_image_bytes&quot;: false,
   &quot;report_contains_local_paths&quot;: false,
   &quot;visual_generalization_status&quot;: &quot;not_established&quot;
-}</code></pre><h2>仍未闭合的 Gate</h2><ul><li>request_ref_not_recorded_for_every_manual_receipt</li><li>visual_effect_generalization_not_established</li><li>region_approved</li><li>estimated_cost_known</li><li>product_owner_promotion_approved</li><li>product_owner_promotion_approval_required</li></ul><h2>下一步</h2><ul><li>把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult</li><li>对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功</li><li>补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据</li><li>在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion</li></ul></body></html>
+}</code></pre><h2>仍未闭合的 Gate</h2><ul><li>request_ref_not_recorded_for_every_manual_receipt</li><li>visual_effect_generalization_not_established</li><li>region_approved</li><li>estimated_cost_known</li></ul><h2>下一步</h2><ul><li>把每张结果图完成一次浏览器→Python 内存 handoff，并生成共同 VerificationResult</li><li>对真实样本做盲化前后视觉复核，记录可复测的几何变化和异常，而不是只看 SDK 成功</li><li>补齐供应商 License、精确域名、图片出站/留存、地区、费用和预算证据</li><li>在上述证据齐全后由产品负责人单独决定 candidate 是否 promotion</li></ul></body></html>

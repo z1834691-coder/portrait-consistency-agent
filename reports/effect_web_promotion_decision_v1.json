@@ -1,0 +1,34 @@
+{
+  "admission_input": {
+    "adapter_ready": true,
+    "batch_failure_isolation_verified": true,
+    "card_review_status": "candidate",
+    "estimated_cost_known": false,
+    "exact_domain_bound": true,
+    "license_active": true,
+    "multi_sample_regression_succeeded": false,
+    "outbound_data_policy_approved": true,
+    "product_owner_approved": true,
+    "provider_permission_granted": true,
+    "region_approved": false,
+    "smoke_receipt_ref": "web_receipt_effect_web_c83e83d54d8e4b1d",
+    "static_image_smoke_succeeded": true
+  },
+  "card_before_status": "candidate",
+  "card_changed": false,
+  "card_id": "tencent-effect-web",
+  "decision": {
+    "allowed": false,
+    "next_action": "keep_candidate",
+    "reason_codes": [
+      "region_not_approved",
+      "estimated_cost_unknown",
+      "multi_sample_regression_not_passed"
+    ]
+  },
+  "decision_version": "effect_web_promotion_v0.1",
+  "evaluated_at": "2026-09-03T12:36:55.777988+00:00",
+  "images_or_secrets_read": false,
+  "promotion_write": "blocked_fail_closed",
+  "write_requested": true
+}

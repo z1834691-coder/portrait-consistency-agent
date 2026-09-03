@@ -74,6 +74,6 @@
     "adapter_ready": true,
     "static_image_smoke_succeeded": true,
     "multi_sample_visual_review_complete": false,
-    "product_owner_promotion_approved": false
+    "product_owner_promotion_approved": true
   }
 }

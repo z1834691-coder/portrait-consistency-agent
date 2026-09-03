@@ -3,9 +3,7 @@
     "request_ref_not_recorded_for_every_manual_receipt",
     "visual_effect_generalization_not_established",
     "region_approved",
-    "estimated_cost_known",
-    "product_owner_promotion_approved",
-    "product_owner_promotion_approval_required"
+    "estimated_cost_known"
   ],
   "evidence_version": "effect_web_e3_evidence_v0.1",
   "formal_admission_evidence": {
@@ -15,7 +13,7 @@
     "license_active": true,
     "multi_sample_visual_review_complete": false,
     "outbound_data_policy_approved": true,
-    "product_owner_promotion_approved": false,
+    "product_owner_promotion_approved": true,
     "provider_permission_granted": true,
     "region_approved": false,
     "static_image_smoke_succeeded": true
