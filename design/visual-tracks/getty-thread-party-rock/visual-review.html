@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="母版人像一致性 Agent 的 Getty × Thread 视觉设计 Track：E01 入口与 E02 Agent 对话。" />
-    <title>对齐 · Getty × Thread 视觉 Track</title>
+    <meta name="description" content="母版人像一致性 Agent 的 Getty × Thread 视觉设计 Track：E01 入口、E02 Agent 对话与 K00 封面。" />
+    <title>对齐 · Getty × Thread 视觉评审</title>
     <style>
       :root {
         --ivory: #f2f1e6;
@@ -215,22 +215,6 @@
       .kicker { margin: 0 0 13px; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
       .screen h2 { max-width: 13ch; margin: 0; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.12; letter-spacing: -.055em; text-wrap: balance; }
       .lead { max-width: 28ch; margin: 15px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
-      .art-layer {
-        position: absolute;
-        z-index: 1;
-        top: 44px;
-        right: -10%;
-        width: min(58%, 560px);
-        aspect-ratio: 1586 / 992;
-        overflow: hidden;
-        border-radius: 38% 18% 40% 24%;
-        opacity: .58;
-        pointer-events: none;
-        mix-blend-mode: multiply;
-        animation: art-breathe 22s ease-in-out infinite;
-      }
-      .art-layer img { display: block; width: 100%; height: 100%; object-fit: cover; }
-      .art-layer::after { content: ""; position: absolute; inset: 0; border: 1px solid rgba(18, 18, 18, .12); border-radius: inherit; }
       .upload-panel {
         position: relative;
         display: grid;
@@ -346,8 +330,6 @@
       .difference-note .icon { color: var(--purple); }
       .difference-note strong { display: block; font-size: 13px; }
       .difference-note p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-      .session-art { position: absolute; right: -10%; bottom: 6%; width: min(34%, 300px); aspect-ratio: 1586 / 992; overflow: hidden; border-radius: 44% 20% 31% 14%; opacity: .31; pointer-events: none; mix-blend-mode: multiply; }
-      .session-art img { width: 100%; height: 100%; display: block; object-fit: cover; }
 
       /* Right thread */
       .thread {
@@ -395,15 +377,9 @@
       .thread-footer a { text-underline-offset: 2px; }
       .prototype-status { min-height: 18px; margin-top: 7px; color: var(--muted); font-size: 11px; }
 
-      @keyframes art-breathe {
-        0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
-        50% { transform: translate3d(-7px, 5px, 0) rotate(1deg); }
-      }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
       }
-      .motion-paused .art-layer, .motion-paused .session-art { animation-play-state: paused; }
-      .motion-paused .art-layer { transform: none; }
       @media (max-width: 1180px) {
         .product-shell { grid-template-columns: 216px minmax(0, 1fr) 326px; }
         .stage { padding-inline: 28px; }
@@ -449,8 +425,112 @@
         .session-heading p { margin-top: 9px; text-align: left; }
         .lineage { gap: 0; }
         .lineage-item { font-size: 10px; }
-        .art-layer { top: 160px; right: -28%; width: 84%; opacity: .34; }
-        .session-art { display: none; }
+      }
+
+      /* K00 cover: a separate editorial entry surface. It uses sourced artwork only; E01/E02 stay flat ivory. */
+      .cover-shell[hidden] { display: none; }
+      .cover-shell {
+        position: relative;
+        min-height: calc(100vh - 100px);
+        overflow: hidden;
+        border: 1.5px solid var(--ink);
+        border-radius: 26px;
+        color: var(--ink);
+        background: var(--purple);
+      }
+      .cover-nav {
+        position: relative;
+        z-index: 20;
+        min-height: 72px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 20px;
+        padding: 0 32px;
+        color: var(--ivory);
+        background: var(--black);
+        border-bottom: 1px solid rgba(242, 241, 230, .42);
+      }
+      .cover-wordmark { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+      .cover-wordmark-dot { width: 12px; height: 12px; flex: 0 0 auto; border: 1px solid var(--ink); border-radius: 50%; background: var(--acid); }
+      .cover-wordmark strong { font-size: 16px; letter-spacing: -.04em; }
+      .cover-wordmark small { display: block; margin-top: 2px; color: var(--nav-muted); font-size: 9px; letter-spacing: .08em; }
+      .cover-nav-center { color: var(--nav-muted); font-size: 10px; letter-spacing: .14em; text-align: center; }
+      .cover-nav-links { display: flex; justify-content: flex-end; gap: 21px; color: var(--nav-muted); font-size: 11px; }
+      .cover-nav-links a { text-decoration: none; text-underline-offset: 4px; }
+      .cover-nav-links a:hover, .cover-nav-links a:focus-visible { color: var(--ivory); text-decoration: underline; }
+      .cover-copy { position: absolute; z-index: 8; top: 150px; left: clamp(30px, 7vw, 102px); width: min(470px, 42vw); }
+      .cover-kicker { margin: 0 0 18px; color: var(--ink); font-size: 12px; font-weight: 700; letter-spacing: .14em; }
+      .cover-title { margin: 0; font-size: clamp(48px, 6.7vw, 94px); font-weight: 700; line-height: .98; letter-spacing: -.075em; text-wrap: balance; }
+      .cover-title span { display: block; width: fit-content; padding: 4px 10px 8px; border: 2px solid var(--black); background: var(--ivory); }
+      .cover-title span + span { margin-top: 8px; color: var(--ivory); background: transparent; }
+      .cover-support { max-width: 24ch; margin: 23px 0 0; color: rgba(18, 18, 18, .82); font-size: 16px; line-height: 1.55; }
+      .cover-cta-row { display: flex; align-items: center; gap: 13px; margin-top: 26px; }
+      .cover-cta { min-height: 48px; display: inline-flex; align-items: center; gap: 10px; padding: 0 17px; border: 1.5px solid var(--black); border-radius: 999px; color: var(--ivory); background: var(--black); box-shadow: 3px 3px 0 rgba(18, 18, 18, .24); font-size: 14px; font-weight: 700; transition: transform 180ms ease-out, box-shadow 180ms ease-out; }
+      .cover-cta:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(18, 18, 18, .24); }
+      .cover-cta:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(18, 18, 18, .24); }
+      .cover-cta-dot { width: 9px; height: 9px; border: 1px solid var(--ink); border-radius: 50%; background: var(--acid); }
+      .cover-side-note { position: absolute; z-index: 8; top: 154px; right: clamp(28px, 6.5vw, 94px); max-width: 18ch; color: rgba(18, 18, 18, .75); font-size: 11px; line-height: 1.5; text-align: right; }
+      .cover-side-note strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 13px; }
+      .cover-play { position: absolute; z-index: 12; top: 310px; left: 50%; width: 76px; height: 76px; display: grid; place-items: center; border: 2px solid var(--black); border-radius: 50%; background: var(--acid); box-shadow: 5px 5px 0 var(--black); transform: translateX(-50%); transition: transform 220ms ease-out, box-shadow 220ms ease-out; }
+      .cover-play::before { content: ""; width: 0; height: 0; margin-left: 6px; border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-left: 17px solid var(--black); }
+      .cover-play:hover { transform: translate(-50%, -3px); box-shadow: 5px 8px 0 var(--black); }
+      .cover-play:active { transform: translate(-50%, 2px); box-shadow: 2px 2px 0 var(--black); }
+      .cover-arc { position: absolute; z-index: 10; left: 2.2%; right: 2.2%; bottom: 26px; height: 370px; }
+      .cover-arc::before { content: ""; position: absolute; left: 2%; right: 2%; bottom: 36px; height: 1px; background: rgba(18, 18, 18, .52); }
+      .cover-card { position: absolute; left: var(--x); top: var(--y); width: clamp(94px, 9.1vw, 132px); height: clamp(132px, 14vw, 188px); padding: 0; overflow: hidden; border: 2px solid var(--black); border-radius: 6px; color: var(--ink); background: var(--ivory); cursor: pointer; transform: translate(-50%, var(--lift, 0)) rotate(var(--rot)); transform-origin: 50% 100%; box-shadow: 4px 5px 0 rgba(18, 18, 18, .22); transition: transform 240ms cubic-bezier(.22, .8, .24, 1), box-shadow 240ms ease-out, filter 240ms ease-out; }
+      .cover-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .cover-card::after { content: ""; position: absolute; inset: 0; border: 1px solid rgba(242, 241, 230, .56); pointer-events: none; }
+      .cover-card-label { position: absolute; right: 5px; bottom: 5px; left: 5px; padding: 4px 5px; color: var(--ivory); background: rgba(0, 0, 0, .78); font-size: 9px; line-height: 1.25; text-align: left; }
+      .cover-card:hover, .cover-card:focus-visible, .cover-card.is-near { z-index: 30; --lift: -24px; box-shadow: 5px 9px 0 rgba(18, 18, 18, .28); filter: saturate(1.06); }
+      .cover-card:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+      .cover-card:nth-child(1) { --x: 3%; --y: 45%; --rot: -18deg; }
+      .cover-card:nth-child(2) { --x: 12%; --y: 28%; --rot: -13deg; }
+      .cover-card:nth-child(3) { --x: 22%; --y: 14%; --rot: -9deg; }
+      .cover-card:nth-child(4) { --x: 32%; --y: 5%; --rot: -5deg; }
+      .cover-card:nth-child(5) { --x: 42%; --y: 1%; --rot: -2deg; }
+      .cover-card:nth-child(6) { --x: 52%; --y: 0%; --rot: 2deg; }
+      .cover-card:nth-child(7) { --x: 62%; --y: 4%; --rot: 6deg; }
+      .cover-card:nth-child(8) { --x: 72%; --y: 14%; --rot: 10deg; }
+      .cover-card:nth-child(9) { --x: 82%; --y: 29%; --rot: 14deg; }
+      .cover-card:nth-child(10) { --x: 92%; --y: 46%; --rot: 19deg; }
+      .cover-status { position: absolute; z-index: 25; right: 30px; bottom: 18px; max-width: 31ch; margin: 0; color: rgba(18, 18, 18, .74); font-size: 10px; text-align: right; }
+      .motion-paused .cover-card { transition: none; }
+      .motion-paused .cover-card:hover, .motion-paused .cover-card:focus-visible, .motion-paused .cover-card.is-near { --lift: 0; filter: none; box-shadow: 4px 5px 0 rgba(18, 18, 18, .22); }
+      @media (prefers-reduced-motion: reduce) {
+        .cover-card:hover, .cover-card:focus-visible, .cover-card.is-near { --lift: 0; filter: none; }
+      }
+      @media (max-width: 940px) {
+        .cover-shell { min-height: calc(100vh - 120px); border-radius: 0; border-inline: 0; }
+        .cover-nav { grid-template-columns: 1fr auto; padding-inline: 22px; }
+        .cover-nav-center { justify-self: end; }
+        .cover-nav-links { display: none; }
+        .cover-copy { top: 128px; left: 30px; width: min(440px, 64vw); }
+        .cover-side-note { top: 136px; right: 28px; }
+      }
+      @media (max-width: 600px) {
+        .cover-shell { min-height: calc(100vh - 122px); }
+        .cover-nav { min-height: 60px; padding-inline: 16px; }
+        .cover-wordmark small { display: none; }
+        .cover-wordmark strong { font-size: 15px; }
+        .cover-nav-center { font-size: 9px; }
+        .cover-copy { top: 104px; left: 20px; width: calc(100% - 40px); }
+        .cover-kicker { margin-bottom: 13px; font-size: 10px; }
+        .cover-title { font-size: clamp(42px, 14vw, 58px); }
+        .cover-title span { padding: 3px 7px 6px; border-width: 1.5px; }
+        .cover-title span + span { margin-top: 5px; }
+        .cover-support { max-width: 22ch; margin-top: 16px; font-size: 14px; }
+        .cover-cta-row { margin-top: 17px; }
+        .cover-cta { min-height: 44px; padding-inline: 14px; font-size: 13px; }
+        .cover-side-note { top: 105px; right: 18px; max-width: 12ch; font-size: 9px; }
+        .cover-side-note strong { font-size: 11px; }
+        .cover-play { top: 272px; width: 58px; height: 58px; box-shadow: 4px 4px 0 var(--black); }
+        .cover-play::before { border-top-width: 9px; border-bottom-width: 9px; border-left-width: 13px; }
+        .cover-arc { left: 0; right: 0; bottom: 28px; height: 260px; }
+        .cover-card { width: 76px; height: 112px; border-width: 1.5px; box-shadow: 3px 4px 0 rgba(18, 18, 18, .2); }
+        .cover-card:hover, .cover-card:focus-visible, .cover-card.is-near { --lift: -17px; box-shadow: 4px 6px 0 rgba(18, 18, 18, .25); }
+        .cover-card-label { right: 3px; bottom: 3px; left: 3px; padding: 3px; font-size: 7px; }
+        .cover-status { right: 16px; bottom: 12px; font-size: 9px; }
       }
     </style>
   </head>
@@ -460,8 +540,8 @@
       <div class="review-heading">
         <div class="review-mark" aria-hidden="true">像</div>
         <div>
-          <h1>Getty × Thread · 视觉 Track 1</h1>
-          <p>Party Rock × 苹方 · 两张关键帧 · 候选探索，不代表正式实现</p>
+          <h1>Getty × Thread · 视觉评审</h1>
+          <p>Party Rock × 苹方 · E01 / E02 / K00 · 候选探索，不代表正式实现</p>
         </div>
       </div>
       <div class="review-controls">
@@ -469,19 +549,14 @@
           <span class="review-label">画面</span>
           <button class="review-button" type="button" data-screen-button="e01" aria-pressed="true">E01 入口</button>
           <button class="review-button" type="button" data-screen-button="e02" aria-pressed="false">E02 对话</button>
-        </div>
-        <div class="review-group" role="group" aria-label="环境素材切换">
-          <span class="review-label">素材</span>
-          <button class="review-button" type="button" data-art-button="orbit-paper" aria-pressed="true">纸上轨道</button>
-          <button class="review-button" type="button" data-art-button="folded-window" aria-pressed="false">折叠窗口</button>
-          <button class="review-button" type="button" data-art-button="ink-garden" aria-pressed="false">墨线花园</button>
+          <button class="review-button" type="button" data-screen-button="k00" aria-pressed="false">K00 封面</button>
         </div>
         <button class="review-button motion-toggle" type="button" aria-pressed="false" data-motion-toggle>暂停动效</button>
       </div>
     </header>
 
     <main id="product-main" class="review-main">
-      <section class="product-shell" aria-label="母版人像一致性 Agent 产品视觉关键帧">
+      <section class="product-shell" data-product-shell aria-label="母版人像一致性 Agent E01/E02 产品视觉关键帧">
         <nav class="global-nav" aria-label="全局导航">
           <a class="brand" href="#" aria-label="对齐首页">
             <span class="brand-mark" aria-hidden="true">
@@ -519,8 +594,6 @@
             <div class="crumb"><i class="crumb-dot" aria-hidden="true"></i><span>人像一致性项目</span><span>/</span><span data-breadcrumb>入口</span></div>
             <div class="context-line"><span class="context-chip" data-context-status>等待母版</span><span class="context-chip ghost">2026 · 09</span></div>
           </div>
-
-          <div class="art-layer" aria-hidden="true"><img data-art-surface="stage" src="assets/orbit-paper.png" alt="" width="1586" height="992" decoding="async" /></div>
 
           <section class="screen" data-screen="e01" aria-labelledby="entry-title">
             <div class="entry-content">
@@ -572,7 +645,6 @@
                 <div class="difference-note"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h9" /><circle cx="17" cy="17" r="3" /></svg><div><strong>可测量差异会在对话里说明</strong><p>只处理能够可靠比较的脸型和眼睛；无法可靠判断的部分会明确停下。</p></div></div>
               </section>
             </div>
-            <div class="session-art" aria-hidden="true"><img data-art-surface="session" src="assets/ink-garden.png" alt="" width="1586" height="992" loading="lazy" decoding="async" /></div>
           </section>
         </section>
 
@@ -602,25 +674,117 @@
           </section>
         </aside>
       </section>
+
+      <section class="cover-shell" data-cover-shell hidden aria-label="K00 封面关键帧">
+        <header class="cover-nav">
+          <a class="cover-wordmark" href="#" aria-label="对齐首页">
+            <i class="cover-wordmark-dot" aria-hidden="true"></i>
+            <span><strong>对齐</strong><small>PORTRAIT CONSISTENCY</small></span>
+          </a>
+          <span class="cover-nav-center">入口 / 关系 / 结果</span>
+          <nav class="cover-nav-links" aria-label="封面导航">
+            <a href="#entry">入口</a><a href="#session">对话</a><a href="#records">记录</a>
+          </nav>
+        </header>
+        <section class="cover-copy" aria-labelledby="cover-title">
+          <p class="cover-kicker">人像一致性 AGENT</p>
+          <h2 class="cover-title" id="cover-title"><span>从一张母版</span><span>开始对齐</span></h2>
+          <p class="cover-support">让每一张照片，都回到同一个可解释的标准。</p>
+          <div class="cover-cta-row">
+            <button class="cover-cta" type="button" data-cover-enter><i class="cover-cta-dot" aria-hidden="true"></i><span>开始对齐</span></button>
+          </div>
+        </section>
+        <p class="cover-side-note"><strong>自然语言优先</strong>上传照片，说出想保留的部分；检查、决策与结果留在同一条线程。</p>
+        <button class="cover-play" type="button" data-cover-enter aria-label="进入对齐工作台"></button>
+        <div class="cover-arc" data-cover-arc aria-label="公共领域艺术作品照片墙">
+          <button class="cover-card" type="button" style="--x:3%;--y:45%;--rot:-18deg" aria-label="戴珍珠耳环的少女，约翰内斯·维米尔">
+            <img src="cover/artwork/vermeer-pearl.jpg" alt="约翰内斯·维米尔《戴珍珠耳环的少女》" width="960" height="1135" loading="eager" decoding="async" />
+            <span class="cover-card-label">珍珠耳环 · Vermeer</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:12%;--y:28%;--rot:-13deg" aria-label="春，桑德罗·波提切利">
+            <img src="cover/artwork/botticelli-primavera.jpg" alt="桑德罗·波提切利《春》" width="960" height="631" loading="eager" decoding="async" />
+            <span class="cover-card-label">春 · Botticelli</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:22%;--y:14%;--rot:-9deg" aria-label="人间乐园，希罗尼穆斯·博斯">
+            <img src="cover/artwork/bosch-garden.jpg" alt="希罗尼穆斯·博斯《人间乐园》" width="960" height="491" loading="lazy" decoding="async" />
+            <span class="cover-card-label">人间乐园 · Bosch</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:32%;--y:5%;--rot:-5deg" aria-label="Vertumnus，朱塞佩·阿尔钦博托">
+            <img src="cover/artwork/arcimboldo-vertumnus.jpg" alt="朱塞佩·阿尔钦博托《Vertumnus》" width="960" height="1190" loading="lazy" decoding="async" />
+            <span class="cover-card-label">Vertumnus · Arcimboldo</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:42%;--y:1%;--rot:-2deg" aria-label="蒙娜丽莎，列奥纳多·达·芬奇">
+            <img src="cover/artwork/leonardo-mona-lisa.jpg" alt="列奥纳多·达·芬奇《蒙娜丽莎》" width="960" height="1435" loading="lazy" decoding="async" />
+            <span class="cover-card-label">蒙娜丽莎 · Leonardo</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:52%;--y:0%;--rot:2deg" aria-label="蓝衣少年，托马斯·庚斯博罗">
+            <img src="cover/artwork/gainsborough-blue-boy.jpg" alt="托马斯·庚斯博罗《蓝衣少年》" width="960" height="1396" loading="lazy" decoding="async" />
+            <span class="cover-card-label">蓝衣少年 · Gainsborough</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:62%;--y:4%;--rot:6deg" aria-label="六十三岁的自画像，伦勃朗">
+            <img src="cover/artwork/rembrandt-self-portrait.jpg" alt="伦勃朗《六十三岁的自画像》" width="960" height="1188" loading="lazy" decoding="async" />
+            <span class="cover-card-label">自画像 · Rembrandt</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:72%;--y:14%;--rot:10deg" aria-label="1500 年自画像，阿尔布雷希特·丢勒">
+            <img src="cover/artwork/durer-self-portrait.jpg" alt="阿尔布雷希特·丢勒《1500 年自画像》" width="960" height="1327" loading="lazy" decoding="async" />
+            <span class="cover-card-label">1500 自画像 · Dürer</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:82%;--y:29%;--rot:14deg" aria-label="理性沉睡生怪物，弗朗西斯科·戈雅">
+            <img src="cover/artwork/goya-sleep-of-reason.jpg" alt="弗朗西斯科·戈雅《理性沉睡生怪物》" width="960" height="1409" loading="lazy" decoding="async" />
+            <span class="cover-card-label">理性沉睡 · Goya</span>
+          </button>
+          <button class="cover-card" type="button" style="--x:92%;--y:46%;--rot:19deg" aria-label="维纳斯的诞生，桑德罗·波提切利">
+            <img src="cover/artwork/botticelli-venus.jpg" alt="桑德罗·波提切利《维纳斯的诞生》" width="960" height="615" loading="lazy" decoding="async" />
+            <span class="cover-card-label">维纳斯 · Botticelli</span>
+          </button>
+        </div>
+        <p class="cover-status" aria-live="polite" data-cover-status>艺术作品为公共领域馆藏转载；来源见 cover/artwork/SOURCES.md。</p>
+      </section>
     </main>
 
     <script>
       (() => {
-        const artMap = {
-          "orbit-paper": "assets/orbit-paper.png",
-          "folded-window": "assets/folded-window.png",
-          "ink-garden": "assets/ink-garden.png"
-        };
         const screenButtons = [...document.querySelectorAll("[data-screen-button]")];
-        const artButtons = [...document.querySelectorAll("[data-art-button]")];
         const screens = [...document.querySelectorAll("[data-screen]")];
         const threadScreens = [...document.querySelectorAll("[data-thread-screen]")];
+        const productShell = document.querySelector("[data-product-shell]");
+        const coverShell = document.querySelector("[data-cover-shell]");
         const breadcrumb = document.querySelector("[data-breadcrumb]");
         const threadStatus = document.querySelector("[data-thread-status]");
         const contextStatus = document.querySelector("[data-context-status]");
-        const artSurfaces = [...document.querySelectorAll("[data-art-surface]")];
         const motionButton = document.querySelector("[data-motion-toggle]");
+        const coverEnterButtons = [...document.querySelectorAll("[data-cover-enter]")];
+        const coverArc = document.querySelector("[data-cover-arc]");
+        const coverCards = [...document.querySelectorAll(".cover-card")];
+        const coverStatus = document.querySelector("[data-cover-status]");
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let cardCenters = [];
+        let pointerFrame = 0;
+
+        const refreshCardCenters = () => {
+          cardCenters = coverCards.map((card) => {
+            const rect = card.getBoundingClientRect();
+            return { card, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          });
+        };
+
+        const clearNearCard = () => coverCards.forEach((card) => card.classList.remove("is-near"));
+
+        const setNearCard = (event) => {
+          if (reducedMotion || document.body.classList.contains("motion-paused") || event.pointerType === "touch") return;
+          if (pointerFrame) cancelAnimationFrame(pointerFrame);
+          pointerFrame = requestAnimationFrame(() => {
+            pointerFrame = 0;
+            if (!cardCenters.length) refreshCardCenters();
+            let nearest = null;
+            let nearestDistance = Number.POSITIVE_INFINITY;
+            cardCenters.forEach(({ card, x, y }) => {
+              const distance = Math.hypot(event.clientX - x, event.clientY - y);
+              if (distance < nearestDistance) { nearestDistance = distance; nearest = card; }
+            });
+            coverCards.forEach((card) => card.classList.toggle("is-near", card === nearest && nearestDistance < 170));
+          });
+        };
 
         const setScreen = (name) => {
           screens.forEach((item) => {
@@ -634,21 +798,26 @@
             item.setAttribute("aria-hidden", String(!active));
           });
           screenButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.screenButton === name)));
+          const isCover = name === "k00";
+          productShell.hidden = isCover;
+          productShell.setAttribute("aria-hidden", String(isCover));
+          coverShell.hidden = !isCover;
+          coverShell.setAttribute("aria-hidden", String(!isCover));
+          if (isCover) {
+            document.title = "对齐 · K00 封面关键帧";
+            window.requestAnimationFrame(refreshCardCenters);
+            return;
+          }
+          document.title = name === "e01" ? "对齐 · E01 入口关键帧" : "对齐 · E02 Agent 对话关键帧";
           breadcrumb.textContent = name === "e01" ? "入口" : "当前会话";
           threadStatus.textContent = name === "e01" ? "待命" : "检查中";
           contextStatus.textContent = name === "e01" ? "等待母版" : "母版已确认";
         };
 
-        const setArt = (name) => {
-          const src = artMap[name];
-          artSurfaces.forEach((image) => { image.src = src; });
-          artButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.artButton === name)));
-        };
-
         screenButtons.forEach((button) => button.addEventListener("click", () => setScreen(button.dataset.screenButton)));
-        artButtons.forEach((button) => button.addEventListener("click", () => setArt(button.dataset.artButton)));
         motionButton.addEventListener("click", () => {
           const paused = document.body.classList.toggle("motion-paused");
+          if (paused) clearNearCard();
           motionButton.setAttribute("aria-pressed", String(paused));
           motionButton.textContent = paused ? "播放动效" : "暂停动效";
         });
@@ -657,6 +826,22 @@
           motionButton.setAttribute("aria-pressed", "true");
           motionButton.textContent = "播放动效";
         }
+
+        coverEnterButtons.forEach((button) => button.addEventListener("click", () => {
+          setScreen("e01");
+          const upload = document.querySelector("[data-upload]");
+          upload?.focus();
+        }));
+        coverArc?.addEventListener("pointerenter", refreshCardCenters, { passive: true });
+        coverArc?.addEventListener("pointermove", setNearCard, { passive: true });
+        coverArc?.addEventListener("pointerleave", clearNearCard, { passive: true });
+        window.addEventListener("resize", refreshCardCenters, { passive: true });
+        coverCards.forEach((card) => card.addEventListener("focus", () => {
+          if (coverStatus) coverStatus.textContent = `${card.getAttribute("aria-label")}；按 Enter 可选择，悬停或聚焦会抬升。`;
+        }));
+        coverCards.forEach((card) => card.addEventListener("blur", () => {
+          if (coverStatus) coverStatus.textContent = "艺术作品为公共领域馆藏转载；来源见 cover/artwork/SOURCES.md。";
+        }));
 
         document.querySelector("[data-upload]").addEventListener("click", () => {
           document.querySelector("[data-upload-label]").textContent = "母版已加入任务";
@@ -690,6 +875,8 @@
             input.form?.requestSubmit();
           }
         }));
+
+        setScreen("e01");
       })();
     </script>
   </body>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" fill="none">
   <title>母版人像一致性 Agent · E01 入口</title>
-  <desc>可导入 Figma 的分层矢量源。黑色左侧导航，米白中央与右侧，紫色轨迹与少量荧光绿节点。</desc>
-  <metadata>VISUAL-DESIGN-SPEC-v0.1; tokens: ivory=#F2F1E6,purple=#A855F7,lilac=#C084FC,ink=#121212,black=#000000,acid=#36FF9B; font=PingFang SC</metadata>
+  <desc>可导入 Figma 的分层矢量源。E01 保持纯米白中央与右侧、黑色左侧导航、紫色柔性框与少量荧光绿节点；不依赖栅格素材。</desc>
+  <metadata>VISUAL-DESIGN-SPEC-v0.2; screen=E01; raster-assets=none; tokens: ivory=#F2F1E6,purple=#A855F7,lilac=#C084FC,ink=#121212,black=#000000,acid=#36FF9B; font=PingFang SC</metadata>
   <g id="nav">
     <rect width="236" height="900" fill="#000000"/>
     <rect x="25" y="24" width="34" height="34" rx="11" fill="#C084FC" stroke="#F2F1E6"/>
@@ -48,12 +48,6 @@
     <text x="912" y="43" fill="#121212" font-family="PingFang SC, sans-serif" font-size="11" font-weight="650">等待母版</text>
     <rect x="989" y="25" width="75" height="28" rx="14" fill="none" stroke="#121212" stroke-opacity=".55"/>
     <text x="1008" y="43" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="11">2026 · 09</text>
-  </g>
-  <g id="art" opacity=".32">
-    <path d="M862 151c94-59 246-35 311 43 68 81 31 214-69 259-83 37-224 4-250-91-22-79-59-151 8-211Z" stroke="#A855F7" stroke-width="4"/>
-    <path d="M953 107c32 48 41 106 20 153-16 36-52 77-41 121 11 46 70 70 128 90" stroke="#121212" stroke-width="2" stroke-linecap="round"/>
-    <path d="M1040 178l81-38-32 83zM1142 332l63-24-42 56zM895 437l89-45-32 81z" fill="#C084FC" stroke="#121212" stroke-width="1"/>
-    <circle cx="1137" cy="185" r="13" fill="#36FF9B" stroke="#121212" stroke-width="1"/>
   </g>
   <g id="stage">
     <text x="300" y="142" fill="#121212" fill-opacity=".64" font-family="PingFang SC, sans-serif" font-size="12" letter-spacing="1">01 / 到达</text>

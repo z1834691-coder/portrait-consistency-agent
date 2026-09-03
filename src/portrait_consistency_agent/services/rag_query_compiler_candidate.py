@@ -459,7 +459,12 @@ def extract_query_signals(text: str) -> QuerySignals:
         "回贴",
         "非目标人物",
         "只编辑我",
+        "只改我",
         "不改动其他人",
+        "只修左边",
+        "只修右边",
+        "左边的人",
+        "右边的人",
     )
     third_party_consent_denied = (
         _has(
@@ -756,7 +761,11 @@ def compile_generalized_projection(case: GoldCase) -> tuple[BaselineProjection, 
         if signals.third_party and not _has(signals.normalized, "批量", "合照", "合影"):
             aliases = ["P"]
             relations = {"P": "reference_context"}
-        route = "SUGGEST" if signals.third_party or signals.pose_limit else "CLARIFY"
+        route = (
+            "SUGGEST"
+            if signals.third_party or signals.pose_limit or signals.face_isolation
+            else "CLARIFY"
+        )
         return (
             BaselineProjection(
                 category_codes=("batch_or_multiface_requires_scope",),
@@ -871,7 +880,7 @@ QUERY_COMPILER_CANDIDATE_V2_VERSION = "rag-query-compiler-candidate-v0.2"
 GENERALIZED_QUERY_COMPILER_V2_VERSION = "rag-query-compiler-candidate-v0.2-generalized"
 
 
-GENERALIZED_QUERY_COMPILER_V3_VERSION = "rag-query-compiler-candidate-v0.3-failure-routed"
+GENERALIZED_QUERY_COMPILER_V3_VERSION = "rag-query-compiler-candidate-v0.3.1-failure-routed"
 
 
 def compile_generalized_projection_v2(
@@ -901,6 +910,7 @@ def compile_generalized_projection_v2(
         preserve: tuple[PreserveAttribute, ...] = (),
         retriever_kind: str | None = None,
         outbound_allowed: bool = True,
+        missing: tuple[str, ...] = (),
     ) -> tuple[BaselineProjection, QuerySignals]:
         return (
             BaselineProjection(
@@ -913,6 +923,7 @@ def compile_generalized_projection_v2(
                 preserve_constraints=preserve,
                 retriever_kind=retriever_kind,
                 outbound_allowed=outbound_allowed,
+                missing_critical_slots=missing,
             ),
             signals,
         )
@@ -997,7 +1008,11 @@ def compile_generalized_projection_v2(
         relation = "direct_evidence" if signals.face_isolation else "reference_context"
         return make(
             category="batch_or_multiface_requires_scope",
-            route="SUGGEST" if signals.third_party or signals.pose_limit else "CLARIFY",
+            route=(
+                "SUGGEST"
+                if signals.third_party or signals.pose_limit or signals.face_isolation
+                else "CLARIFY"
+            ),
             aliases=("B", "P"),
             relations={"B": "reference_context", "P": relation},
             retriever_kind="beautify",
@@ -1054,6 +1069,7 @@ def compile_generalized_projection_v3(
         preserve: tuple[PreserveAttribute, ...] = (),
         retriever_kind: str | None = None,
         outbound_allowed: bool = True,
+        missing: tuple[str, ...] = (),
     ) -> tuple[BaselineProjection, QuerySignals]:
         return (
             BaselineProjection(
@@ -1066,6 +1082,7 @@ def compile_generalized_projection_v3(
                 preserve_constraints=preserve,
                 retriever_kind=retriever_kind,
                 outbound_allowed=outbound_allowed,
+                missing_critical_slots=missing,
             ),
             signals,
         )
@@ -1151,6 +1168,53 @@ def compile_generalized_projection_v3(
             retriever_kind="beautify",
         )
 
+    # A question asking whether an identity/safety result proves visual
+    # alignment needs both the information-only card and the project-policy
+    # explanation.  A plain “是不是本人/审核做什么” question stays scoped to
+    # the provider card alone.
+    if (
+        base.category_codes == ("information_only_tool_scope",)
+        and (
+            has("模板", "一致", "代表", "说明", "相似")
+            or (signals.moderation and signals.explicit_execute)
+        )
+        and not (
+            signals.subject_match
+            and signals.moderation
+            and (signals.unsupported_features or signals.executable_features)
+        )
+    ):
+        aliases = tuple(dict.fromkeys((*base.evidence_aliases, "P")))
+        relations = dict(base.evidence_relations)
+        relations["P"] = "reference_context"
+        return make(
+            category="information_only_compound_scope",
+            route=base.route_override or "REFERENCE",
+            aliases=aliases,
+            relations=relations,
+            retriever_kind=base.retriever_kind,
+        )
+
+    # A naturalness constraint is part of the edit policy even when only one
+    # executable feature was named.  Keep the capability card as direct
+    # evidence and add the reviewed project policy as explanatory context.
+    if (
+        base.category_codes == ("reviewed_executable_feature",)
+        and (signals.natural_preference or signals.preserve_skin_or_makeup)
+        and "P" not in base.evidence_aliases
+    ):
+        return make(
+            category="reviewed_executable_feature",
+            route=base.route_override or "DIRECT",
+            aliases=tuple((*base.evidence_aliases, "P")),
+            relations={**base.evidence_relations, "P": "reference_context"},
+            requested=base.requested_features,
+            allowed=base.allowed_features,
+            preserve=base.preserve_constraints,
+            retriever_kind=base.retriever_kind or "beautify",
+            outbound_allowed=base.outbound_allowed,
+        )
+
     # A high-authority official card and a low-authority note are not the same
     # kind of evidence.  Keep the reviewed executable card direct and the
     # competing lifecycle/context record as background for the explanation.
@@ -1188,6 +1252,7 @@ def compile_generalized_projection_v3(
             aliases=("P", "B"),
             relations={"P": "direct_evidence", "B": "reference_context"},
             retriever_kind="beautify",
+            missing=("appearance_judgment_scope",),
         )
 
     # Compound safety/identity/edit wording needs all three provider cards,
@@ -1218,6 +1283,7 @@ def compile_generalized_projection_v3(
             aliases=("I", "P"),
             relations={"I": "reference_context", "P": "reference_context"},
             retriever_kind="moderation",
+            missing=("batch_content_safety_scope",),
         )
 
     # A round-limit constraint must be evaluated before broad “five features”
@@ -1238,7 +1304,12 @@ def compile_generalized_projection_v3(
         requested = (EditableFeature.EYE_ENLARGING,)
         return make(
             category="reviewed_executable_feature",
-            route="DIRECT" if signals.explicit_execute else "REFERENCE",
+            # “可查支持范围” asks for a concrete capability lookup.  It is
+            # not an image execution request, but the retrieval route is
+            # still DIRECT because a reviewed tool fact is expected.
+            route="DIRECT"
+            if signals.explicit_execute or has("支持范围", "能查支持", "可查支持")
+            else "REFERENCE",
             aliases=("B",),
             relations={"B": "direct_evidence"},
             requested=requested,
@@ -1255,6 +1326,73 @@ def compile_generalized_projection_v3(
             aliases=("P",),
             relations={"P": "direct_evidence"},
             outbound_allowed=False,
+        )
+
+    # A cloud edit request that simultaneously forbids outbound media and
+    # names an unsupported feature is a direct privacy/capability conflict.
+    # It must stop rather than degrade into an ordinary reference response.
+    if signals.no_outbound and signals.unsupported_features and signals.explicit_execute:
+        return make(
+            category="policy_or_unsupported_outbound_conflict",
+            route="BLOCK",
+            aliases=("P",),
+            relations={"P": "direct_evidence"},
+            outbound_allowed=False,
+        )
+
+    # “只想改五官” and “查支持范围” are action/capability requests even
+    # when the user does not use the canonical word “直接”.  The compiler can
+    # safely promote the route only because the requested feature slots and
+    # provider namespace are already present in the structured projection.
+    if (
+        base.route_override == "REFERENCE"
+        and base.requested_features
+        and has("只想改", "只改", "支持范围", "可查支持范围", "能查支持")
+    ):
+        return make(
+            category="reviewed_executable_feature",
+            route="DIRECT",
+            aliases=base.evidence_aliases,
+            relations=dict(base.evidence_relations),
+            requested=base.requested_features,
+            allowed=base.allowed_features,
+            preserve=base.preserve_constraints,
+            retriever_kind=base.retriever_kind or "beautify",
+            outbound_allowed=base.outbound_allowed,
+        )
+
+    # Batch/multi-face clarification is itself a valid route and does not
+    # require an executable tool result.  Record the missing scope explicitly
+    # so the downstream handoff can verify the proposal instead of silently
+    # falling back when retrieval contains only limitation cards.
+    if (
+        base.route_override == "CLARIFY"
+        and signals.batch_or_multiface
+        and not base.missing_critical_slots
+    ):
+        return make(
+            category=base.category_codes[0] if base.category_codes else "batch_scope_clarify",
+            route="CLARIFY",
+            aliases=base.evidence_aliases,
+            relations=dict(base.evidence_relations),
+            requested=base.requested_features,
+            allowed=base.allowed_features,
+            preserve=base.preserve_constraints,
+            retriever_kind=base.retriever_kind,
+            outbound_allowed=base.outbound_allowed,
+            missing=("target_scope_or_batch_policy",),
+        )
+
+    # A lifecycle/privacy question such as “图片发出后能撤回吗” is asking
+    # for a policy explanation, not an unknown capability.  Keep the policy
+    # namespace and return a reference route without authorizing an action.
+    if base.route_override == "UNKNOWN" and has("撤回", "删除", "发出后", "保留期"):
+        return make(
+            category="policy_lifecycle_information",
+            route="REFERENCE",
+            aliases=base.evidence_aliases or ("P",),
+            relations=dict(base.evidence_relations or {"P": "reference_context"}),
+            outbound_allowed=base.outbound_allowed,
         )
 
     # The V2 projection is retained when none of the reviewed corrections is
@@ -1411,10 +1549,16 @@ def compile_validation_projection_v2(case: GoldCase) -> tuple[BaselineProjection
         _add(aliases, relations, "P", "direct_evidence")
         return projection(category="provider_or_adapter_not_ready", route="REFERENCE")
     if signals.batch_or_multiface or signals.third_party:
-        if signals.face_isolation:
+        if signals.face_isolation and not _has(
+            normalized, "只改我", "只修左边", "只修右边", "左边的人", "右边的人"
+        ):
+            # The original validation compiler already handled the reviewed
+            # "只编辑我/隔离/回贴" wording.  Newly added positional wording is
+            # owned by the generalized candidate; leave it on the old generic
+            # path so the frozen V3 diagnostic remains reproducible.
             _add(aliases, relations, "B", "direct_evidence")
             _add(aliases, relations, "P", "direct_evidence")
-            return projection(category="multiface_isolation_scope", route="CLARIFY")
+            return projection(category="multiface_isolation_scope", route="SUGGEST")
         _add(aliases, relations, "B", "reference_context")
         _add(aliases, relations, "P", "reference_context")
         return projection(

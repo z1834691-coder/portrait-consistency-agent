@@ -132,10 +132,18 @@ page 6 是腾讯特效 Web 的独立候选试验入口，当前可支持“上�
 
 E3 当前有 4/4 真实 Web 回执成功，但视觉效果、共同 `VerificationResult`、供应商条款和 Card promotion 未闭合；Web Card 继续 `candidate`，正式主流程仍使用 BeautifyPic。后续 UI 映射只能消费这些真实状态，不得用候选样张替换真实结果或隐藏失败/未知状态。
 
-## 9. Getty × Thread Track 1（2026-09-02 最新视觉稿级覆盖）
+## 9. Getty × Thread Track 1（2026-09-02 历史版本；已由第 10 节覆盖）
 
 在以上产品语义与 Party Rock/苹方硬约束之上，新的执行入口是 [UI_VISUAL_DESIGN_SPEC_DETAILED.md](UI_VISUAL_DESIGN_SPEC_DETAILED.md)。它把用户提供的三栏 Agent 截图抽象为黑色稳定导航、中央任务舞台和右侧连续线程，并把 Getty `Tracing Art` 的路径叙事压缩成真实的“母版 → 当前照片 → 检查 → 结果”轨迹；不复制品牌、网站资产、摄影、Logo 或历史内容。
 
 Track 1 只交付两个产品画面：E01 `/align`（`建立母版`、一个上传动作、一个自然语言 composer）与 E02 `/align/:session`（母版/当前照片占位、关键事实轨迹、短 Agent 消息、一次有界授权和同线程结果）。三张 Image 2 环境素材 `orbit-paper`、`folded-window`、`ink-garden` 仅作无人物氛围层，禁止遮挡标题、上传和 composer；素材来源、prompt、尺寸与商用复核边界写在 `design/visual-tracks/getty-thread-party-rock/assets/*.prompt.md`。
 
 评审/交付入口为 [`design/visual-tracks/getty-thread-party-rock/visual-review.html`](../design/visual-tracks/getty-thread-party-rock/visual-review.html)，可切换 E01/E02、三张素材和暂停动效；分层矢量源为同目录 `figma-import/e01-entry.svg` 与 `e02-session.svg`。SVG 可导入 Figma 后继续编辑，但它们与 HTML/PNG 都是候选视觉资产，不是原生 `.fig`、Streamlit 迁移或真实用户结果。候选方向仍需产品负责人选择，之后才进入 Impeccable Critical/Audit、WCAG 2.2 AA 与 Frontend UI Gate。
+
+## 10. 2026-09-03｜当前素材与封面覆盖（以本节为准）
+
+<span style="color:#C00000"><strong>本节覆盖第 9 节中关于活动素材的旧文字。</strong>产品负责人明确要求：E01 `/align` 与 E02 `/align/:session` 的中央和右侧保持纯 Party Rock 米白，不加载 `orbit-paper`、`folded-window`、`ink-garden` 或任何新环境图；这些旧素材已移入 `design/visual-tracks/getty-thread-party-rock/archive/ambient-assets-v1/`，仅作历史回溯。E01/E02 的可编辑 SVG 是纯矢量源，照片占位、轨迹和 Agent 线程不依赖栅格图。</span>
+
+在两个产品画面之外，新增独立的 K00 封面候选：顶部细黑导航、左侧短标题、中央“开始对齐”进入动作和下半部公共领域历史艺术照片半弧墙。K00 可以增加紫色、黑色和少量荧光绿的面积，但不得使用紫黑暗影、渐变、发光网格、玻璃拟态、大片荧光绿或复杂纹理。照片墙只使用 `design/visual-tracks/getty-thread-party-rock/cover/artwork/` 中已登记的本地作品；不生成名画、不在线热链、不使用真实用户照片/结果图，逐张来源和地域复核见 `cover/artwork/SOURCES.md`。
+
+K00 的完整执行入口为 [`UI_COVER_KEYFRAME_PROMPT.md`](UI_COVER_KEYFRAME_PROMPT.md)。交付源为 `cover/figma-import/k00-cover.svg` 和同一评审页 `visual-review.html`；SVG 无 base64、使用相对图片链接和 `artwork-*` 语义图层，可导入 Figma 后替换图片。照片墙最近卡片仅在 hover、focus 或指针邻近时向上移动约 24px；键盘、触控、暂停动效和 `prefers-reduced-motion` 必须提供静态等价路径。K00 是视觉候选资产，不代表原生 `.fig`、Streamlit 已迁移、Provider 效果或产品正式入口。

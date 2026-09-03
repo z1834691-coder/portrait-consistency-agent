@@ -8,6 +8,12 @@ from portrait_consistency_agent.services.rag_process_supervisor import (
     fair_run_payload,
     fair_trace_payload,
 )
+from portrait_consistency_agent.services.rag_query_compiler_candidate import (
+    compile_generalized_projection_v3,
+)
+from portrait_consistency_agent.services.rag_route_handoff_candidate import (
+    select_validated_route,
+)
 
 
 def test_fair_runner_retrieves_every_case_without_projection_injection() -> None:
@@ -44,6 +50,23 @@ def test_fair_runner_retrieves_every_case_without_projection_injection() -> None
         assert '"gold_route"' not in serialized
     assert "case_id" not in persisted_trace["traces"][0]["prediction"]
     assert "case_id" not in persisted_trace["traces"][0]
+
+
+def test_fair_runner_records_validated_route_handoff_lineage() -> None:
+    cases = (GoldCase(case_id="H403", split="holdout", query="请把脸宽调整得更接近母版"),)
+    run = RagFairEvaluationRunner().run(
+        cases,
+        dataset_version="test-v1",
+        runtime_mode="holdout_process_replay",
+        projection_compiler=compile_generalized_projection_v3,
+        compiler_version="route-handoff-fixture-v1",
+        route_handoff=select_validated_route,
+    )
+    report = audit_fair_run(run, run_id="test-handoff")
+    assert report.process_gate == "PASS"
+    assert run.predictions[0]["route_source"] == "validated_route_handoff"
+    assert run.traces[0]["route_handoff"]["proposal_only"] is True
+    assert run.traces[0]["route_handoff"]["execution_authorized"] is False
 
 
 def test_supervisor_rejects_legacy_projection_and_incomplete_trace() -> None:

@@ -303,6 +303,17 @@ def _guard_accepts_candidate(
     flags = raw_flags if isinstance(raw_flags, dict) else {}
     normalized = normalize_for_compilation(case.query)
     if baseline.route not in (None, "UNKNOWN"):
+        # Positional wording such as “只修左边” is a newly added generalized
+        # signal.  The frozen V3 diagnostic compiler does not own that route;
+        # do not let the signal alone turn a known SUGGEST baseline into a
+        # weaker CLARIFY result.  The generalized candidate has its own
+        # handoff/guard and remains unaffected.
+        if (
+            flags.get("face_isolation")
+            and candidate.route == "CLARIFY"
+            and candidate.route != baseline.route
+        ):
+            return False, "preserve_known_baseline_for_new_positional_scope"
         if (
             any(
                 flags.get(name)

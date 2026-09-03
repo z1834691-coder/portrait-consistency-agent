@@ -1151,3 +1151,31 @@ Web 的纵向链路现已由合同和 fixture 回放覆盖：RAG advisory → Me
 E3 已在四张负责人授权 JPEG 上完成真实 Tencent Effect Web 候选试验，4/4 Browser Receipt 成功，输入哈希全部绑定预检，结果交接标记 4/4。该证据只说明 Web SDK 返回了结果，不改变 RAG 的职责：RAG/Meta-Agent 仍只能检索已审核 Card、提出候选工具或复测策略，`execution_authorized=false`，不能因为 Web 回执成功而 promotion。
 
 E3 报告和 page 8 看板只读展示脱敏 receipt、hash、尺寸、耗时、状态和 blocker；不把图片 bytes/data URL 放入 RAG。视觉泛化、共同 `VerificationResult`、供应商地区/费用/留存和 Card promotion 尚未闭合，因此 Web Card 继续 `candidate`，正式主流程仍使用 BeautifyPic baseline。RAG 当前仍保持 `proposal-only`，任何后续 Web 证据都必须先通过独立准入和产品负责人批准。
+
+## 44. 2026-09-03｜V5 反思后的真实链路优化 Gate
+
+<span style="color:#C00000"><strong>背景。</strong>V5 暴露的主要问题不是“资料完全找不到”，而是结构化查询提出的路径没有稳定传到最终结果，以及多个操作共用一个证据篮子。早期只改 Prediction 的文字会产生 no-op，不能算真正优化。</span>
+
+<span style="color:#C00000"><strong>冻结的执行边界。</strong>先冻结 V5 和 active baseline，只在公开开发/回归集候选中改变真实层。第一候选是受限的 `route_handoff`：硬冲突、缺槽、索引异常优先；DIRECT 必须有真实 direct executable evidence；SUGGEST/REFERENCE 必须有真实检索证据；无证据回到 baseline/unknown。第二候选是 `feature-specificity`：用户未请求的参数不标 direct，CompareFace/ImageModeration 只能作为参考，过期/冲突不能变成执行依据。两者都不产生参数、权限或 ProviderRun。</span>
+
+<span style="color:#C00000"><strong>评测证据。</strong>公开开发/回归候选报告记录最终路径变化、实际证据引用、过程门、hard-safety、回归、延迟和成本代理；不读取 V5 答案，不调用网络、LLM、照片、向量或图片 Provider。候选即使指标改善，也仍是 `proposal-only`；只有新建且未见过的 V6 通过独立过程门与 Gold join，才可讨论泛化。</span>
+
+可复核入口：[真实链路候选报告](../reports/rag_route_handoff_candidate_v1.html)、[优化任务树](RAG_OPTIMIZATION_TASK_TREE_V1.md)。
+
+## 45. 2026-09-03｜真实链路候选 v0.4 收口
+
+### 反思结论
+
+V5 的主要问题不是资料完全不存在，而是资料找到后没有稳定地进入最终判断：路由不一致 `50/60`、证据集合不一致 `59/60`、关系不一致 `54/60`，前五条完全 miss 只有 `2/60`。因此只改最终文字属于 no-op，本轮必须修改真实“查询→候选→关系→路径”层。
+
+### 本轮候选与证据
+
+候选增加 `route_handoff`、按功能部位的 evidence specificity 和 route-scoped explanation selection。公开开发集 28 题、公开回归 52 题全部留下完整 Trace；解释候选的 Route、Evidence exact/relation、Recall@5、MRR、nDCG@5 均为 `100%`，固定 Precision@3 为 `47.62%/47.44%`，hard-safety 均 PASS。评测器只在评分层将版本化内部引用映射为稳定别名，未向运行时添加证据。
+
+### 当前结论
+
+这证明候选确实改变了真实路径和证据组织，但公开题与审核卡高度对齐，且历史固定 Precision 与独立泛化仍未通过。因此候选保留为 `proposal-only`，不 promotion，不改 active baseline、Provider 白名单、权限或图片执行链。
+
+### 下一道 Gate
+
+先查看候选逐题 Trace，确认是否接受“真实连接问题已修复、但尚未证明泛化”。若需要泛化证据，建立与 V3/V4/V5 完全不重叠的 V6，先完成无答案过程监督，再由负责人授权一次 Gold join；若不需要，则把工程重心转回真实端到端照片 Demo。两条路径都禁止在 V5 上继续调参或把公开成绩写成产品化结论。

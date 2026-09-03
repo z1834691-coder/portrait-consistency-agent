@@ -167,6 +167,16 @@ RAG_REPORT_ARTIFACTS: tuple[RagReportArtifact, ...] = (
         description=("V5 Gold join 的脱敏失败模式、根因和下一步 SOP；不输出逐题内容，不自动调参。"),
         scope="owner_authorised_aggregate_diagnosis_only",
     ),
+    RagReportArtifact(
+        key="route_handoff_candidate",
+        title="RAG｜真实路径交接、证据特异性与解释限域候选 v0.4",
+        filename="rag_route_handoff_candidate_v1.html",
+        description=(
+            "公开开发/回归候选：验证结构化路径是否真正进入最终结果，"
+            "按请求部位区分直接依据与参考信息，并按路径限制解释资料。"
+        ),
+        scope="public_candidate_only_no_promotion",
+    ),
 )
 
 

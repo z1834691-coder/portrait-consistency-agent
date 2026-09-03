@@ -215,3 +215,68 @@ hard-safety=`PASS`、project Gate=`FAIL`。失败分析显示 50/60 路由不一
 
 本轮按上述约束完成代码、测试、报告和文档同步后的工程 QA 为 `220 passed, 4 warnings`；Ruff check、format、
 compileall 与 `git diff --check` 均通过。该 QA 只证明执行器和治理边界一致，不把 V5 质量 Gate 改为通过。
+
+## 11.6 2026-09-03｜反思后的真实链路优化 Prompt v0.3
+
+前几轮的“优化”曾经只重写 Prediction 的文字或关系标签，真实候选池没有变化；另一处根因是结构化查询已经提出了路径，但公平运行器最终仍只读取检索器自己的 fallback 路径。下面的 Prompt 将修改点放回真实链路，要求每轮只改一层，并把候选是否真正改变结果写成可回放证据。它不打开 V5，不改变 active baseline，也不授予任何图片工具权限。
+
+```text
+你是本项目的 RAG 质量负责人、过程监督者和回滚负责人。你要优化的是“用户话语被理解后，真实知识被找到并形成受限路径”的链路，不是把结果写得更好看。
+
+【冻结边界】
+1. V5 题目、答案和历史报告只允许做聚合审计，不能进入规则、候选、查询编译器或知识库；不重复考试、不回写旧快照。
+2. active baseline、Provider 白名单、权限、参数、图片出站和 proposal-only 边界保持不变。所有候选在隔离 profile 中运行。
+3. 运行器只读公开开发集和公开回归集；每题必须有实际结构化查询、真实检索、证据关系、最终路径和安全 Trace。
+
+【第一轮真实修复：路径交接】
+当前结构化查询会提出 DIRECT/SUGGEST/REFERENCE/CLARIFY/BLOCK/BASELINE/UNKNOWN，但最终 Prediction 只取 retrieval_result，导致“已经理解却被 fallback 覆盖”。实现一个受限 handoff 决策：
+- 冲突、缺关键槽位、索引不可用等硬路由优先；
+- DIRECT 只有在实际召回至少一条相关 direct executable evidence 时才接受；
+- SUGGEST/REFERENCE 只有在实际有证据时才接受；
+- 没有证据时回退 baseline/unknown；
+- handoff 只能改变候选 Prediction 的路径来源，不能凭空创造证据、参数、权限或 ProviderRun。
+
+【第二轮真实修复：证据关系与操作槽位】
+一个问题同时提到多个操作时，为每个真实请求的 operation/provider/feature 保留一个已审核候选；具体功能交集才可标 direct，泛化能力说明、CompareFace 和 ImageModeration 只能标 reference，过期/冲突只能标 conflict。关系变化必须来自真实 chunk，不得在结果整理层补标签。
+
+【评测和停机】
+每轮先 Smoke，再跑公开开发集、公开回归集和 hard-safety；记录 changed_prediction_count、真实候选引用、route/evidence lineage、Trace 完整率、延迟和成本代理。公开回归退化、安全错误放行、Trace 缺失或两轮没有真实变化就回滚并转向更早的失败层。通过公开集不等于 Holdout 泛化；只有候选稳定后才新建与 V3/V4/V5 不重叠的 V6。
+
+【禁止 Goodhart】
+不得塞无关证据、放宽安全阈值、改 Precision 分母、按题目 ID 写特例、把 projection/Gold 写进 Prediction、重复使用 V5 或把 RAG 输出直接当执行授权。
+
+【最终交付】
+用中文说明最早失败层、修改前后真实路径/证据变化、指标 delta、失败模式 SOP、回滚点、是否保留候选，以及下一道产品决策门。没有独立新 Holdout 证据，不得称 RAG 已产品化。
+```
+
+本节对应任务树 [RAG_OPTIMIZATION_TASK_TREE_V1.md](RAG_OPTIMIZATION_TASK_TREE_V1.md)。T1/T2 的代码候选必须同时有公开开发、公开回归和安全结果；若只改显示层或只改变标签而候选池不变，直接判定为 no-op。
+
+## 11.7 2026-09-03｜真实链路优化 Prompt v0.4（本轮已执行）
+
+### 这次为什么要升级 Prompt
+
+V5 的失败不是“资料完全找不到”，而是三处连接没有接好：系统已经理解了用户想做什么，却在最后退回了不合适的默认路径；一个问题涉及多个部位时，证据彼此挤占；解释页面把相关性排序误当成证据关系。v0.4 把修复目标从“写出更像正确答案”改为“改变真实候选、关系和路径，并能在 Trace 中证明”。
+
+### 可直接执行的监督 Prompt
+
+```text
+你是本项目的 RAG 质量负责人、过程监督者和回滚负责人。
+
+先冻结 active baseline、知识版本、公开开发/回归版本、指标口径和安全边界。不得读取 V5/V6 的题目、答案或人工标签；不得把 Gold、上游答案投影、题目编号或隐藏标签写入被测结果。所有候选都在隔离 profile 中以 proposal-only 运行，不得调用网络、LLM、照片、向量或图片 Provider。
+
+按以下顺序逐层修复：
+1. 受限路径交接：结构化查询提出的路径必须经过真实检索证据验证。硬冲突、缺关键槽位、索引不可用优先；DIRECT 必须有 direct executable evidence；SUGGEST/REFERENCE 必须有真实证据；无证据只能回到 BASELINE/UNKNOWN。
+2. 功能特异性：按 operation/provider/feature 分配真实候选。请求部位且可执行的能力为 direct；泛化说明、未请求参数、CompareFace 和 ImageModeration 为 reference；过期/冲突为 conflict。
+3. 解释证据选择：已验证路径是硬范围，只从该范围中选择最多三条已检索事实；缺少范围时可以取限制说明，但不得改变 CLARIFY、BLOCK 或执行授权。解释证据不等于执行证据。
+4. 评测引用归一化：仅在评测层把带版本的内部 ref 映射到稳定 Gold alias；不得在运行时制造、补写或升级 evidence。
+
+每个案例必须写完整 Trace：原话哈希→结构化查询→真实召回→路径交接→证据选择→最终 Prediction→安全检查。记录候选版本、changed_prediction_count、实际引用、每条证据采用/排除原因、延迟、成本代理、回滚点和 process_gate。先跑 smoke，再跑公开开发、公开回归和 hard-safety。安全错误放行、回归退化、Trace 缺失或连续两代无真实改变立即回滚。
+
+指标只作证据，不是目标：保留 fixed Precision，同时报告 effective/returned Precision、Recall@5、Hit@5、MRR、nDCG@5、关系/路由准确率、空召回、Trace 完整率和安全违规数。不得塞无关证据、修改分母、为题目写特例或在同一 Holdout 反复调参。公开集改善不等于泛化；只有全新的未见过 Holdout 通过独立过程门和 Gold join，才可以讨论 promotion。
+```
+
+### 执行结果与停止规则
+
+本轮已执行上述 Prompt：开发集 28 题、公开回归 52 题完整跑通；候选未读取 V5、没有外部调用，且仍不能改变 active baseline。最终解释证据候选在两组公开数据上均取得 Route/exact/relation/Recall@5/MRR/nDCG@5=`100%`；但单独的 route handoff 在公开回归为 `92.31%`，说明仍有 4 个需要更完整工具/策略证据才能交接的案例，随后由 specificity 与证据限域层补齐。固定 Precision@3 只有 `47.62%/47.44%`，历史 project Gate 仍为 `FAIL`。这组结果说明真实连接断点被逐层修复，不说明 RAG 已能处理未见过的问题。
+
+下一轮不再继续在同一公开集堆同义词或改显示层。若要证明泛化，下一步建立与 V3/V4/V5 完全不重叠的 V6；若不需要新的泛化证据，则转回真实端到端照片 Demo。任何情况下 RAG 仍只提出建议，不能单独调用图片工具或授予权限。

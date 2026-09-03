@@ -172,6 +172,17 @@ def _load_v5_failure_analysis_report() -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _load_route_handoff_candidate_report() -> dict[str, Any] | None:
+    path = PROJECT_ROOT / "reports/rag_route_handoff_candidate_v1.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _percent(value: object) -> str:
     if isinstance(value, (int, float)):
         return f"{float(value) * 100:.2f}%"
@@ -248,6 +259,7 @@ def main() -> None:
     v5_process = _load_v5_process_audit_report()
     v5_gold = _load_v5_gold_aggregate_report()
     v5_failures = _load_v5_failure_analysis_report()
+    route_handoff_candidate = _load_route_handoff_candidate_report()
     st.title("RAG 优化看板（本地管理员原型）")
     st.caption(
         "这张看板把公开集事实、隐藏集聚合错误和下一步修正 SOP 放在一起，帮助定位问题，"
@@ -496,6 +508,65 @@ def main() -> None:
         if v5_failure_artifact is not None and v5_failure_artifact.path(PROJECT_ROOT).is_file():
             render_component(
                 read_rag_report(v5_failure_artifact, PROJECT_ROOT), height=720, scrolling=True
+            )
+    if route_handoff_candidate is not None:
+        st.subheader("RAG 真实链路候选：路径交接、证据特异性与解释限域")
+        st.caption(
+            "本轮先修复结构化查询到最终路径的交接，再独立观察按功能部位划分证据关系；"
+            "解释资料按最终路径限域；只读公开开发/回归数据，V5 不参与，候选不改变 active baseline。"
+        )
+        candidate = route_handoff_candidate.get("candidate", {})
+        candidate = candidate if isinstance(candidate, dict) else {}
+        cards = st.columns(5)
+        cards[0].metric("路径候选", candidate.get("route_handoff_version", "—"))
+        cards[1].metric("证据特异性候选", candidate.get("specificity_version", "—"))
+        cards[2].metric("解释限域候选", candidate.get("evidence_selection_version", "—"))
+        cards[3].metric("Proposal-only", str(candidate.get("proposal_only", "—")))
+        cards[4].metric(
+            "Promotion", route_handoff_candidate.get("policy", {}).get("promotion_decision", "—")
+        )
+        rows: list[dict[str, object]] = []
+        datasets = route_handoff_candidate.get("datasets", {})
+        for dataset_name, dataset in datasets.items() if isinstance(datasets, dict) else ():
+            if not isinstance(dataset, dict):
+                continue
+            tracks = dataset.get("tracks", {})
+            for track_name, metrics in tracks.items() if isinstance(tracks, dict) else ():
+                if not isinstance(metrics, dict):
+                    continue
+                rows.append(
+                    {
+                        "数据集/轨道": f"{dataset_name} / {track_name}",
+                        "题数": metrics.get("cases", "—"),
+                        "路径": _percent(metrics.get("route_accuracy")),
+                        "关系": _percent(metrics.get("evidence_relation_accuracy")),
+                        "Recall@5": _percent(metrics.get("recall_at_5")),
+                        "MRR": _percent(metrics.get("mrr")),
+                        "安全门": metrics.get("hard_safety_gate", "—"),
+                    }
+                )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+        dev = datasets.get("development", {}) if isinstance(datasets, dict) else {}
+        dev = dev if isinstance(dev, dict) else {}
+        st.write(
+            "开发集真实改变数：路径交接",
+            dev.get("changed_prediction_count_route_handoff", "—"),
+            "；特异性候选相对交接",
+            dev.get("changed_prediction_count_specificity", "—"),
+            "；解释限域候选相对特异性",
+            dev.get("changed_prediction_count_explanation_selection", "—"),
+        )
+        st.info(
+            "候选仅证明修复触达真实路径/证据层；只有新 Holdout 通过且安全、回归、"
+            "成本和用户任务结果都可接受，才有资格讨论 promotion。"
+        )
+        handoff_artifact = next(
+            (item for item in RAG_REPORT_ARTIFACTS if item.key == "route_handoff_candidate"),
+            None,
+        )
+        if handoff_artifact is not None and handoff_artifact.path(PROJECT_ROOT).is_file():
+            render_component(
+                read_rag_report(handoff_artifact, PROJECT_ROOT), height=620, scrolling=True
             )
     if failure_driven is not None:
         st.subheader("失败驱动迭代（查询理解层）")

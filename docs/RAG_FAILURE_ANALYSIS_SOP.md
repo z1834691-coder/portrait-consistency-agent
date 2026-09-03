@@ -266,3 +266,77 @@ V5 的聚合根因是：路由不一致 `50/60`、证据集合不一致 `59/60`�
 
 本轮 SOP、聚合失败分析、registry/看板与测试同步后的全量工程 QA 为 `220 passed, 4 warnings`；Ruff check、
 format、compileall 与 `git diff --check` 均通过。该回执证明流程可复核，不代表 V5 质量 Gate 通过。
+
+## 10. 2026-09-03｜路径交接与证据特异性 SOP
+
+### 10.1 适用问题
+
+当 Trace 显示“结构化查询已经理解了用户目标”，但最终结果仍回到 BASELINE，先判断是否发生了路径交接丢失；当一个问题包含多个部位或多个工具，先判断是不是无关证据占用了采用位置。不要先调 Top-K，也不要只改最终文字。
+
+### 10.2 路径交接修正
+
+```text
+结构化查询提出路径
+→ 实际 P0-B 检索
+→ 检查真实 direct/reference/conflict evidence
+→ 硬冲突/缺槽/索引异常优先
+→ 有证据才接受 DIRECT/SUGGEST/REFERENCE
+→ 无证据回到 BASELINE/UNKNOWN
+→ Trace 写出 handoff 原因、支持证据数和 source
+```
+
+`route_handoff` 只能选择路径，不能创造证据、参数、权限或 ProviderRun。`execution_authorized` 固定为 `false`。如果 callback 没有被注入，运行器必须保持旧的 `route_source=retrieval_result`，删除候选即可回滚。
+
+### 10.3 证据特异性修正
+
+```text
+识别请求的 feature/operation/provider
+→ 从真实候选中检查 feature 是否相交
+→ 相交且能力可执行：direct
+→ 未请求、泛化说明、未接入能力：reference
+→ 过期/冲突：conflict
+→ 再执行原有采用上限和权限检查
+```
+
+这一步只改变关系判定，不改变知识内容或 active resolver。CompareFace 只能证明同人辅助证据，ImageModeration 只能证明内容安全路径，两者不升级为人像一致性 direct evidence。
+
+### 10.4 评测与回滚
+
+先跑公开开发、公开回归和 hard-safety；记录真实改变数量、候选引用、路径来源、关系和过程门。公开候选若安全或回归退化、Trace 不完整或连续两代没有真实改变，立即回滚。即使指标提高，也只能保留 proposal-only；只有新的、未参与诊断的 V6 Holdout 通过后，才可讨论泛化。
+
+## 10.5 2026-09-03｜v0.4 失败修正 SOP：先修连接，不堆资料
+
+### 适用背景
+
+V5 逐题聚合显示：前五条完全没有相关资料的题只有 `2/60`，但最终路径不一致 `50/60`、证据集合不一致 `59/60`、证据关系不一致 `54/60`。所以“继续增加资料”不是第一解法；先检查资料是否已经找到、但在后续步骤被丢掉或误用。
+
+### 标准处理顺序
+
+```text
+1. 先看结构化查询：用户想做什么、缺什么、有哪些操作和部位
+2. 再看真实检索：实际返回了哪些已审核知识块，是否为空、过期或冲突
+3. 做路径交接：硬状态优先；有证据才接受 DIRECT/SUGGEST/REFERENCE
+4. 做证据分槽：每个 operation/provider/feature 各自保留代表证据
+5. 做关系判断：具体可执行能力=direct；解释/限制=reference；过期/冲突=conflict
+6. 做解释选择：按最终路径筛最多三条事实，不能拿解释证据越过权限或执行门
+7. 评测层再做稳定 ref 对齐；运行时禁止补写证据
+```
+
+### 失败代码与处置
+
+| 发现 | 处置 | 不允许的替代 |
+|---|---|---|
+| 结构化查询有路径，但结果变成 BASELINE | 检查 handoff 是否有真实证据；修交接层 | 只重写结果文案 |
+| 多操作只留下一个部位的卡片 | 按 operation/provider/feature 分槽 | 继续盲目加 Top-K |
+| 具体能力被标成 reference | 检查 feature 交集与能力状态 | 用相似度直接升级关系 |
+| 解释页混入无关工具/策略卡 | 使用 route-scoped selector，最多三条 | 让所有高分卡都展示 |
+| 内部版本 ref 与 Gold alias 不一致 | 仅在评测器做稳定别名归一化 | 在运行时伪造新 evidence |
+| RAG miss、索引异常或硬冲突 | 返回“暂时不知道”并 baseline/人工复核 | 让 LLM 猜测或越权执行 |
+
+### 本轮验收证据
+
+候选 Trace 必须同时出现 `route_handoff` 和 `evidence_selection`，并满足 `proposal_only=true`、`execution_authorized=false`。本轮公开开发/回归均 `28/28`、`52/52` Trace 完整，hard-safety 无错误放行；候选改变了真实最终路径和证据引用，但因固定 Precision 及独立泛化尚未通过，不能 promotion。
+
+### 复盘原则
+
+每次修改都要回答三个问题：真实候选是否变了？哪一层的失败数量变了？公开回归是否退化？若答案只是“最终文字变了”，即判定 no-op；若公开分数提高但新 Holdout 未通过，只能说明对已知资料的适配，不代表产品化。

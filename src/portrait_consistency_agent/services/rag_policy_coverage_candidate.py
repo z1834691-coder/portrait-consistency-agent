@@ -78,6 +78,7 @@ POLICY_MULTI_OPERATION_CANDIDATE_VERSION = (
     "rag-policy-coverage-candidate-v0.7-multi-operation-scope"
 )
 POLICY_SEMANTIC_CANDIDATE_VERSION = "rag-policy-coverage-candidate-v0.9-semantic-precedence"
+POLICY_SPECIFICITY_CANDIDATE_VERSION = "rag-policy-coverage-candidate-v1.1-feature-specificity"
 _REVIEWED_AT = datetime(2026, 9, 2, tzinfo=timezone.utc)
 _POLICY_OPERATIONS = ("BeautifyPic", "CompareFace", "ImageModeration")
 
@@ -422,6 +423,7 @@ def policy_relation_resolver_v2(
         "third_party_consent_block",
         "current_session_anchor_degrade",
         "bounded_plan_family_conflict",
+        "policy_or_unsupported_outbound_conflict",
     )
     if not query.outbound_allowed or any(token in route for token in direct_policy_categories):
         return EvidenceRelation.DIRECT_EVIDENCE
@@ -481,6 +483,7 @@ def policy_relation_resolver_v3(
             "provider_parameter_range_block",
             "third_party_consent_block",
             "missing_critical_slots",
+            "policy_or_unsupported_outbound_conflict",
         }
         return (
             EvidenceRelation.DIRECT_EVIDENCE
@@ -505,6 +508,62 @@ def policy_relation_resolver_v3(
     if route in direct_tool_routes:
         return EvidenceRelation.DIRECT_EVIDENCE
     if route in {"direct_and_background_evidence_relation", "authority_priority"}:
+        return EvidenceRelation.DIRECT_EVIDENCE
+    return EvidenceRelation.REFERENCE_CONTEXT
+
+
+def policy_relation_resolver_v4(
+    query: RagQuery, item: KnowledgeItem, chunk: KnowledgeChunk
+) -> EvidenceRelation:
+    """Make direct evidence specific to the requested operation/feature.
+
+    V3 fixed several policy routes but still treated every BeautifyPic chunk
+    as direct for an executable-feature route.  That lets a FaceLifting
+    request adopt unrelated eye/skin chunks.  V4 keeps policy/lifecycle
+    semantics from V3 and adds a feature intersection gate: a parameter chunk
+    is direct only when the query names the same feature; unsupported and
+    limitation chunks remain context.  This is an isolated candidate and does
+    not alter the active resolver.
+    """
+
+    relation = policy_relation_resolver_v3(query, item, chunk)
+    if item.source_type == KnowledgeSourceType.PROJECT_POLICY:
+        return relation
+    if item.operation != "BeautifyPic":
+        return relation
+
+    requested = set(query.requested_features)
+    # In a suggestion-only request the capability card explains what could be
+    # changed, but it is not direct execution evidence.  The policy card is
+    # the direct explanation of the user's explicit “only suggest” boundary.
+    if (query.verification_route or "").casefold() in {
+        "manual_parameters_requested",
+        "batch_appearance_judgment_scope",
+    }:
+        return EvidenceRelation.REFERENCE_CONTEXT
+    if requested:
+        intersects = bool(requested.intersection(chunk.feature_codes))
+        if not intersects:
+            return EvidenceRelation.REFERENCE_CONTEXT
+        if chunk.capability_status != KnowledgeCapabilityStatus.EXECUTABLE:
+            return EvidenceRelation.REFERENCE_CONTEXT
+        return EvidenceRelation.DIRECT_EVIDENCE
+
+    if chunk.capability_status != KnowledgeCapabilityStatus.EXECUTABLE:
+        return EvidenceRelation.REFERENCE_CONTEXT
+    if chunk.claim_type not in {KnowledgeClaimType.CAPABILITY, KnowledgeClaimType.PARAMETER}:
+        return EvidenceRelation.REFERENCE_CONTEXT
+    # Without a named feature, a generic provider-scope statement can be
+    # direct, but it must not adopt every parameter as if each were requested.
+    route = (query.verification_route or "").casefold()
+    if route in {
+        "approved_provider_scope",
+        "broad_facial_edit_scope",
+        "current_reviewed_version_preferred",
+        "superseded_by_reviewed_card",
+        "direct_and_background_evidence_relation",
+        "authority_priority",
+    }:
         return EvidenceRelation.DIRECT_EVIDENCE
     return EvidenceRelation.REFERENCE_CONTEXT
 
@@ -679,6 +738,25 @@ def policy_candidate_query_builder_multi_operation(
             updates["requested_features"] = list(projection.requested_features)
         if projection.allowed_features:
             updates["allowed_features"] = list(projection.allowed_features)
+        # Preserve only structured scope facts needed by downstream
+        # explanation selection.  This is not a Gold label and does not
+        # expose the original sentence.
+        slots = list(query.intent_slots_present)
+        if "P" in projection.evidence_aliases and "policy_context" not in slots:
+            slots.append("policy_context")
+        if signals.face_isolation and "face_isolation" not in slots:
+            slots.append("face_isolation")
+        # A missing slot should still make the final route CLARIFY, but it
+        # must not prevent the retriever from collecting the reviewed
+        # limitation/policy cards that explain the clarification.  The
+        # projection remains the source of the missing-slot decision; the
+        # query records it as a non-authorising intent slot instead.
+        if projection.missing_critical_slots:
+            if "missing_scope" not in slots:
+                slots.append("missing_scope")
+            updates["missing_critical_slots"] = []
+        if slots != query.intent_slots_present:
+            updates["intent_slots_present"] = slots
         query = query.model_copy(update=updates)
     elif providers != list(query.provider_candidates):
         query = query.model_copy(update={"provider_candidates": list(dict.fromkeys(providers))})

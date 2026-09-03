@@ -143,7 +143,7 @@ V3 已成为负责人授权的 validation，不能继续作为独立泛化证明
 
 G2–G5 的 100% 只属于 owner-unlocked validation；fixed Precision 的低值来自 Gold 稀疏（47/48 题少于三条证据），不是允许通过增加无关证据抬分的理由。effective/returned Precision 作为诊断口径并列展示，冻结的 project Gate 仍 FAIL。
 
-本轮候选改变了真实的“自然语言→查询投影”判断，而不是只改最终答案文字；所有代次都保持 `active_baseline_changed=false`、`proposal_only=true`，没有读取照片/向量、调用网络/LLM/Provider 或写入图片执行合同。G3–G5 连续无新增预测变化，按停止规则达到边际效益递减，未继续堆补丁。
+本轮候选改变了真实的“自然语言→查询投影”判断，而不是只改最终答案文字；所有代次都保持 `active_baseline_changed=false`、`proposal_only=true`，没有读取照片/向量、调用网络/LLM/Provider 或写入图片执行合同。公开回归中单独 route handoff 仍有 4 个案例不一致，但 specificity 与解释限域候选随后把它们补齐；这说明要把“路由”和“证据覆盖”一起看，不能只看一个候选分支。G3–G5 连续无新增预测变化，按停止规则达到边际效益递减，未继续堆补丁。
 
 详细题集和盲测/诊断边界见 [RAG_V4_HOLDOUT.md](RAG_V4_HOLDOUT.md)。
 
@@ -212,3 +212,30 @@ Top-K。报告 `rag_v5_failure_analysis_v1` 已将这些事实转成下一轮 SO
 V5。RAG 继续 `proposal-only`，active baseline 和图片执行权限不变。本轮代码/文档同步后的最终工程
 回归为 `220 passed, 4 warnings`；Ruff check、format、compileall 与 `git diff --check` 均通过，4 条 warning
 仍是既有 Pillow 弃用提示。
+
+## 11. 2026-09-03｜V5 反思后的真实链路优化候选（当前）
+
+### 11.1 任务树与监督 Prompt
+
+本轮新增 [RAG 优化任务树 v1](RAG_OPTIMIZATION_TASK_TREE_V1.md)，并在 [RAG_DEEP_OPTIMIZATION_PROMPT.md](RAG_DEEP_OPTIMIZATION_PROMPT.md) 保存可直接执行的 v0.3 Prompt。任务树要求：冻结 V5 与 active baseline；先修真实路径交接，再修证据特异性；每轮只改一个实际层；公开开发/回归和 hard-safety 先过，才考虑新的独立 Holdout。V5 不读取、不重跑、不回写。
+
+### 11.2 为什么要改这两层
+
+V5 的前五条完全 miss 只有 `2/60`，但 Route 不一致 `50/60`、证据集合不一致 `59/60`、关系不一致 `54/60`。这说明资料经常能被找到，却没有被正确地传到最终路径或按请求功能整理。早期 no-op 只改结果文字，没有改变候选池，已被本轮规则明确禁止。
+
+### 11.3 实现与结果
+
+| 候选 | 真实修改 | 开发集结果 | 公开回归结果 | 真实改变 | 状态 |
+|---|---|---:|---:|---:|---|
+| 路径交接 v0.1 | 只在真实证据支持时采纳结构化查询提出的路径；硬状态优先 | Route `3.57% → 92.86%` | `30.77% → 76.92%` | 26 / 44 | proposal-only |
+| 证据特异性 v1.0 | 只给请求部位的能力卡标 direct；无关参数/泛化/CompareFace/IMS 标 reference | Relation `100%`、Recall@5 `100%` | Relation `96.15%`、Recall@5 `100%` | 相对交接 11 / 20 | proposal-only |
+
+两项过程审计均 `PASS`，hard-safety 均 `PASS`；没有网络、LLM、照片、向量或图片 Provider 副作用。路径候选确实改变了真实最终路径，特异性候选确实改变了真实关系和采用证据，不是结果层 no-op。公开指标仍不能替代独立 Holdout 泛化，也不能把 RAG 改成可执行。
+
+### 11.4 当前交接门
+
+候选报告：[rag_route_handoff_candidate_v1.html](../reports/rag_route_handoff_candidate_v1.html)；脱敏逐题 Trace：[rag_route_handoff_candidate_v1_traces.json](../reports/rag_route_handoff_candidate_v1_traces.json)。下一步先审核公开逐题 Trace 和回归是否接受；若接受，建立与 V3/V4/V5 不重叠的新 V6。若新 Holdout 不通过，继续按最早失败层修复，不在 V5 上试错。候选仍 `not_promoted_proposal_only`，V5 仍 `FAIL`。
+
+### 11.5 本轮工程 QA
+
+专项 handoff/specificity/process 测试当前 `9 passed`；完整 QA 在本轮文档同步后重新执行，最终数字以本文件末尾最新回执覆盖。Ruff、format、compileall 与 `git diff --check` 也必须重新运行。

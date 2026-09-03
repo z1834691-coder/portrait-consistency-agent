@@ -33,6 +33,9 @@ from portrait_consistency_agent.services.local_rag_models import (
     TokenOverlapReranker,
 )
 from portrait_consistency_agent.services.rag_advisory import RagAdvisoryService
+from portrait_consistency_agent.services.rag_evidence_selection_candidate import (
+    EvidenceSelectionDecision,
+)
 from portrait_consistency_agent.services.rag_gold_baseline import (
     BaselineProjection,
     _query_for_projection,
@@ -40,7 +43,8 @@ from portrait_consistency_agent.services.rag_gold_baseline import (
 )
 from portrait_consistency_agent.services.rag_gold_eval import GoldCase
 from portrait_consistency_agent.services.rag_p0a import seed_reviewed_provider_knowledge
-from portrait_consistency_agent.services.rag_p0b import RagP0BHybridRetriever
+from portrait_consistency_agent.services.rag_p0b import RagP0BHybridRetriever, RagP0BRun
+from portrait_consistency_agent.services.rag_route_handoff_candidate import RouteHandoffDecision
 from portrait_consistency_agent.storage.dense_index import LocalDenseIndex
 from portrait_consistency_agent.storage.knowledge_store import LocalKnowledgeStore
 
@@ -49,6 +53,8 @@ PROCESS_SUPERVISOR_VERSION = "rag-process-supervisor-v0.1"
 
 FairQueryBuilder = Callable[[GoldCase, BaselineProjection], tuple[RagQuery, bool]]
 QueryTermExpander = Callable[[RagQuery], Iterable[str]]
+RouteHandoff = Callable[[BaselineProjection, RagQuery, RagP0BRun], RouteHandoffDecision]
+EvidenceSelection = Callable[[RagQuery, RagP0BRun], EvidenceSelectionDecision]
 
 _FORBIDDEN_KEYS = frozenset(
     {
@@ -399,12 +405,49 @@ class RagProcessSupervisor:
                 "retrieval_route": False,
                 "prediction_lineage": bool(
                     pred_ok
-                    and pred.get("route_source") == "retrieval_result"
                     and pred.get("evidence_source") == "retrieval_result"
+                    and (
+                        pred.get("route_source") == "retrieval_result"
+                        or (
+                            pred.get("route_source") == "validated_route_handoff"
+                            and isinstance(trace.get("route_handoff"), Mapping)
+                            and trace.get("route_handoff", {}).get("accepted") is True
+                            and trace.get("route_handoff", {}).get("selected_route")
+                            == pred.get("route")
+                            and trace.get("route_handoff", {}).get("execution_authorized") is False
+                        )
+                    )
                 ),
                 "finalized": bool(trace.get("finalized") is True),
                 "governance_boundary": governance_ok,
+                "route_handoff_lineage": True,
+                "evidence_selection_lineage": True,
             }
+            if pred_ok and pred.get("route_source") == "validated_route_handoff":
+                handoff = trace.get("route_handoff")
+                required["route_handoff_lineage"] = bool(
+                    isinstance(handoff, Mapping)
+                    and handoff.get("accepted") is True
+                    and handoff.get("selected_route") == pred.get("route")
+                    and handoff.get("proposal_only") is True
+                    and handoff.get("execution_authorized") is False
+                )
+            if pred_ok and isinstance(trace.get("evidence_selection"), Mapping):
+                selection = trace.get("evidence_selection", {})
+                selected = selection.get("selected_refs", [])
+                actual = (
+                    trace.get("retrieval", {}).get("actual_evidence_refs", [])
+                    if isinstance(trace.get("retrieval"), Mapping)
+                    else []
+                )
+                required["evidence_selection_lineage"] = bool(
+                    selection.get("accepted") is True
+                    and selection.get("proposal_only") is True
+                    and selection.get("execution_authorized") is False
+                    and isinstance(selected, list)
+                    and len(selected) <= 3
+                    and all(isinstance(item, str) and item in actual for item in selected)
+                )
             retrieval_trace = retrieval.get("trace") if retrieval_ok else []
             steps = _step_names(retrieval_trace)
             required["retrieval_query_contract"] = "query_contract" in steps
@@ -462,12 +505,17 @@ class RagProcessSupervisor:
                         case_violations.append(
                             ProcessViolation("PREDICTION_EVIDENCE_SHAPE_INVALID", "evidence_refs")
                         )
-                    elif not set(pred_refs).issubset(set(adopted_refs)):
-                        case_violations.append(
-                            ProcessViolation(
-                                "PREDICTION_EVIDENCE_NOT_RETRIEVED", "prediction refs not adopted"
+                    else:
+                        selection = trace.get("evidence_selection")
+                        selected_via_candidate = isinstance(selection, Mapping)
+                        allowed_refs = actual_refs if selected_via_candidate else adopted_refs
+                        if not set(pred_refs).issubset(set(allowed_refs)):
+                            case_violations.append(
+                                ProcessViolation(
+                                    "PREDICTION_EVIDENCE_NOT_RETRIEVED",
+                                    "prediction refs not in allowed retrieval lineage",
+                                )
                             )
-                        )
                 trace_refs = _candidate_refs_from_trace(retrieval_trace)
                 if trace_refs and not set(actual_refs).intersection(trace_refs):
                     case_violations.append(
@@ -577,6 +625,8 @@ class RagFairEvaluationRunner:
         relation_resolver: Callable[[RagQuery, object, object], object] | None = None,
         query_term_expander: QueryTermExpander | None = None,
         operation_coverage: bool = False,
+        route_handoff: RouteHandoff | None = None,
+        evidence_selection: EvidenceSelection | None = None,
     ) -> FairEvaluationRun:
         case_list = tuple(cases)
         if not case_list:
@@ -625,14 +675,42 @@ class RagFairEvaluationRunner:
                 adopted_refs = list(_adopted_refs(retrieval))
                 relation_map = _relation_map(retrieval)
                 retrieval_route = retrieval.result.route.value
+                handoff_decision = (
+                    route_handoff(projection, query, retrieval)
+                    if route_handoff is not None
+                    else None
+                )
+                evidence_selection_decision = (
+                    evidence_selection(query, retrieval) if evidence_selection is not None else None
+                )
+                final_route = (
+                    handoff_decision.selected_route
+                    if handoff_decision is not None and handoff_decision.accepted
+                    else retrieval_route
+                )
+                route_source = (
+                    "validated_route_handoff"
+                    if handoff_decision is not None and handoff_decision.accepted
+                    else "retrieval_result"
+                )
+                prediction_evidence_refs = (
+                    list(evidence_selection_decision.selected_refs)
+                    if evidence_selection_decision is not None
+                    and evidence_selection_decision.accepted
+                    else adopted_refs
+                )
+                prediction_evidence_relations = (
+                    dict(evidence_selection_decision.selected_relations)
+                    if evidence_selection_decision is not None
+                    and evidence_selection_decision.accepted
+                    else {ref: relation_map[ref] for ref in adopted_refs if ref in relation_map}
+                )
                 prediction = {
                     "case_id": case.case_id,
-                    "route": retrieval_route,
-                    "evidence_refs": adopted_refs,
-                    "evidence_relations": {
-                        ref: relation_map[ref] for ref in adopted_refs if ref in relation_map
-                    },
-                    "route_source": "retrieval_result",
+                    "route": final_route,
+                    "evidence_refs": prediction_evidence_refs,
+                    "evidence_relations": prediction_evidence_relations,
+                    "route_source": route_source,
                     "evidence_source": "retrieval_result",
                     "trace_ref": f"{FAIR_EVALUATION_VERSION}:{_case_hash(case.case_id)[:24]}",
                 }
@@ -673,6 +751,10 @@ class RagFairEvaluationRunner:
                     },
                     "finalized": True,
                 }
+                if handoff_decision is not None:
+                    safe_trace["route_handoff"] = handoff_decision.to_trace()
+                if evidence_selection_decision is not None:
+                    safe_trace["evidence_selection"] = evidence_selection_decision.to_trace()
                 predictions.append(prediction)
                 traces.append(safe_trace)
             snapshot = store.snapshot()

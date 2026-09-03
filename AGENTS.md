@@ -323,9 +323,27 @@ The latest visual execution candidate is the Getty × Thread Track 1 under
 `design/visual-tracks/getty-thread-party-rock/` with its detailed rules in
 `docs/UI_VISUAL_DESIGN_SPEC_DETAILED.md`. It keeps only E01 `/align` and E02
 `/align/:session`, uses the three-column black-nav/ivory-stage/ivory-thread shell,
-and adds Image 2 surreal ambient art as a decorative layer. The track's HTML and
-Figma-importable SVG are review assets only; they do not change the Streamlit
+and keeps E01/E02 free of raster environment art. A separate K00 cover candidate
+uses the locally sourced, manifested historical artwork wall under
+`cover/artwork/`; it is not part of the E01/E02 task surface. The track's HTML,
+SVG and artwork are review assets only; they do not change the Streamlit
 implementation, consent, Provider, persistence, Trace, RAG or privacy boundaries.
+
+## 2026-09-03 latest visual asset override
+
+The owner has now requested one additional K00 cover keyframe alongside the two
+product keyframes E01 `/align` and E02 `/align/:session`. K00 is a separate
+入口/brand-cover candidate, not a third business screen: it may use a purple
+field, black top rail, ivory paper/cards and sparse acid-green entry marker, plus
+the locally downloaded historical artwork registered in
+`design/visual-tracks/getty-thread-party-rock/cover/artwork/SOURCES.md`. Do not
+generate or hot-link artworks. The cover wall's nearest-card lift must have
+keyboard, touch, pause and reduced-motion equivalents. Keep E01/E02 backgrounds
+pure ivory with no environment assets; the archived `ambient-assets-v1` files
+remain recoverable history only. `docs/UI_COVER_KEYFRAME_PROMPT.md` is the
+single execution prompt for K00. All assets remain visual review sources and do
+not change product contracts, permissions, Provider admission, privacy, Trace or
+the unfinished Streamlit migration.
 
 ## 2026-09-02 latest Tencent Web Meta-Agent integration override
 
