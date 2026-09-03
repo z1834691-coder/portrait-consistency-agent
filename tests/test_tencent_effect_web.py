@@ -402,10 +402,14 @@ def test_web_admission_is_fail_closed_until_all_non_secret_evidence_is_present()
 def test_browser_bridge_uses_static_image_capture_api() -> None:
     source = inspect.getsource(render_tencent_effect_web)
     assert "takePhoto" in source
-    assert "getOutput" not in source
+    assert "getOutput" in source
+    assert "updateInputImage" in source
+    assert "OUTPUT_EMPTY_FRAME" in source
+    assert "imageDataHasVisiblePixels" in source
     assert 'const resultCanvas = document.createElement("canvas")' in source
     assert "canvas.width = imageData.width" not in source
     assert "canvas.height = imageData.height" not in source
+    assert 'const sdkCanvas = document.createElement("canvas")' in source
     assert "errorCodeOf" in source
     assert "SDK 鉴权缺少必要参数" in source
     assert "runButton.disabled = false" in source

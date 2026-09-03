@@ -725,6 +725,7 @@ def render_tencent_effect_web(
               "10001103": "SDK 特效强度参数不正确",
               "10001104": "SDK 尚未启用，无法设置特效",
               "10001105": "SDK 收到无效特效 ID",
+              "OUTPUT_EMPTY_FRAME": "SDK 返回了空白结果，未生成可显示图片；请刷新页面或更换图片",
             };
             return known[code] || "浏览器 SDK 返回运行时错误，请检查 SDK 初始化、"
               + "License、域名和输入图片";
@@ -790,6 +791,70 @@ def render_tencent_effect_web(
               .map((byte) => byte.toString(16).padStart(2, "0"))
               .join("");
           };
+          const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+          const nextFrames = () => new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+          });
+          const imageDataHasVisiblePixels = (imageData) => {
+            if (!imageData || !imageData.data || imageData.data.length < 4) return false;
+            let visible = 0;
+            for (let index = 0; index < imageData.data.length; index += 4) {
+              const alpha = imageData.data[index + 3];
+              const color = imageData.data[index]
+                + imageData.data[index + 1]
+                + imageData.data[index + 2];
+              if (alpha > 8 && color > 8) {
+                visible += 1;
+                if (visible >= 32) return true;
+              }
+            }
+            return false;
+          };
+          const imageDataFromOutputUrl = async (value) => {
+            const image = await loadImage(value);
+            const outputCanvas = document.createElement("canvas");
+            outputCanvas.width = image.naturalWidth || image.width;
+            outputCanvas.height = image.naturalHeight || image.height;
+            const outputContext = outputCanvas.getContext("2d");
+            if (!outputContext) throw new Error("CANVAS_CONTEXT_MISSING");
+            outputContext.drawImage(image, 0, 0);
+            const imageData = outputContext.getImageData(
+              0,
+              0,
+              outputCanvas.width,
+              outputCanvas.height,
+            );
+            if (!imageDataHasVisiblePixels(imageData)) throw new Error("OUTPUT_EMPTY_FRAME");
+            return imageData;
+          };
+          const captureStaticImage = async (sdk) => {
+            // The official static-image API exposes getOutput(..., IMAGE) as a
+            // data URL.  Prefer it because it reads the SDK's own rendered
+            // canvas after the ticker has advanced.  takePhoto remains the
+            // compatibility path for WorkerCore/browser builds.
+            if (typeof sdk.getOutput === "function") {
+              try {
+                const outputUrl = await sdk.getOutput(undefined, 3);
+                if (typeof outputUrl === "string" && outputUrl.startsWith("data:image/")) {
+                  return await imageDataFromOutputUrl(outputUrl);
+                }
+              } catch (_) {
+                // Fall through to the ImageData path below.  The final error
+                // must still be OUTPUT_EMPTY_FRAME rather than a false success.
+              }
+            }
+            let lastImageData = null;
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+              await nextFrames();
+              await sleep(150);
+              lastImageData = await sdk.takePhoto();
+              if (imageDataHasVisiblePixels(lastImageData)) return lastImageData;
+            }
+            if (!lastImageData || !lastImageData.data) {
+              throw new Error("STATIC_IMAGE_OUTPUT_MISSING");
+            }
+            throw new Error("OUTPUT_EMPTY_FRAME");
+          };
           const run = async () => {
             if (state.running || state.disposed) return;
             state.running = true;
@@ -800,8 +865,24 @@ def render_tencent_effect_web(
               const arGlobal = await loadSdk();
               show("SDK 已加载，正在初始化…", "working");
               const inputImage = await loadImage(data.input);
-              canvas.width = inputImage.naturalWidth || inputImage.width;
-              canvas.height = inputImage.naturalHeight || inputImage.height;
+              // A previous ArSdk instance may have transferred its canvas to
+              // WebGL/WorkerCore.  Always stop it and replace the DOM canvas
+              // before the next attempt; resizing a transferred canvas is the
+              // source of Chromium's "Cannot resize canvas after call to
+              // transfer" error.
+              if (state.sdk) {
+                try { if (state.sdk.stop) state.sdk.stop(); } catch (_) {}
+                try { if (state.sdk.destroy) state.sdk.destroy(); } catch (_) {}
+                state.sdk = null;
+              }
+              const currentCanvas = parentElement.querySelector('[data-role="canvas"]');
+              if (!currentCanvas) throw new Error("CANVAS_MISSING");
+              const sdkCanvas = document.createElement("canvas");
+              sdkCanvas.dataset.role = "canvas";
+              sdkCanvas.style.display = "none";
+              currentCanvas.replaceWith(sdkCanvas);
+              sdkCanvas.width = inputImage.naturalWidth || inputImage.width;
+              sdkCanvas.height = inputImage.naturalHeight || inputImage.height;
               const sdk = new arGlobal.ArSdk({
                 module: { beautify: true },
                 auth: {
@@ -810,7 +891,7 @@ def render_tencent_effect_web(
                   authFunc: async () => ({ signature: data.signature, timestamp: data.timestamp }),
                 },
                 input: inputImage,
-                output: canvas,
+                output: sdkCanvas,
                 beautify: data.beautify,
               });
               state.sdk = sdk;
@@ -822,11 +903,21 @@ def render_tencent_effect_web(
               sdk.on("ready", async () => {
                 if (!state.running) return;
                 try {
-                  // The static-image Web API returns ImageData from
-                  // `takePhoto()`. The media-stream getter would not produce
-                  // a verifiable still-image result here.
+                  // Official static-image flow: refresh the input after the
+                  // SDK is ready, let its ticker render, then capture a real
+                  // non-empty frame.  This is intentionally deterministic at
+                  // the boundary: a blank frame becomes a failed receipt.
+                  if (typeof sdk.updateInputImage === "function") {
+                    await sdk.updateInputImage({
+                      width: inputImage.naturalWidth || inputImage.width,
+                      height: inputImage.naturalHeight || inputImage.height,
+                      input: inputImage,
+                    });
+                  }
                   await sdk.setBeautify(data.beautify);
-                  const imageData = await sdk.takePhoto();
+                  await nextFrames();
+                  await sleep(250);
+                  const imageData = await captureStaticImage(sdk);
                   if (!imageData || !imageData.data || !imageData.width || !imageData.height) {
                     throw new Error("STATIC_IMAGE_OUTPUT_MISSING");
                   }
