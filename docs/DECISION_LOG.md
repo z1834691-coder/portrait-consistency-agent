@@ -411,3 +411,17 @@
 | D-TECH-154 | 2026-09-03 | E3 证据生成、预检、Web 合同回归和 handoff smoke 在本轮同步后重新执行：预检 5 个样本（2 eligible、2 warning、1 rejected），真实浏览器回执 4/4 成功、输入哈希 4/4 匹配、结果交接标记 4/4；离线 Web 回归 8/8，E1 handoff smoke 通过。 | 已验证 | 当前仓库、报告、合同与代码可由同一组命令回放；4 条 Pillow 弃用 warning 为既有非阻塞提示 | 真实视觉复测、完整 request_ref、供应商地区/费用/留存和 Card promotion 仍必须独立补证，不得由本回执自动推断 |
 | D-TECH-155 | 2026-09-03 | 全量质量门重新执行：`.venv/bin/pytest -q`=`226 passed, 4 warnings`；`ruff check .`、`ruff format --check .`、`compileall` 与 `git diff --check` 全部通过。 | 已验证 | 证明当前 E3 代码、测试、合同与文档没有工程级回归；不改变 Web Card `candidate` 或 RAG `proposal-only` | 后续任何 E3 证据或视觉/UI 变更都必须重新执行同一套全量检查 |
 | D-PROD-156 | 2026-09-03 | E3 当前产品边界冻结为“可录制候选 Demo，不等同于正式视觉效果/Provider 上线”：page 6 可展示真实 Web 结果，page 8 只读展示脱敏证据；在视觉泛化、共同 VerificationResult、供应商条款和负责人批准未齐前，继续以 BeautifyPic 为正式 baseline。 | 已冻结 | Demo 叙事可以前进，但不能夸写成母版一致性已证明、批量效果已通过或 Web Card 已 verified | 到真实视觉与供应商准入证据齐全后，由产品负责人单独决定 candidate→verified |
+
+## 2026-09-03 追加记录｜V5 失败后的真实链路候选 v0.4
+
+| 决策 ID | 日期 | 决策 / 事实 | 状态 | 产品/工程影响 | 后续复核 |
+|---|---|---|---|---|---|
+| D-TECH-157 | 2026-09-03 | 早期 no-op 的根因是只重写结果层，没有改变真实候选池；本轮新增 `route_handoff`、功能特异性证据分槽和 route-scoped explanation selector，把修复放回“查询→候选→关系→路径”真实链路。 | 已实现并验证；候选未 promotion | 开发/回归候选分别改变真实最终路径与证据引用；不读取 V5、不给 RAG 执行权限、不改变 active baseline | 查看候选逐题 Trace；若需泛化，再建立不与 V3/V4/V5 重叠的 V6 |
+| D-TECH-158 | 2026-09-03 | 修正评测器内部版本 ref 与 Gold 稳定 alias 的确定性对齐；该修正只发生在评测层，不向运行时 Prediction 注入证据。 | 已实现并验证 | 避免把“实际选中正确卡片”误算为 evidence=0；不改变 Gold、分母或项目门槛 | 新 Holdout 继续使用独立 Gold join，不能把别名映射当成泛化能力 |
+| D-PROD-159 | 2026-09-03 | 候选证据的产品语义冻结：请求部位且可执行的卡片为 direct；泛化说明、未请求参数、CompareFace/ImageModeration 为 reference；过期/冲突为 conflict。解释证据最多三条、按受限路径取值，不能越过权限或执行门。 | 已冻结为候选边界 | 解释更聚焦，直接依据与参考信息不再混淆；RAG 仍 `proposal-only` | 候选进入独立 V6 前需检查多操作、冲突、注入和 miss 的安全回归 |
+| D-TECH-160 | 2026-09-03 | `rag_route_handoff_candidate_v0.2`、`rag-evidence-selection-candidate-v0.2-route-scoped` 和公平评测脚本完成公开开发/回归运行。解释候选 Route/exact/relation/Recall@5/MRR/nDCG@5 均为 100%，固定 Precision@3 为开发 47.62%、回归 47.44%，hard-safety 均 PASS；Trace 76/76 完整。 | 已验证；project Gate 仍 FAIL | 证明候选确实改变真实链路，但公开数据与审核卡高度对齐，不能称 RAG 产品化或泛化通过 | 停止同一公开集补丁；产品负责人确认后再建 V6 或转回端到端照片 Demo |
+| D-TECH-161 | 2026-09-03 | 本轮文档/代码同步后重新执行专项与全量 QA：`pytest=238 passed, 4 warnings`；Ruff check、format、compileall、`git diff --check` 和候选脚本均通过。一次回归断言曾因新增 face-isolation 词汇影响冻结 V3 诊断，已通过历史编译器守门修复，V3 原有回执恢复。 | 已验证 | 保证候选优化没有破坏历史评测、合同或安全边界；4 条 warning 为既有 Pillow 弃用提示 | 后续任何候选、Rubric 或文档规则变化仍需重跑同一组 QA |
+
+| D-PROD-162 | 2026-09-03 | 为满足当天 Demo 节奏，负责人明确暂缓当前浏览器手动上传/点击，但要求其余硬证据、测试和文档继续完成；旧真实回执只能作为历史证据，不能冒充本轮新的视觉复测。 | 已冻结 | 把“提速”定义为减少重复外部尝试并完成自动化收口，不降低证据门槛；Web Card 继续 candidate | 后续只需新的可关联 Browser Receipt/真实复测及供应商区域、成本事实 |
+| D-TECH-163 | 2026-09-03 | 新增 `promote_effect_web_card.py` 确定性准入命令、阻塞测试和 JSON/HTML 决定报告；用负责人批准真实运行后因 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed` fail-closed，未修改 Card。 | 已实现并验证 | 自动化替代手工改状态，原子写、无图片/密钥读取；缺证据时可回滚且保持 candidate | 证据全部齐全时才允许同一命令写 `verified`，不能由 RAG/LLM 绕过 |
+| D-TECH-164 | 2026-09-03 | 修正 E3 报告口径：只有未获负责人批准时才追加 owner blocker；视觉状态由 `multi_sample_visual_review_complete` 事实决定。重建报告仍为 4/4 历史成功、handoff 4/4、request_ref 不全、视觉未建立。 | 已实现并验证 | 报告不再重复声称“负责人未批准”，与当前授权一致；真实未完成项更清晰 | 下一轮新回执必须更新 manifest 与报告，不得手工猜 request_ref |

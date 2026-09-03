@@ -280,3 +280,11 @@ E1 已由 `tests/test_execution.py` 和 `scripts/smoke_effect_web_b_handoff.py` 
 ### 17.1 2026-09-03｜E3 同步后复核
 
 预检、证据汇总、Web E2 回归和 B handoff smoke 已重新执行：5 个样本为 2 eligible、2 warning、1 rejected；4 条真实 Browser Receipt 全部成功，输入哈希全部绑定，handoff 标记 4/4；E2 合同回归 8/8。完整工程 QA 为 `226 passed, 4 warnings`。手工 manifest 仍缺完整 `request_ref`，所以报告保留该缺口；视觉复测、供应商地区/费用/留存和 Card promotion 不得由这些结果自动推断。
+
+### 17.2 2026-09-03｜确定性 promotion 与快速 Demo 边界
+
+新增 `scripts/promote_effect_web_card.py` 和 `tests/test_effect_web_promotion.py`。脚本只读取脱敏报告/Card，不读照片、结果 bytes、data URL、密钥或本地路径；它将报告事实映射到 `EffectWebAdmissionInput`，并在 `--write-if-allowed` 下以原子写方式更新 Card。负责人批准不再是人工改 JSON，而是一个输入事实；它仍不能覆盖视觉、request_ref、区域或成本 Gate。
+
+本轮已实际运行命令并生成 `reports/effect_web_promotion_decision_v1.json/.html`：`card_changed=false`，`blocked_fail_closed`，原因是 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed`。因此 Web Card 继续 candidate；这不是技术故障，而是证据不足的正确结果。当前 Demo 可以展示已有真实 receipt 和 E1/E2 工程链路，但不能说 Web 已正式上线或已证明母版一致。
+
+文档同步后最终自动 QA：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；Ruff check/format、compileall、`git diff --check` 均通过。该结果确认 Adapter、promotion fail-closed 和合同测试可回放，不改变真实视觉复测、供应商区域/费用或 Card promotion 的未闭合状态。

@@ -2345,3 +2345,59 @@ Card promotion：CANDIDATE
 E3 预检、证据汇总、Web 合同回归和 handoff smoke 已在文档同步后重新运行。最新可复核事实：预检 5 个样本（2 eligible、2 warning、1 rejected）；真实浏览器回执 4/4 成功，输入哈希 4/4 匹配，结果交接标记 4/4；离线 Web 回归 8/8，批量失败隔离通过。全量工程 QA 为 `.venv/bin/pytest -q`=`226 passed, 4 warnings`；Ruff check、format、compileall 和 `git diff --check` 通过。4 条 warning 是既有 Pillow 弃用提示。
 
 本轮没有把 request_ref 缺失、视觉效果泛化、共同 VerificationResult 的真实图片复测、供应商地区/费用/留存或负责人 promotion 伪装成完成。Web Card 仍 `candidate`，RAG 仍 `proposal-only`，正式主流程仍为已验证的 BeautifyPic。page 6 已具备“上传→真实 Web 结果展示”的录制路径，page 8 提供脱敏 E3 证据看板；下一道真实决策门是补证后是否批准 Web Card promotion。
+
+## 2026-09-03｜RAG V5 失败后的真实链路优化候选 v0.4
+
+### 本轮目标
+
+V5 已冻结，不能用它继续调参。本轮依据 V5 的聚合失败模式，只在公开开发集和公开回归集修复真实链路：让结构化查询的路径不再无理由丢失；让多个操作各自保留证据；让解释页面只展示当前任务真正相关的资料。评测编号不一致的问题也只在评测器修正，不影响运行时。
+
+### 做了什么
+
+1. 增加受限 `route_handoff`：硬冲突、缺槽位、索引异常优先；只有真实证据支持时才接受 DIRECT/SUGGEST/REFERENCE。
+2. 增加功能特异性关系：用户请求的部位且工具确实支持才为 direct；泛化说明、未请求参数、CompareFace/ImageModeration 为 reference；过期/冲突保持 conflict。
+3. 增加 route-scoped explanation selection：按任务范围从真实召回中最多选三条解释资料；它不改变执行授权。
+4. 评测器只把带版本的内部引用映射为稳定 Gold 别名，避免“选中正确卡片但被统计成错误”。
+
+### 结果
+
+| 指标 | 开发集（28 题） | 公开回归（52 题） |
+|---|---:|---:|
+| Route（解释候选最终轨） | 100% | 100% |
+| Evidence exact / relation | 100% / 100% | 100% / 100% |
+| Recall@5 / MRR / nDCG@5 | 100% / 100% / 100% | 100% / 100% / 100% |
+| 固定 Precision@3 | 47.62% | 47.44% |
+| Hard-safety | PASS | PASS |
+| 完整 Trace | 28/28 | 52/52 |
+
+候选实际改变最终路径：route handoff `28`/`48` 条；证据选择相对 specificity 又改变 `22`/`39` 条（开发/回归）。上述公开结果不是新 Holdout 成绩：公开题与当前审核卡存在较强对齐，固定 Precision 仍未达到历史项目门槛，项目 Gate=`FAIL`。候选保持 `proposal-only`，active baseline、权限、图片 Provider 不变。
+
+### 结论与下一步
+
+本轮解决的是“系统已经找到资料，却在后面丢失或误用”的真实连接问题，不是证明 RAG 已经能处理未见过的用户问题。继续在同一公开集加同义词会产生边际收益递减，下一步停止公开集补丁，优先查看候选逐题 Trace；若需要泛化证明，再建立和 V3/V4/V5 完全不重叠的 V6 Holdout，走一次无答案过程监督和一次授权 Gold join。没有 V6 通过，不得宣称 RAG 产品化。
+
+### 本轮工程回执
+
+专项 handoff/process 测试：`15 passed`。本节同步后的最终 QA：`.venv/bin/pytest -q`=`238 passed, 4 warnings`；Ruff check、`ruff format --check`、compileall、`git diff --check` 和候选脚本均通过。4 条 warning 仍为既有 Pillow 弃用提示。任何新增代码或规则都必须重新执行这组检查。
+
+## 2026-09-03｜限范围 E3 收尾回执
+
+用户为今天录制 Demo 要求暂缓当前浏览器手动上传/点击，因此本轮不重复触发外部 SDK。先保存了可回滚提交 `a08197c`，并完成了可自动验证的硬证据收口：E3 脱敏报告重建；E2 Web 合同回归 `8/8`；E1 Web handoff 与共同 `VerificationResult` fixture 复测；新增确定性 promotion 脚本、JSON/HTML 决定报告和阻塞测试。
+
+当前 promotion 命令在 `--owner-approved --write-if-allowed` 下真实运行，输出 `card_changed=false`、`blocked_fail_closed`，阻塞码为 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed`；`tencent_effect_web` Card 保持 `candidate`。这三个阻塞码是证据不足，不是代码异常。已有四条历史真实 Browser Receipt 仍为 4/4 成功、输入哈希 4/4 绑定、handoff 4/4，但本轮没有新增 live receipt，也没有把旧结果冒充新视觉复测。
+
+### 本轮可回放命令
+
+```text
+.venv/bin/python scripts/build_effect_web_e3_evidence.py
+.venv/bin/python scripts/promote_effect_web_card.py --owner-approved --write-if-allowed
+.venv/bin/pytest -q tests/test_effect_web_promotion.py tests/test_tencent_effect_web.py tests/test_tencent_effect_web_e3.py tests/test_tencent_effect_web_regression.py
+```
+
+### 本轮边界
+
+可录 Demo 讲“浏览器候选 SDK 的真实回执、结果交接和安全准入”；不能讲 Web 已正式上线、视觉效果已泛化、区域/费用已确认或 RAG 已授权执行。剩余硬 Gate 只保留：一次新的可关联 Browser Receipt/真实图像复测、供应商区域与成本证据；其余工程代码和离线测试已收口。
+
+### 2026-09-03 最终自动 QA 回执
+
+文档补齐当前收尾覆盖后重新执行全量工程校验：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`python -m compileall -q src pages scripts tests` 与 `git diff --check` 全部通过。4 条 warning 仍为既有 Pillow 弃用提示。promotion 命令再次运行仍输出 `card_changed=false`、`blocked_fail_closed`，Web Card 保持 `candidate`。本回执是当前自动化收尾的最终数字；任何新增代码或规则都必须重新执行同一组校验。

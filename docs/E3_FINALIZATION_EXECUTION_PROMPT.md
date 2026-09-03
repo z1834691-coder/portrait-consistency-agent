@@ -53,3 +53,11 @@ E3 收尾
 ## 收尾 Gate
 
 当网页上传 → SDK 处理 → 结果展示 → 回执/哈希 Trace 已稳定时，可以录制 Demo；但只有以下证据全部齐全后，才由产品负责人另行决定 Card promotion：真实多样本视觉效果与批量异常、供应商图片出站/留存/地区/费用、正式 License/权限和最终产品批准。若任一证据缺失，展示“候选 Provider 的真实 Web 试验”而不是“正式生产能力”。
+
+## 2026-09-03 限范围 Demo 收尾覆盖（当前执行口径）
+
+负责人为今日录制 Demo 明确要求暂缓新的浏览器手动上传/点击步骤。本轮只执行可自动验证的工程收口：重建脱敏 E3 报告、运行 E2 合同/异常/批量隔离回归、验证 E1 到共同 `VerificationResult` 的 fixture 路径，并运行确定性 promotion 命令。不得因为跳过新的 live receipt 就伪造 `request_ref`、视觉复测或供应商地区/费用证据。
+
+当前 promotion 命令采用 fail-closed：即使带有负责人批准参数，只要 `region_not_approved`、`estimated_cost_unknown` 或 `multi_sample_regression_not_passed` 任一硬证据缺失，就不改写 Card，继续保持 `review_status=candidate`。已有历史真实回执可用于 Demo 的“SDK 真实返回与结果展示”叙述，但不等于共同视觉复测、效果泛化或正式 Provider 准入。
+
+本覆盖不改变原有收尾 Gate；它只把“今天先录 Demo”与“后续再补准入证据”分开，并要求在下一轮恢复人工步骤时，优先补齐可关联 `request_ref`、真实输出的共同复测和供应商条款证据。

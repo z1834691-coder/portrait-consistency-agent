@@ -379,3 +379,25 @@ supplier region/cost/retention as verified. Results and data URLs remain
 browser-session-only; reports contain hashes and metadata, never image bytes or
 paths. The next gate is human visual review plus common verification handoff
 and supplier evidence, followed by explicit product-owner promotion.
+
+## 2026-09-03 current limited-scope closeout override
+
+For today's Demo recording, the owner explicitly deferred any new browser
+manual upload/click step. The automatic closeout was saved at checkpoint
+`a08197c` and pushed to `origin/main`. The current bridge is
+`bridge_2026-09-03_static_capture_v6_rerun_recovery`; the evidence report was
+rebuilt, E2 offline Web contract/batch-isolation regression is `8/8`, and the
+E1 common `VerificationResult` handoff is fixture-verified.
+
+The deterministic command
+`python scripts/promote_effect_web_card.py --owner-approved --write-if-allowed`
+was run and fail-closed with `card_changed=false`. Its current hard blockers
+are `region_not_approved`, `estimated_cost_unknown`, and
+`multi_sample_regression_not_passed`; therefore
+`data/provider_cards/tencent_effect_web.json` must remain `candidate`. Do not
+invent request references, visual improvement, vendor terms, or new live
+receipts. Historical four-row Browser Receipt evidence may support a Demo
+description of a real candidate SDK response, but it is not common visual
+VerificationResult evidence or formal promotion. The next evidence gate is
+still a new associable receipt/output review plus supplier region/cost/
+retention evidence. RAG remains `proposal-only`.

@@ -528,3 +528,15 @@ Gold route/evidence、题目标签或评测分数注入被测查询；完成后�
 当前事实是 4/4 真实浏览器回执成功、输入哈希 4/4 与预检匹配、结果交接标记 4/4，E2 离线合同/批量隔离回归通过；透明通道 PNG 作为异常样本被拒绝。手工 manifest 尚未抄录每条完整 `request_ref`，因此 Prompt 禁止用 receipt ID 猜测 request_ref，报告必须保留缺口。
 
 Prompt 不得让 Agent、RAG 或 LLM：把 SDK 成功当成母版一致；生成视觉事实、参数、权限或供应商条款；自动创建 promotion；把结果图/data URL/密钥/本地路径写入 Trace、数据库、RAG 或 Git。`tencent_effect_web` Card 继续 `candidate`，RAG 继续 `proposal-only`；没有共同 `VerificationResult` 的真实几何复测、供应商地区/留存/费用证据和负责人最终批准，不得宣称 Web 已正式接入或泛化。
+
+## 2026-09-03｜RAG 真实链路优化监督 Prompt v0.4
+
+本轮使用的 Prompt 已完整保存于 [RAG 深度优化 Prompt](RAG_DEEP_OPTIMIZATION_PROMPT.md) 和 [优化任务树](RAG_OPTIMIZATION_TASK_TREE_V1.md)。它要求先冻结 V5/active baseline，再按“路径交接→功能特异性→解释限域→评测引用归一化”逐层修改；每题都要保留原话哈希、结构化查询、真实召回、路径、证据采用/排除原因、最终结果和安全事实。候选不得读取 V5/V6 答案、不得调用网络/LLM/照片/向量/图片 Provider，且 `proposal_only=true`、`execution_authorized=false`。
+
+本轮结果：开发集 28/28、公开回归 52/52 Trace 完整；最终解释候选的 Route、Evidence exact/relation、Recall@5、MRR、nDCG@5 均为 100%，但单独 route handoff 的公开回归 Route=`92.31%`，固定 Precision@3 为 47.62%/47.44%，project Gate 仍 FAIL。该 Prompt 的作用是确保“真实链路发生变化”与“指标是否泛化”分开记录，不能把公开候选结果写成产品化结论。
+
+## 2026-09-03｜E3 快速收尾执行边界
+
+本轮执行 Prompt 的优先级是“先保住可录制 Demo，再完成可自动完成的证据收口”，不是跳过质量 Gate。浏览器手动上传/点击按负责人要求暂缓；已有四条真实成功回执、E1/E2 fixture、预检、E3 报告和 promotion 决定仍必须进入同一 Trace。自动准入只允许调用 `promote_effect_web_card.py`：`--owner-approved --write-if-allowed` 也不能越过视觉、request_ref、区域或成本缺口。缺证据时 Prompt 必须输出精确阻塞码、写入脱敏 JSON/HTML，保持 candidate；不能调用 RAG/LLM 编造证据，也不能把旧回执当作新的 live run。
+
+同步后的自动回执为全量 `pytest`=`240 passed, 4 warnings`，Ruff check/format、compileall、`git diff --check` 通过。Prompt 当前执行结果仍是 `candidate`/`blocked_fail_closed`；这组工程校验不能替代新的真实 Browser Receipt、视觉复测或供应商准入证据。

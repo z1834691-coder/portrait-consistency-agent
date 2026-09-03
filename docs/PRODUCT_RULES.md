@@ -800,3 +800,17 @@ V3/V4 考试无漏题、无答案/标签注入且每题有完整检索 Trace；R
 | 视觉效果/母版一致 | 未建立 | 不展示未经复测的改善或达标结论 |
 | 供应商地区/费用/留存 | 未闭合 | 不宣称生产准入 |
 | Card promotion | `candidate` | 只能由负责人在证据齐全后人工批准 |
+
+## 2026-09-03｜RAG 真实链路候选 v0.4 规则
+
+<span style="color:#C00000"><strong>候选范围。</strong>本轮候选只修复“结构化查询→真实候选→证据关系→最终路径”的连接，不改变 active baseline、Provider 白名单、权限、参数或图片出站。RAG 仍是参谋层：可以查资料、整理依据、提出路径，不能直接执行、授权或 promotion。</span>
+
+<span style="color:#C00000"><strong>证据语义。</strong>请求部位且已审核工具确实支持的能力才可以标 direct；泛化说明、未请求参数、CompareFace/ImageModeration 只能标 reference；过期或冲突标 conflict。解释页最多使用三条当前路径范围内的真实召回资料，解释证据不能替代执行证据。</span>
+
+<span style="color:#C00000"><strong>缺证据处理。</strong>路径交接必须依赖真实检索结果；硬冲突、缺槽位、索引异常优先。检索为空或证据不支持时，只能 baseline/unknown/clarify/人工复核，不允许 LLM 猜测。评测器的版本化 ref→稳定 alias 映射只存在于评分层，不写回运行时 Prediction。</span>
+
+<span style="color:#C00000"><strong>当前质量边界。</strong>公开开发/回归候选结果用于诊断，不能替代独立 Holdout。最终解释候选的公开语义指标达到 100%，但单独 route handoff 的公开回归为 92.31%，固定 Precision@3 仍未过历史 project Gate；V5 已封存，候选未 promotion。需要泛化证明时必须新建与 V3/V4/V5 不重叠的 V6，并经过独立过程监督和一次授权 Gold join。</span>
+
+<span style="color:#C00000"><strong>2026-09-03 Web 收尾规则。</strong>为了支持当天录制 Demo，浏览器手动 E3 步骤可以暂缓，但工程收尾不能省略：既有四条真实成功回执只证明 SDK 处理、哈希绑定和结果交接，不证明视觉改善。`promote_effect_web_card.py` 采用 fail-closed 规则，只有所有 admission 字段为真才可以写 `review_status=verified`；本轮执行结果因区域、成本和真实视觉多样本证据缺失而保持 `candidate`。完整 request_ref 缺失也必须保留为阻塞事实，不能用 receipt_id 推断。</span>
+
+<span style="color:#C00000"><strong>同步后工程回执。</strong>当前代码和规则通过全量 `pytest`=`240 passed, 4 warnings`、Ruff check/format、compileall 与 `git diff --check`。这是工程一致性证据，不是 Web 视觉效果、供应商准入或 RAG 产品化证据；Card 继续 `candidate`，正式图片主流程继续使用已验证的 Tencent BeautifyPic。</span>

@@ -1973,3 +1973,75 @@ IntentFrame
 ### 17.25.3 Demo 收尾 Prompt
 
 本轮执行规范已另存为 [E3 收尾与可录制 Demo 执行 Prompt](E3_FINALIZATION_EXECUTION_PROMPT.md)，其中固定了任务树、每步五项交付物、权限/留存边界、继续推进条件和必须停下的准入门。
+
+## 17.26 2026-09-03 产品设计：V5 反思后的 RAG 真实链路优化
+
+<span style="color:#C00000"><strong>背景与问题。</strong>连续几轮 RAG 优化后，V5 仍出现低路由正确率和低证据关系正确率。复盘发现，早期改动只重写了最终结果的文字，没有改变真实候选池；更关键的是，结构化查询已经提出用户目标，却在最终结果阶段被检索器的 BASELINE 回退覆盖。因此“看起来有迭代”不等于系统真的学会了。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong>我把失败拆回四层：听懂用户、建立合法查询、找到真实资料、用正确关系形成最终路径。先冻结 V5 和 active baseline，只在公开开发/回归集改变一个真实层，并要求每个候选留下路径来源、实际证据引用、Trace、改变数量和回滚点。不能读取 V5 答案、按题目写特例，也不能用改分母或塞无关证据抬指标。</span>
+
+<span style="color:#C00000"><strong>本轮产品决策。</strong>第一候选增加“结构化查询→最终路径”的受限交接：冲突、缺槽、索引异常等硬状态优先；DIRECT 只有在真实召回的 direct executable evidence 支持时才接受；SUGGEST/REFERENCE 只有在真实有证据时才接受；没有证据就回到 baseline/unknown。第二候选增加“功能特异性关系”：只有用户实际请求的部位与能力卡 feature 相交，才可标记 direct；未请求的参数、泛化说明、CompareFace 和 ImageModeration 保持 reference；过期/冲突保持 conflict。两项都只产生 RAG proposal，不产生参数、权限或 ProviderRun。</span>
+
+<span style="color:#C00000"><strong>真实结果与边界。</strong>公开开发集上，路径交接候选把最终 Route 从 `3.57%` 提升到 `92.86%`，实际改变 26 条结果；公开回归从 `30.77%` 提升到 `76.92%`，实际改变 44 条结果。证据特异性候选相对路径交接又改变 11 条开发结果、20 条回归结果；真实检索关系/Recall@5 在开发集达到 `100%`，回归集关系 `96.15%`、Recall@5 `100%`。三条过程门均 `PASS`，hard-safety 均 `PASS`，没有网络、LLM、照片、向量或图片 Provider 副作用。这里的结果是公开候选证据，不是 V5 泛化成绩，也不表示 RAG 已产品化。</span>
+
+### 17.26.1 当前实现矩阵
+
+| 能力 | 当前状态 | 可复核证据 | 真实边界 |
+|---|---|---|---|
+| 查询到最终路径交接 | **候选已实现并验证** | `rag_route_handoff_candidate_v1`、`route_handoff` Trace | 仅公开开发/回归；未 promotion |
+| 按功能部位区分证据关系 | **候选已实现并验证** | `policy_relation_resolver_v4`、specificity Trace | 不改变 active resolver |
+| 过程完整性 | **三轨 PASS** | 候选报告中的 process audit | 只证明没漏跑/没越权 |
+| V5 质量 | **仍 FAIL，已封存** | V5 Gold aggregate | 不得用于调参 |
+| RAG 执行权限 | **proposal-only** | 合同、Policy、Trace | 不得调用图片工具或扩大权限 |
+
+候选报告与任务树：[RAG 真实链路候选报告](../reports/rag_route_handoff_candidate_v1.html)、[优化任务树](RAG_OPTIMIZATION_TASK_TREE_V1.md)。下一道 Gate 是公开候选是否值得保留及是否需要一套全新 V6 Holdout；没有独立新 Holdout 证据，不得把候选写成产品化。
+
+## 17.27 2026-09-03 产品设计：把 RAG 优化从“改答案”推进到“改真实链路”
+
+<span style="color:#C00000"><strong>背景。</strong>前几轮迭代已经有多次评测和数据集，但分数长期偏低，且出现过“迭代了却没有实际效果”的情况。复盘 V5 后发现，相关资料通常已经被找到了（前五条完全 miss 只有 `2/60`），真正的问题集中在：用户目标没有稳定传到最终路径；多个操作共用一个证据篮子；解释资料的关系被过度简化。若继续只增加资料或修改最终文字，无法证明产品能力真的提升。</span>
+
+<span style="color:#C00000"><strong>调研与方法。</strong>我把用户请求拆成“理解用户要什么→实际找到了什么→哪些资料能作为直接依据/参考/冲突→允许走哪条路径→如何向用户解释”五个可观察环节。先冻结 V5 和 active baseline，再用一份监督 Prompt 规定：每次只改一个真实层；公开开发和回归先跑；每题必须留下完整 Trace；不能读取 V5 答案、不能按题目写特例、不能用无关资料抬指标。评测器同时修正内部带版本资料编号与 Gold 稳定编号的比较口径，但只在评测层做映射。</span>
+
+<span style="color:#C00000"><strong>产品决策。</strong>第一，增加受限的“路径交接”：结构化查询提出的 DIRECT/SUGGEST/REFERENCE 只有在真实检索证据支持时才可进入候选结果；硬冲突、缺关键槽位和索引异常优先，没证据就保守回到 BASELINE/UNKNOWN。第二，按 operation/provider/feature 给证据分槽；具体、已审核且工具确实支持的能力才标 direct，泛化说明、未请求参数、CompareFace 和 ImageModeration 只能作 reference，过期或冲突保持 conflict。第三，解释页面最多展示三条当前路径范围内的已检索事实；解释资料不能越过权限、图片出站或 Provider 执行门。第四，所有候选继续 `proposal-only`，`execution_authorized=false`，不能直接调用图片工具、产生参数或授予权限。</span>
+
+<span style="color:#C00000"><strong>实现与效果。</strong>本轮实现 `RouteHandoffDecision`、`EvidenceSelectionDecision`、route-scoped 查询/证据选择和评测引用归一化，并将版本、证据数量、采用/排除原因、路径来源写入 Trace。公开开发集 28 题、公开回归 52 题均完整运行；最终解释候选 Route、Evidence exact/relation、Recall@5、MRR、nDCG@5 均为 `100%`，但单独 route handoff 的公开回归 Route=`92.31%`，随后由 specificity/解释限域补齐；hard-safety 均 PASS。固定 Precision@3 仍为 `47.62%/47.44%`，历史 project Gate 仍 FAIL；候选没有读取 V5/V6、没有网络/LLM/Provider/照片副作用，也没有 promotion。</span>
+
+<span style="color:#C00000"><strong>决策带来的效果与边界。</strong>这次确实改变了真实的路径和证据选择，修复了“理解到了但没有传下去”和“无关资料挤占解释位”的连接问题；但公开数据与当前审核卡高度对齐，不能把 100% 写成未见问题的泛化能力。下一步停止在同一公开集继续堆补丁；如果需要证明泛化，建立与 V3/V4/V5 不重叠的 V6，经过独立过程监督和一次授权 Gold join。V6 通过前，RAG 不得写成产品化，也不得改变正式图片主流程。</span>
+
+### 17.27.1 当前实现矩阵补充
+
+| 能力 | 当前状态 | 真实证据 | 边界 |
+|---|---|---|---|
+| 查询路径交接 | 候选已实现 | `RouteHandoffDecision`、handoff Trace | 公开数据；未 promotion |
+| 按部位整理 direct/reference/conflict | 候选已实现 | `policy_relation_resolver_v4`、证据选择 Trace | 不改变 active resolver |
+| 解释资料按路径限域 | 候选已实现 | `EvidenceSelectionDecision`、候选报告 | 最多三条；不能授权执行 |
+| 内部 ref 评测归一化 | 评测器已实现 | `_prediction_rows` | 仅评分，不改变运行时证据 |
+| V5 泛化 | 未通过 | V5 Gold aggregate | 已封存，不得调参 |
+| RAG promotion | 未进行 | `proposal_only=true` | 需新 Holdout 与负责人批准 |
+
+## 30.9 2026-09-03 当前收尾：可录制 Demo 与确定性 Web 准入
+
+<span style="color:#C00000"><strong>产品设计：背景与问题。</strong>今天的目标是尽快得到一个可以录制的网页 Demo，但“快”不能通过跳过证据来实现。上一轮 Web E3 已经留下四条真实成功回执，却仍有手工 request_ref、真实视觉复测和供应商条款证据缺口；如果直接把 Card 改成 verified，面试或用户会把“SDK 有输出”误解成“已经证明母版一致”。</span>
+
+<span style="color:#C00000"><strong>调研与判断。</strong>我回看了 E3 预检、四条真实 Browser Receipt、E1 共同复测合同、E2 8 条离线异常/批量隔离回归、Provider Card 和腾讯官方 Web 文档。得到的结论是：可自动完成的是合同、回执、哈希、结果交接、离线回归和准入判断；不能凭代码补齐的是本轮没有重新取得的视觉效果样本、完整 request_ref 转录、供应商区域与成本事实。浏览器手动上传/点击本轮按负责人要求暂缓，不把“未重跑”写成“失败”或“通过”。</span>
+
+<span style="color:#C00000"><strong>产品负责人冻结的决策。</strong>继续保留 Web Card 为 candidate；允许一个确定性 promotion 命令在传入负责人批准时自动检查全部 Gate，但只有所有 Gate 均为真才可写入 verified。当前命令已用负责人批准运行，因 `visual_effect_generalization_not_established`、`request_ref_not_recorded_for_every_manual_receipt`、`region_not_approved` 和 `estimated_cost_unknown` 被 fail-closed 拦截。RAG/LLM 仍不能授权或晋级 Provider。</span>
+
+<span style="color:#C00000"><strong>带来的效果。</strong>项目现在可以用真实回执录制“浏览器 SDK → 结果交接 → 脱敏账本 → 准入判断”的工程 Demo，同时页面和面试材料会明确说这是候选工具，不夸写成正式视觉效果。等补齐独立证据后，命令可以无人工改 JSON 地完成 promotion；证据不足时也会留下 JSON/HTML 决定回执和精确阻塞码。</span>
+
+### 30.9.1 当前实现矩阵（以代码和回执为准）
+
+| 能力 | 当前状态 | 证据 | 不可夸写边界 |
+|---|---|---|---|
+| Web 桥接稳定性 | 已实现并测试 | `bridge_2026-09-03_static_capture_v6_rerun_recovery`、专项测试 | 本轮未重新手动触发，不增加新的真实回执 |
+| E1 Web→共同复测 | 已实现并由 fixture 验证 | `accept_effect_web_browser_result()` → `verify_result()` | 真实图片复测仍未在本轮取得 |
+| E2 合同/异常/批量隔离 | 已验证 | Web 回归 8/8，hard-safety 与隔离分开统计 | 不等于视觉泛化 |
+| E3 真实历史样本 | 4/4 成功，输入哈希 4/4 绑定，handoff 4/4 | `reports/effect_web_e3_evidence_v1.*` | 手工 request_ref 不全，旧结果不等于本轮重跑 |
+| 确定性 promotion | 已实现并运行 | `scripts/promote_effect_web_card.py`、`reports/effect_web_promotion_decision_v1.*` | 缺任一 Gate 就保持 candidate |
+| Card | `candidate` | `data/provider_cards/tencent_effect_web.json` | 正式主流程仍使用 BeautifyPic baseline |
+
+### 30.9.2 Demo 叙事边界
+
+可以展示：上传/处理动作、结果图、脱敏 receipt、输入/输出哈希绑定、耗时、E1/E2 合同和“准入被安全拦截”的原因。不能展示或宣称：未经本轮复测的视觉改善、供应商真实区域/费用结论、Web 已替代主流程、RAG 自动执行或已达成母版一致。
+
+<span style="color:#C00000"><strong>同步后的工程校验。</strong>执行版 PRD 所对应的当前代码快照已通过全量 `pytest`=`240 passed, 4 warnings`、Ruff check/format、compileall 与 `git diff --check`。这些检查确认合同、实现、报告和安全边界可以回放；它们不替代被暂缓的新的浏览器真实回执、视觉复测、供应商地区/费用证据，也不触发 Web Card 晋级。</span>

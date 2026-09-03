@@ -613,3 +613,31 @@ Provider 权限；RAG 的执行授权字段继续为 `false`。
 本轮文档同步后重新执行 E3 预检、证据汇总、Web E2 回归和 B handoff smoke：预检 5 个样本为 2 eligible、2 warning、1 rejected；真实浏览器回执 4/4 成功、输入 hash 4/4 绑定、handoff 标记 4/4；E2 回归 8/8，批量失败隔离通过；全量测试为 `226 passed, 4 warnings`。这些是工程/回执合同事实，不是视觉效果或供应商准入事实。
 
 E3 manifest 未记录完整 `request_ref` 时，合同必须输出 `request_ref_not_recorded_for_every_manual_receipt`；不能把 receipt ID 当 request_ref。`E3EvidenceReport` 固定 `visual_generalization_status=not_established`、`promotion_status=candidate`，结果 payload 只在浏览器会话内存，不进入合同持久化、数据库、Trace、RAG 或 Git。
+
+## 26. 2026-09-03｜RAG 真实链路候选合同补充
+
+本轮新增的 `RouteHandoffDecision`、`rag_route_handoff_candidate.py` 和 `policy_relation_resolver_v4` 属于隔离的评测候选合同，不是六个图片处理合同，也不是 active RAG 运行规则。`RouteHandoffDecision` 的输入只能是结构化 `BaselineProjection`、合法 `RagQuery` 和真实 `RagP0BRun`；它不能读取原话、Gold、照片、向量、密钥或 Provider 回执。
+
+路径交接候选只有在真实证据支持时才可把提出的 DIRECT/SUGGEST/REFERENCE/CLARIFY/BLOCK/BASELINE/UNKNOWN 写入候选 Prediction；冲突、缺关键槽位和索引异常优先，空证据不能被投影强行覆盖。Trace 必须记录 `route_handoff` 的版本、原因、支持证据数量、`proposal_only=true` 和 `execution_authorized=false`。公平过程监督允许 `route_source=validated_route_handoff`，但只有当 Trace 中 handoff 已接受、最终路径一致且仍未授权时才算 lineage 合法；默认没有 callback 时仍保持 `route_source=retrieval_result`。
+
+证据特异性候选只在用户请求 feature 与真实 chunk 的 `feature_codes` 相交且能力为 executable 时标记 direct；未请求参数、泛化说明、unsupported 能力、CompareFace 和 ImageModeration 只能作为 reference，过期/冲突仍为 conflict。候选不能改变 active resolver、知识内容、Provider 白名单、参数、权限、图片出站或 `ProviderRun`。
+
+本轮公开候选报告和脱敏 Trace 只用于质量诊断；V5 已封存，不允许读取或重跑。候选结果即使改善也仍 `proposal-only`，不得写入六类业务表或宣称 RAG 产品化。
+
+## 2026-09-03｜RAG 真实链路候选 v0.4 合同边界
+
+新增的 `RouteHandoffDecision` 与 `EvidenceSelectionDecision` 仅是隔离评测候选，不是六类图片业务合同，也不是 active 运行规则。前者只接收结构化投影、合法 `RagQuery` 和真实 `RagP0BRun`，根据实际 direct/reference/conflict 证据选择一个受限路径；后者只从实际返回的知识块中按任务范围挑选最多三条解释事实。
+
+两者都必须在 Trace 中写出版本、支持证据数、实际引用、选择原因、`proposal_only=true` 和 `execution_authorized=false`。缺槽位、索引异常、过期或冲突只能保守降级；解释证据不能授予参数、权限、图片出站或 `ProviderRun`。评测器的稳定引用归一化只为解决“内部带版本 ref 与 Gold 稳定别名”的比较问题，运行时不得新增或改写 evidence。
+
+本轮公开候选报告仅覆盖开发 28 题与回归 52 题，V5/V6 不读、不重跑、不回写；即便公开 exact/relation/Recall 指标为 100%，固定 Precision 与独立泛化仍未通过，因此合同状态保持 `not_promoted_proposal_only`。
+
+本轮同步后的工程回归为 `238 passed, 4 warnings`，Ruff check/format、compileall 和 `git diff --check` 全部通过；候选脚本生成 JSON、HTML 与脱敏 Trace。该回执只证明合同/代码/测试一致，不代表 RAG 质量 Gate 或产品化通过。
+
+## 2026-09-03｜Web E3 收尾与自动准入合同
+
+`EffectWebBrowserReceipt`、`EffectWebBrowserResult` 和共同 `ProviderRun`/`VerificationResult` 的字段边界保持不变：回执是浏览器真实事实，结果 bytes 只在一次 handoff 的当前会话内存中存在。`scripts/promote_effect_web_card.py` 是唯一允许写 Card 状态的确定性入口；它读取脱敏 E3 报告和 Card，构造 `EffectWebAdmissionInput`，逐项执行 License、精确域名、Provider 权限、出站、区域、成本、Adapter、真实 smoke、视觉/批量回归、故障隔离和负责人批准检查。任何一项缺失都返回 `keep_candidate`，并不覆盖 Card。
+
+本轮命令已使用负责人批准运行，真实输出为 `card_changed=false`、`promotion_write=blocked_fail_closed`；阻塞码是 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed`。这三个码分别表示供应商事实未确认、项目成本口径未确认、真实视觉多样本复核尚未完成；不能用一次 SDK 成功、RAG 命中或 LLM 判断替代。决定 JSON/HTML 不含照片、data URL、密钥或本地路径。
+
+文档同步后的最终自动 QA 为 `.venv/bin/pytest -q`=`240 passed, 4 warnings`；Ruff check、`ruff format --check`、compileall 与 `git diff --check` 均通过。该数字包含 Web promotion fail-closed 回归；它只证明合同、代码和安全边界一致，不改变 `candidate`、RAG `proposal-only` 或未闭合的视觉/供应商 Gate。

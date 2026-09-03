@@ -176,3 +176,17 @@ project Gate=`FAIL`。这不是产品化通过。新增 `reports/rag_v5_failure_
 负责人已批准 E3，并提供四张真实 JPEG。它们先经过内存预检（输入哈希、尺寸、人脸数、质量/可编辑性路由和分层标签），再在部署后的精确域名 page 6 逐张执行 Tencent Effect Web。当前真实结果为 4/4 `succeeded`，输入哈希 4/4 绑定预检，结果交接标记 4/4；透明通道 PNG 作为异常样本被拒绝。脱敏汇总为 `reports/effect_web_e3_evidence_v1.json/.html`，只读展示页为 `pages/8_腾讯特效Web_E3证据看板.py`。
 
 E3 的工程事实不等于视觉准入：手工 manifest 尚未记录四条完整 `request_ref`，共同 `VerificationResult` 的真实图像几何复测、视觉泛化、供应商地区/留存/费用与负责人 promotion 仍未完成。`tencent_effect_web` Card 保持 `candidate`；正式主流程仍走已验证的 Tencent BeautifyPic，RAG/Meta-Agent 继续 `proposal-only`。结果图 bytes、data URL、密钥和本地路径不写入数据库、Trace、RAG 或 Git。
+
+## 2026-09-03 当前事实｜RAG 真实链路候选 v0.4
+
+V5 失败分析后，本轮只在公开开发/回归集修复真实的路径交接、功能特异性证据和解释资料限域，并在评测层统一版本化 ref 与稳定 alias。候选没有读取 V5/V6 答案，没有网络、LLM、照片、向量或图片 Provider 副作用；`proposal_only=true`、`execution_authorized=false`、`active_baseline_changed=false`。
+
+开发集 28 题、公开回归 52 题均完成完整 Trace。最终解释候选 Route、Evidence exact/relation、Recall@5、MRR、nDCG@5 均为 100%，但单独 route handoff 的公开回归 Route 为 92.31%，固定 Precision@3 为 47.62%/47.44%，历史 project Gate 仍 FAIL。该结果说明连接断点被候选逐层修复，不说明对未见问题已泛化，更不代表 RAG 产品化。候选报告见 `reports/rag_route_handoff_candidate_v1.json/.html`，逐题脱敏 Trace 见同名 `_traces.json`。
+
+当前研发策略是停止在同一公开集继续堆补丁：若产品负责人需要泛化证明，下一步建立与 V3/V4/V5 不重叠的 V6，并走独立过程监督与一次授权 Gold join；否则返回真实端到端照片 Demo。无论哪条路径，RAG 都不能直接改图、授予权限或自动 promotion。
+
+## 2026-09-03 当前收尾覆盖｜Web candidate 与可录 Demo
+
+负责人要求跳过本轮浏览器手动上传/点击，优先完成可自动验证的收尾。当前最新证据仍是四条历史真实 Web Receipt 全部成功、输入哈希 4/4 绑定、handoff 4/4、E2 离线回归 8/8；本轮没有伪造新的 live receipt。新增确定性 promotion 命令并用负责人批准运行，因 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed` fail-closed，Card 保持 candidate。E1 共同 VerificationResult 代码/fixture 已存在，但没有把本轮未重新取得的结果 bytes 写成真实视觉复测。可录 Demo 应讲清“候选 Web SDK 的真实回执与安全准入”，正式主流程仍为已审核 BeautifyPic，RAG 仍 proposal-only。
+
+同步后自动 QA：`pytest`=`240 passed, 4 warnings`；Ruff check/format、compileall 与 `git diff --check` 通过。该回执只说明当前快照可回放且文档/代码一致，不能把跳过的 live 步骤写成完成。

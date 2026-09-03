@@ -27,7 +27,7 @@
     ]
   },
   "decision_version": "effect_web_promotion_v0.1",
-  "evaluated_at": "2026-09-03T12:36:55.777988+00:00",
+  "evaluated_at": "2026-09-03T13:11:46.255331+00:00",
   "images_or_secrets_read": false,
   "promotion_write": "blocked_fail_closed",
   "write_requested": true

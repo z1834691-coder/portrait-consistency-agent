@@ -166,14 +166,10 @@ def main() -> int:
         output["promotion_write"] = "blocked_fail_closed"
     _atomic_write_json(args.decision_output, output)
     args.decision_output_html.parent.mkdir(parents=True, exist_ok=True)
-    reason_items = "".join(
-        f"<li>{html.escape(str(code))}</li>" for code in decision.reason_codes
-    )
+    reason_items = "".join(f"<li>{html.escape(str(code))}</li>" for code in decision.reason_codes)
     verdict = "允许晋级" if decision.allowed else "保持 candidate"
     status_after = (
-        "verified"
-        if decision.allowed and args.write_if_allowed
-        else str(card.get("review_status"))
+        "verified" if decision.allowed and args.write_if_allowed else str(card.get("review_status"))
     )
     args.decision_output_html.write_text(
         "<!doctype html><html lang='zh-CN'><meta charset='utf-8'>"

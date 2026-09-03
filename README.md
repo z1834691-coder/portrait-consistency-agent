@@ -247,3 +247,30 @@ uv run python scripts/build_effect_web_e3_evidence.py
 uv run python scripts/run_effect_web_regression.py
 uv run python scripts/smoke_effect_web_b_handoff.py
 ```
+
+## 2026-09-03｜RAG 真实链路优化候选 v0.4（当前）
+
+本轮依据 V5 失败模式把修复放回真实链路，而不是只改最终文字：
+
+- `route_handoff`：只有真实检索证据支持时，结构化查询提出的路径才进入候选结果；硬冲突、缺槽位和索引异常优先；
+- `feature-specificity`：请求部位且工具确实支持才是 direct，泛化说明、未请求参数、CompareFace/ImageModeration 是 reference，过期/冲突是 conflict；
+- `route-scoped explanation selection`：解释页最多选三条当前任务范围内的真实资料；它不能授予权限或调用图片工具；
+- 评测层稳定引用归一化：只解决版本化内部 ref 与 Gold 稳定别名的比较问题，运行时不补写 evidence。
+
+候选只在公开开发集 28 题和公开回归 52 题运行，完整 Trace 为 `28/28` 与 `52/52`，hard-safety 均 PASS。最终解释候选的 Route、Evidence exact/relation、Recall@5、MRR、nDCG@5 均为 `100%`；单独 route handoff 的公开回归 Route=`92.31%`，固定 Precision@3 为 `47.62%`/`47.44%`，因此历史 project Gate 仍 `FAIL`。这些不是 Holdout 泛化或线上指标，候选仍 `proposal-only`，active baseline、权限和图片 Provider 不变。
+
+可复核入口：[候选报告](reports/rag_route_handoff_candidate_v1.html)、[逐题脱敏 Trace](reports/rag_route_handoff_candidate_v1_traces.json)、[优化任务树](docs/RAG_OPTIMIZATION_TASK_TREE_V1.md)、[RAG 看板](pages/5_RAG优化看板.py)。运行命令：
+
+```bash
+UV_CACHE_DIR=/private/tmp/portrait_consistency_uv_cache .venv/bin/python scripts/run_rag_route_handoff_candidate.py
+```
+
+下一步停止同一公开集补丁；若要证明泛化，建立与 V3/V4/V5 完全不重叠的 V6，并先过独立过程门和一次授权 Gold join。V6 通过前不能宣称 RAG 已产品化。
+
+## 2026-09-03 当前收尾状态（最新）
+
+为保证今天可以录制 Demo，本轮按负责人要求暂缓浏览器手动上传/点击，完成其余自动化收口并先保存可回滚提交 `a08197c`。已有四条历史真实 Tencent Effect Web Receipt 全部成功（4/4），输入哈希绑定 4/4、结果 handoff 4/4；E2 离线合同/异常/批量隔离回归 8/8，E1 共同 `VerificationResult` 路径由 fixture 验证。新增 `scripts/promote_effect_web_card.py` 后，以负责人批准运行仍被 `region_not_approved`、`estimated_cost_unknown`、`multi_sample_regression_not_passed` 安全拦截，Card 保持 `candidate`。
+
+因此可录 Demo 的准确说法是“浏览器候选 SDK 的真实结果回执、受限结果交接和确定性准入”；不能说 Web 已正式上线、视觉效果已泛化、供应商区域/费用已确认或 RAG 已授权执行。最新决定回执见 [`reports/effect_web_promotion_decision_v1.html`](reports/effect_web_promotion_decision_v1.html)，E3 汇总见 [`reports/effect_web_e3_evidence_v1.html`](reports/effect_web_e3_evidence_v1.html)。
+
+本轮文档同步后的最终自动 QA：`.venv/bin/pytest -q`=`240 passed, 4 warnings`；Ruff check/format、compileall 和 `git diff --check` 均通过。4 条 warning 为既有 Pillow 弃用提示。Web Card 仍 `candidate`，RAG 仍 `proposal-only`；这些工程数字不代表视觉效果或生产准入。
